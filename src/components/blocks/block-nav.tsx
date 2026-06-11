@@ -65,7 +65,7 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
             {/* Stage Accordion Header */}
             <button
               onClick={() => onSelectStage(stage.key)}
-              className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-xs font-semibold transition-colors ${
+              className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-semibold transition-colors ${
                 isExpanded ? 'bg-slate-50/80 text-slate-800' : 'text-slate-500 hover:bg-slate-50/50 hover:text-slate-700'
               }`}
             >
@@ -110,7 +110,7 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
                     >
                       {/* Block number */}
                       <span
-                        className={`w-4 shrink-0 text-center text-[10px] font-mono font-medium ${
+                        className={`w-4 shrink-0 text-center text-xs font-mono font-medium ${
                           isSelected ? 'font-bold' : 'text-slate-400'
                         }`}
                         style={isSelected ? { color: stage.color } : undefined}
@@ -119,7 +119,7 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
                       </span>
 
                       {/* Title */}
-                      <span className="text-xs truncate flex-1 leading-snug">
+                      <span className="text-sm truncate flex-1 leading-snug">
                         {block.title}
                       </span>
 

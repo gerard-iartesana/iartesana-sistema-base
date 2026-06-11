@@ -76,22 +76,13 @@ export default function HomePage() {
       {/* Sidebar Left */}
       <aside className="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0 h-screen sticky top-0">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <img src="/assets/logo/logo.svg" alt="iARTESANA Logo" className="w-8 h-8 object-contain shrink-0" />
-              <div>
-                <h1 className="text-sm font-bold text-slate-800">Sistema Base</h1>
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Núcleo de Contexto</p>
-              </div>
+        <div className="px-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <img src="/assets/logo/logo.svg" alt="iARTESANA Logo" className="w-8 h-8 object-contain shrink-0" />
+            <div>
+              <h1 className="text-sm font-bold text-slate-800">Sistema Base</h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Núcleo de Contexto</p>
             </div>
-            <button
-              onClick={logout}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
-              title="Cerrar sesión"
-            >
-              <LogOut size={16} />
-            </button>
           </div>
         </div>
 
@@ -102,48 +93,67 @@ export default function HomePage() {
 
         {/* Block Navigation */}
         {activeBrand && (
-          <div className="flex-1 overflow-y-auto">
-            <BlockNav
-              selectedStage={selectedStage}
-              selectedBlockId={selectedBlockId}
-              onSelectStage={setSelectedStage}
-              onSelectBlock={setSelectedBlockId}
-              brandBlocks={brandBlocks}
-            />
-          </div>
-        )}
-
-        {/* Export Link */}
-        {activeBrand && (
-          <div className="px-4 py-2">
-            <Link
-              href={`/marca/${activeBrand.slug}/exportar`}
-              className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-xs font-semibold text-slate-500 hover:bg-slate-50/50 hover:text-slate-700 transition-colors rounded-lg"
-            >
-              <FileOutput className="h-4 w-4 shrink-0 text-slate-400" />
-              <span className="truncate">Panel de exportaciones</span>
-            </Link>
-          </div>
-        )}
-
-        {/* User info */}
-        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center">
-              <span className="text-xs font-medium text-violet-700">
-                {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-              </span>
-            </div>
+          <div className="flex-1 overflow-y-auto flex flex-col justify-between py-2">
             <div>
-              <p className="text-xs font-medium text-slate-700">{user.name || user.email}</p>
-              <p className="text-[10px] text-slate-400">{user.role}</p>
+              <BlockNav
+                selectedStage={selectedStage}
+                selectedBlockId={selectedBlockId}
+                onSelectStage={setSelectedStage}
+                onSelectBlock={setSelectedBlockId}
+                brandBlocks={brandBlocks}
+              />
+
+              {/* Export Link at the same level as block stage accordion headers */}
+              <div className="px-4 py-1">
+                <Link
+                  href={`/marca/${activeBrand.slug}/exportar`}
+                  className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold text-slate-500 hover:bg-slate-50/50 hover:text-slate-700 transition-colors rounded-lg"
+                >
+                  <FileOutput className="h-4 w-4 shrink-0 text-slate-400" />
+                  <span className="truncate">Panel de exportaciones</span>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 h-screen">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        {/* Top Header Bar */}
+        <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-6 shrink-0 z-30">
+          {/* Left side: Active brand metadata or name */}
+          <div className="flex items-center gap-2">
+            {activeBrand ? (
+              <>
+                <span className="text-sm font-semibold text-slate-800">{activeBrand.name}</span>
+                <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">v{activeBrand.doc_version}</span>
+              </>
+            ) : (
+              <span className="text-sm font-semibold text-slate-400">iARTESANA app</span>
+            )}
+          </div>
+
+          {/* Right side: User Avatar + Logout Button */}
+          <div className="flex items-center gap-3">
+            {/* User Avatar */}
+            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center cursor-help shadow-sm" title={`${user.name || user.email} (${user.role})`}>
+              <span className="text-xs font-semibold text-violet-700">
+                {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+              </span>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={logout}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              title="Cerrar sesión"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        </header>
+
         {activeBrand ? (
           <>
             {/* Editor Area */}
