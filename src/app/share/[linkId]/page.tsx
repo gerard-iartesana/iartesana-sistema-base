@@ -1,12 +1,331 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { db } from '@/lib/db/local-storage';
 import { Brand, BrandBlock, Marker } from '@/lib/db/types';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
 import { Lock, Eye, AlertTriangle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
+
+function extractText(children: React.ReactNode): string {
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return children.toString();
+  if (Array.isArray(children)) {
+    return children.map(extractText).join('');
+  }
+  if (React.isValidElement(children)) {
+    return extractText((children.props as any)?.children);
+  }
+  return '';
+}
+
+const HeadingRenderer = ({ level, children, ...props }: any) => {
+  const text = extractText(children);
+  const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  let iconSrc = '';
+  if (normalized.includes('mision')) {
+    iconSrc = '/images/icono-mision.svg';
+  } else if (normalized.includes('vision')) {
+    iconSrc = '/images/icono-vision.svg';
+  } else if (normalized.includes('valores')) {
+    iconSrc = '/images/icono-valores.svg';
+  }
+
+  const Tag = `h${level}` as any;
+
+  if (iconSrc) {
+    return (
+      <div className="flex flex-col items-start gap-2 mt-5 mb-3 select-none">
+        <img
+          src={iconSrc}
+          alt={text}
+          className="w-10 h-10 opacity-60 object-contain"
+        />
+        <Tag {...props} className="!m-0">
+          {children}
+        </Tag>
+      </div>
+    );
+  }
+
+  return <Tag {...props}>{children}</Tag>;
+};
+
+interface SectionMatch {
+  iconSrc: string;
+  sectionTitle: string;
+  cleanedChildren: React.ReactNode[];
+}
+
+function matchSection(children: React.ReactNode): SectionMatch | null {
+  const childrenArray = React.Children.toArray(children);
+  if (childrenArray.length === 0) return null;
+
+  const firstChild = childrenArray[0];
+  let iconSrc = '';
+  let sectionTitle = '';
+  let restOfChildren = childrenArray;
+
+  // Case 1: First child is a <strong> element
+  if (
+    React.isValidElement(firstChild) &&
+    (firstChild.type === 'strong' ||
+      (firstChild.type as any)?.name === 'strong' ||
+      (firstChild.props as any)?.className?.includes('strong'))
+  ) {
+    const strongText = extractText((firstChild.props as any).children).trim();
+    const normalized = strongText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (normalized.startsWith('mision')) {
+      iconSrc = '/images/icono-mision.svg';
+      sectionTitle = 'Misión';
+      restOfChildren = childrenArray.slice(1);
+    } else if (normalized.startsWith('vision')) {
+      iconSrc = '/images/icono-vision.svg';
+      sectionTitle = 'Visión';
+      restOfChildren = childrenArray.slice(1);
+    } else if (normalized.startsWith('valores')) {
+      iconSrc = '/images/icono-valores.svg';
+      sectionTitle = 'Valores';
+      restOfChildren = childrenArray.slice(1);
+    }
+  }
+  // Case 2: First child is a plain text string
+  else if (typeof firstChild === 'string') {
+    const text = firstChild.trim();
+    const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (normalized.startsWith('mision')) {
+      iconSrc = '/images/icono-mision.svg';
+      sectionTitle = 'Misión';
+      const cleanedText = text.replace(/^[Mm]isi[oó]n[\s\.:\-]*/, '');
+      restOfChildren = [cleanedText, ...childrenArray.slice(1)];
+    } else if (normalized.startsWith('vision')) {
+      iconSrc = '/images/icono-vision.svg';
+      sectionTitle = 'Visión';
+      const cleanedText = text.replace(/^[Vv]isi[oó]n[\s\.:\-]*/, '');
+      restOfChildren = [cleanedText, ...childrenArray.slice(1)];
+    } else if (normalized.startsWith('valores')) {
+      iconSrc = '/images/icono-valores.svg';
+      sectionTitle = 'Valores';
+      const cleanedText = text.replace(/^[Vv]alores[\s\.:\-]*/, '');
+      restOfChildren = [cleanedText, ...childrenArray.slice(1)];
+    }
+  }
+
+  if (iconSrc) {
+    // Clean up any leading dot, colon, or space from the remaining content
+    const cleaned = [...restOfChildren];
+    if (cleaned.length > 0 && typeof cleaned[0] === 'string') {
+      cleaned[0] = cleaned[0].replace(/^[\s\.\:\-]*/, '');
+    }
+    return {
+      iconSrc,
+      sectionTitle,
+      cleanedChildren: cleaned,
+    };
+  }
+
+  return null;
+}
+
+const ParagraphRenderer = ({ children, ...props }: any) => {
+  const match = matchSection(children);
+  if (match) {
+    return (
+      <div className="mt-6 mb-4 first:mt-2">
+        <div className="flex items-center gap-2 mb-1.5 select-none">
+          <img
+            src={match.iconSrc}
+            alt={match.sectionTitle}
+            className="w-8 h-8 opacity-60 object-contain shrink-0"
+          />
+          <span className="text-lg font-bold tracking-tight text-slate-800 uppercase">
+            {match.sectionTitle}
+          </span>
+        </div>
+        <p className="text-base leading-relaxed pl-[40px] text-slate-600 m-0">
+          {match.cleanedChildren}
+        </p>
+      </div>
+    );
+  }
+  return <p {...props}>{children}</p>;
+};
+
+const LiRenderer = ({ children, ...props }: any) => {
+  const match = matchSection(children);
+  if (match) {
+    return (
+      <li className="list-none mt-6 mb-4 first:mt-2">
+        <div className="flex items-center gap-2 mb-1.5 select-none">
+          <img
+            src={match.iconSrc}
+            alt={match.sectionTitle}
+            className="w-8 h-8 opacity-60 object-contain shrink-0"
+          />
+          <span className="text-lg font-bold tracking-tight text-slate-800 uppercase">
+            {match.sectionTitle}
+          </span>
+        </div>
+        <p className="text-base leading-relaxed pl-[40px] text-slate-600 m-0">
+          {match.cleanedChildren}
+        </p>
+      </li>
+    );
+  }
+  return <li {...props}>{children}</li>;
+};
+
+function SharePageArchetypeWheel({ content }: { content: string }) {
+  const selected = parseArchetypes(content);
+
+  const cx = 250;
+  const cy = 250;
+  const r = 180;
+  const iconR = 120;
+  const textR = 215;
+
+  return (
+    <div className="w-full flex flex-col items-center select-none bg-slate-50/50 rounded-2xl border border-slate-100 p-6">
+      <svg viewBox="-100 -50 700 600" className="w-full max-w-[480px] h-auto">
+        {/* Outer Category Labels */}
+        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase">Cambio</text>
+        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase">Estabilidad</text>
+        
+        <text
+          x={cx + r + 25}
+          y={cy}
+          textAnchor="middle"
+          className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase"
+          transform={`rotate(90, ${cx + r + 25}, ${cy})`}
+        >
+          Colectividad
+        </text>
+        <text
+          x={cx - r - 25}
+          y={cy}
+          textAnchor="middle"
+          className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase"
+          transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
+        >
+          Individualismo
+        </text>
+
+        {/* Render the 12 sectors */}
+        {ARCHETYPES.map((arc, i) => {
+          const startAngle = ((arc.angleStart - 90) * Math.PI) / 180;
+          const endAngle = ((arc.angleEnd - 90) * Math.PI) / 180;
+          const midAngle = startAngle + (endAngle - startAngle) / 2;
+
+          const x1 = cx + r * Math.cos(startAngle);
+          const y1 = cy + r * Math.sin(startAngle);
+          const x2 = cx + r * Math.cos(endAngle);
+          const y2 = cy + r * Math.sin(endAngle);
+
+          const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+
+          const ix = cx + iconR * Math.cos(midAngle);
+          const iy = cy + iconR * Math.sin(midAngle);
+
+          const tx = cx + textR * Math.cos(midAngle);
+          const ty = cy + textR * Math.sin(midAngle);
+
+          let textAnchor: 'inherit' | 'end' | 'middle' | 'start' = 'middle';
+          const cosValue = Math.cos(midAngle);
+          if (cosValue > 0.2) textAnchor = 'start';
+          else if (cosValue < -0.2) textAnchor = 'end';
+
+          const isSelected = selected[arc.name] !== undefined;
+          const percentage = selected[arc.name] || 0;
+          const catColor = CATEGORY_COLORS[arc.category];
+
+          return (
+            <g key={arc.name}>
+              {/* Slice Path */}
+              <path
+                d={pathData}
+                fill={isSelected ? catColor : '#f1f5f9'}
+                fillOpacity={isSelected ? 0.2 + 0.8 * (percentage / 100) : 0.6}
+                stroke="#ffffff"
+                strokeWidth="2.5"
+              />
+
+              {/* Icon */}
+              <g
+                transform={`translate(${ix - 12}, ${iy - 12})`}
+                className={isSelected ? 'text-slate-800' : 'text-slate-400'}
+              >
+                {ICON_PATHS[arc.icon]}
+              </g>
+
+              {/* Text label */}
+              <text
+                x={tx}
+                y={ty}
+                textAnchor={textAnchor}
+                className={`transition-all duration-300 ${
+                  isSelected 
+                    ? 'text-[22px] font-bold fill-slate-800' 
+                    : 'text-[12px] font-medium fill-slate-400 opacity-70'
+                }`}
+              >
+                <tspan x={tx} dy="0">
+                  {arc.name.replace('La ', '')}
+                </tspan>
+                {isSelected && (
+                  <tspan x={tx} dy="22" fill={catColor} className="font-mono font-bold text-[17px]">
+                    {percentage}%
+                  </tspan>
+                )}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Inner center ring */}
+        <circle cx={cx} cy={cy} r="25" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" />
+      </svg>
+    </div>
+  );
+}
+
+interface SavedMockups {
+  card?: string;
+  mobile?: string;
+  letter?: string;
+  tshirt?: string;
+  tote?: string;
+}
+
+const CATEGORY_MAP: Record<string, keyof SavedMockups> = {
+  'Tarjeta': 'card',
+  'Movil': 'mobile',
+  'Papel A4': 'letter',
+  'Camiseta': 'tshirt',
+  'Bolso Tote': 'tote'
+};
+
+function parseSavedMockups(md: string): SavedMockups {
+  const mockups: SavedMockups = {};
+  const regex = /!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\((data:image\/[^)]+)\)/g;
+  let match;
+  while ((match = regex.exec(md)) !== null) {
+    const label = match[1];
+    const base64 = match[2];
+    const key = CATEGORY_MAP[label];
+    if (key) {
+      mockups[key] = base64;
+    }
+  }
+  return mockups;
+}
+
+function cleanMarkdownMockups(md: string): string {
+  const regex = /\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g;
+  return md.replace(regex, '').trim();
+}
 
 export default function SharePage() {
   const params = useParams();
@@ -167,13 +486,113 @@ export default function SharePage() {
                         ))}
                       </div>
                     )}
-                    {block?.content_md ? (
-                      <div className="markdown-preview text-slate-600 leading-relaxed">
-                        <ReactMarkdown>{block.content_md}</ReactMarkdown>
-                      </div>
-                    ) : (
-                      <p className="text-slate-400 italic text-sm">Sin contenido</p>
-                    )}
+                    {(() => {
+                      if (!block?.content_md) {
+                        return <p className="text-slate-400 italic text-sm">Sin contenido</p>;
+                      }
+
+                      let content = block.content_md;
+                      let customElements = null;
+
+                      if (def.id === 4) {
+                        // 1. Clean markdown content of the arquetipos bullet points
+                        content = content
+                          .replace(/^### Arquetipos Seleccionados\s*\n?/gi, '')
+                          .replace(/^(?:[\*\-]\s*)?\*\*(La\s+[^*]+?)\*\*\:\s*\d+\s*%\s*\n?/gim, '')
+                          .replace(/^---\s*\n?/gi, '')
+                          .trim();
+
+                        customElements = (
+                          <div className="w-full flex justify-center mt-6">
+                            <SharePageArchetypeWheel content={block.content_md} />
+                          </div>
+                        );
+                      } else if (def.id === 7) {
+                        // 2. Clean markdown content of the mockups base64 image tags
+                        content = cleanMarkdownMockups(content);
+
+                        const saved = parseSavedMockups(block.content_md);
+                        const savedList = Object.entries(saved).filter(([_, val]) => !!val);
+
+                        const labels: Record<string, string> = {
+                          card: 'Tarjeta comercial',
+                          mobile: 'Interfaz móvil',
+                          letter: 'Papel membretado A4',
+                          tshirt: 'Camiseta de marca',
+                          tote: 'Bolso tote de algodón'
+                        };
+
+                        if (savedList.length > 0) {
+                          customElements = (
+                            <div className="mt-8 border-t border-slate-100 pt-6">
+                              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Mockups de conceptualización visual</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {savedList.map(([key, base64]) => {
+                                  const label = labels[key] || key;
+                                  return (
+                                    <div key={key} className="flex flex-col gap-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-sm animate-fade-in">
+                                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider select-none px-0.5">{label}</span>
+                                      <div className="overflow-hidden rounded-lg shadow-sm border border-slate-100 aspect-[16/10] flex justify-center items-center bg-white">
+                                        <img 
+                                          src={base64} 
+                                          alt={`Mockup ${label}`} 
+                                          className="w-full h-full object-cover" 
+                                        />
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        }
+                      }
+
+                      return (
+                        <div className="space-y-4">
+                          {content.trim() ? (
+                            <div className="markdown-preview text-slate-600 leading-relaxed">
+                              <ReactMarkdown
+                                components={{
+                                  a: ({ href, children, ...props }) => {
+                                    if (href === '#marker-pendiente') {
+                                      return (
+                                        <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                                          {children}
+                                        </span>
+                                      );
+                                    }
+                                    if (href === '#marker-verificar') {
+                                      return (
+                                        <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                                          {children}
+                                        </span>
+                                      );
+                                    }
+                                    return <a href={href} {...props}>{children}</a>;
+                                  },
+                                  h1: (props) => <HeadingRenderer level={1} {...props} />,
+                                  h2: (props) => <HeadingRenderer level={2} {...props} />,
+                                  h3: (props) => <HeadingRenderer level={3} {...props} />,
+                                  h4: (props) => <HeadingRenderer level={4} {...props} />,
+                                  h5: (props) => <HeadingRenderer level={5} {...props} />,
+                                  h6: (props) => <HeadingRenderer level={6} {...props} />,
+                                  p: (props) => <ParagraphRenderer {...props} />,
+                                  li: (props) => <LiRenderer {...props} />,
+                                }}
+                              >
+                                {content
+                                  .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                                  .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                              </ReactMarkdown>
+                            </div>
+                          ) : (
+                            !customElements && <p className="text-slate-400 italic text-sm">Sin contenido</p>
+                          )}
+                          {customElements}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
