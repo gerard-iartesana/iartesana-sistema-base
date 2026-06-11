@@ -321,6 +321,15 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   const [isRefining, setIsRefining] = useState(false);
   const [promptError, setPromptError] = useState<string | null>(null);
 
+  // Logo Overlay Editor states
+  const [logoX, setLogoX] = useState(50); // percentage (0-100)
+  const [logoY, setLogoY] = useState(50); // percentage (0-100)
+  const [logoScale, setLogoScale] = useState(100); // percentage (10-300)
+  const [logoRotation, setLogoRotation] = useState(0); // degrees (-180 to 180)
+  const [logoOpacity, setLogoOpacity] = useState(90); // percentage (0-100)
+  const [logoBlend, setLogoBlend] = useState<string>('normal'); // normal, multiply, screen, overlay, soft-light
+  const [logoColorMode, setLogoColorMode] = useState<'original' | 'white' | 'black'>('original');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -515,6 +524,110 @@ Requirements for the generated prompt:
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleDownloadComposite = () => {
+    if (!generatedImage || !logoSrc) return;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const bgImg = new Image();
+    const logoImg = new Image();
+
+    let bgLoaded = false;
+    let logoLoaded = false;
+
+    const drawComposite = () => {
+      if (!bgLoaded || !logoLoaded) return;
+
+      // Set canvas dimensions to match the generated AI image
+      canvas.width = bgImg.naturalWidth || 1024;
+      canvas.height = bgImg.naturalHeight || 1024;
+
+      // Draw background AI mockup
+      ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+      // Save context state
+      ctx.save();
+
+      // Configure blend mode
+      const blendMap: Record<string, string> = {
+        normal: 'source-over',
+        multiply: 'multiply',
+        screen: 'screen',
+        overlay: 'overlay',
+        'soft-light': 'soft-light'
+      };
+      ctx.globalCompositeOperation = (blendMap[logoBlend] || 'source-over') as GlobalCompositeOperation;
+
+      // Configure opacity
+      ctx.globalAlpha = logoOpacity / 100;
+
+      // Configure filters (white, black, original)
+      if (logoColorMode === 'white') {
+        ctx.filter = 'brightness(0) invert(1)';
+      } else if (logoColorMode === 'black') {
+        ctx.filter = 'brightness(0)';
+      } else {
+        ctx.filter = 'none';
+      }
+
+      // Calculate position in pixels
+      const xPx = (logoX / 100) * canvas.width;
+      const yPx = (logoY / 100) * canvas.height;
+
+      // Translate, rotate, and scale
+      ctx.translate(xPx, yPx);
+      ctx.rotate((logoRotation * Math.PI) / 180);
+
+      // Base width is 20% of canvas width, scaled by logoScale
+      const baseWidth = canvas.width * 0.20;
+      const drawWidth = baseWidth * (logoScale / 100);
+      const drawHeight = drawWidth * (logoImg.naturalHeight / (logoImg.naturalWidth || 1));
+
+      // Draw the logo centered at the translation point
+      ctx.drawImage(logoImg, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+
+      // Restore context
+      ctx.restore();
+
+      // Trigger download
+      try {
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const link = document.createElement('a');
+        link.download = `mockup-${aiPromptType}-${activeBrand?.slug || 'logo'}-final.jpg`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error('[VisualLab] Failed to generate download:', err);
+        // Fallback to downloading raw background image if canvas fails (CORS etc.)
+        const link = document.createElement('a');
+        link.download = `mockup-${aiPromptType}-${activeBrand?.slug || 'logo'}-bg.jpg`;
+        link.href = generatedImage;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    };
+
+    bgImg.crossOrigin = 'anonymous';
+    logoImg.crossOrigin = 'anonymous';
+
+    bgImg.onload = () => {
+      bgLoaded = true;
+      drawComposite();
+    };
+    logoImg.onload = () => {
+      logoLoaded = true;
+      drawComposite();
+    };
+
+    bgImg.src = generatedImage;
+    logoImg.src = logoSrc;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1526,25 +1639,167 @@ Requirements for the generated prompt:
                         </div>
                       )}
 
-                      {/* Generated Image Result Card */}
+                      {/* Generated Image Result Card with Interactive Logo Overlay Editor */}
                       {generatedImage && (
-                        <div className="border border-slate-800 rounded-lg p-3 bg-slate-950/60 space-y-3 animate-fadeIn">
-                          <div className="flex justify-between items-center select-none text-[9px] font-sans">
-                            <span className="font-bold text-white">Imagen Generada</span>
-                            <a 
-                              href={generatedImage} 
-                              download={`mockup-${aiPromptType}-${activeBrand?.slug || 'logo'}.jpg`}
-                              className="text-violet-400 hover:text-violet-300 font-bold underline cursor-pointer"
+                        <div className="border border-slate-800 rounded-lg p-4 bg-slate-950/60 space-y-4 animate-fadeIn">
+                          <div className="flex justify-between items-center select-none text-[9.5px] font-sans">
+                            <div>
+                              <span className="font-bold text-white block">Maquetación del Logotipo sobre el Mockup</span>
+                              <span className="text-[8px] text-slate-500">Ajusta la posición y escala de tu logotipo original sobre la imagen.</span>
+                            </div>
+                            <button 
+                              onClick={handleDownloadComposite}
+                              className="text-violet-400 hover:text-violet-300 font-bold underline cursor-pointer hover:scale-105 transition-transform"
                             >
-                              Descargar JPG
-                            </a>
+                              Descargar Mockup Final JPG
+                            </button>
                           </div>
-                          <div className="border border-slate-900 rounded-lg overflow-hidden bg-slate-900 flex justify-center items-center shadow-inner">
-                            <img 
-                              src={generatedImage} 
-                              alt="Mockup Generado por IA" 
-                              className="max-h-[300px] w-full object-contain" 
-                            />
+
+                          {/* Preview container with absolute logo positioning */}
+                          <div className="border border-slate-900 rounded-lg overflow-hidden bg-slate-950 flex justify-center items-center shadow-inner relative max-h-[340px]">
+                            <div className="relative inline-block w-full overflow-hidden select-none">
+                              {/* Background AI mockup image */}
+                              <img 
+                                src={generatedImage} 
+                                alt="Mockup Generado por IA" 
+                                className="w-full object-contain block max-h-[340px] mx-auto" 
+                              />
+
+                              {/* Overlaid Logo */}
+                              {logoSrc && (
+                                <img 
+                                  src={logoSrc} 
+                                  alt="Logo superpuesto" 
+                                  className="absolute pointer-events-none transition-all duration-75"
+                                  style={{
+                                    left: `${logoX}%`,
+                                    top: `${logoY}%`,
+                                    transform: `translate(-50%, -50%) scale(${logoScale / 100}) rotate(${logoRotation}deg)`,
+                                    opacity: logoOpacity / 100,
+                                    mixBlendMode: logoBlend as any,
+                                    filter: logoColorMode === 'white' ? 'brightness(0) invert(1)' : logoColorMode === 'black' ? 'brightness(0)' : 'none',
+                                    maxWidth: '30%', // clamp logo size relative to card
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Control panel for overlay adjustments */}
+                          <div className="bg-slate-900/60 border border-slate-800/80 rounded-lg p-3 space-y-2.5 text-[9.5px] font-sans">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                              {/* X position */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-slate-400">
+                                  <span>Posición Horizontal (X):</span>
+                                  <span className="font-mono text-slate-300">{logoX}%</span>
+                                </div>
+                                <input 
+                                  type="range" 
+                                  min="0" 
+                                  max="100" 
+                                  value={logoX} 
+                                  onChange={(e) => setLogoX(Number(e.target.value))}
+                                  className="w-full accent-violet-600 cursor-pointer h-1 bg-slate-800 rounded"
+                                />
+                              </div>
+
+                              {/* Y position */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-slate-400">
+                                  <span>Posición Vertical (Y):</span>
+                                  <span className="font-mono text-slate-300">{logoY}%</span>
+                                </div>
+                                <input 
+                                  type="range" 
+                                  min="0" 
+                                  max="100" 
+                                  value={logoY} 
+                                  onChange={(e) => setLogoY(Number(e.target.value))}
+                                  className="w-full accent-violet-600 cursor-pointer h-1 bg-slate-800 rounded"
+                                />
+                              </div>
+
+                              {/* Scale */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-slate-400">
+                                  <span>Tamaño / Escala:</span>
+                                  <span className="font-mono text-slate-300">{logoScale}%</span>
+                                </div>
+                                <input 
+                                  type="range" 
+                                  min="10" 
+                                  max="300" 
+                                  value={logoScale} 
+                                  onChange={(e) => setLogoScale(Number(e.target.value))}
+                                  className="w-full accent-violet-600 cursor-pointer h-1 bg-slate-800 rounded"
+                                />
+                              </div>
+
+                              {/* Rotation */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-slate-400">
+                                  <span>Rotación del Logotipo:</span>
+                                  <span className="font-mono text-slate-300">{logoRotation}°</span>
+                                </div>
+                                <input 
+                                  type="range" 
+                                  min="-180" 
+                                  max="180" 
+                                  value={logoRotation} 
+                                  onChange={(e) => setLogoRotation(Number(e.target.value))}
+                                  className="w-full accent-violet-600 cursor-pointer h-1 bg-slate-800 rounded"
+                                />
+                              </div>
+
+                              {/* Opacity */}
+                              <div className="space-y-1 col-span-2">
+                                <div className="flex justify-between text-slate-400">
+                                  <span>Opacidad:</span>
+                                  <span className="font-mono text-slate-300">{logoOpacity}%</span>
+                                </div>
+                                <input 
+                                  type="range" 
+                                  min="0" 
+                                  max="100" 
+                                  value={logoOpacity} 
+                                  onChange={(e) => setLogoOpacity(Number(e.target.value))}
+                                  className="w-full accent-violet-600 cursor-pointer h-1 bg-slate-800 rounded"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 border-t border-slate-800/80 pt-2.5">
+                              {/* Color mode */}
+                              <div className="flex flex-col gap-1">
+                                <span className="text-slate-400 font-semibold">Tinta del Logotipo:</span>
+                                <select
+                                  value={logoColorMode}
+                                  onChange={(e) => setLogoColorMode(e.target.value as any)}
+                                  className="bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-[9px] text-slate-300 focus:outline-none focus:border-violet-500 cursor-pointer"
+                                >
+                                  <option value="original">Color Original (Logo Cargado)</option>
+                                  <option value="white">Blanco Puro (Negativo)</option>
+                                  <option value="black">Negro Puro</option>
+                                </select>
+                              </div>
+
+                              {/* Blend mode */}
+                              <div className="flex flex-col gap-1">
+                                <span className="text-slate-400 font-semibold">Modo de Fusión (Blend):</span>
+                                <select
+                                  value={logoBlend}
+                                  onChange={(e) => setLogoBlend(e.target.value)}
+                                  className="bg-slate-950 border border-slate-800 rounded px-1.5 py-1 text-[9px] text-slate-300 focus:outline-none focus:border-violet-500 cursor-pointer"
+                                >
+                                  <option value="normal">Normal (Por defecto)</option>
+                                  <option value="multiply">Multiplicar (Para soportes claros)</option>
+                                  <option value="screen">Trama / Screen (Para soportes oscuros)</option>
+                                  <option value="overlay">Superponer / Overlay</option>
+                                  <option value="soft-light">Luz Suave</option>
+                                </select>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
