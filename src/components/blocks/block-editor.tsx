@@ -87,7 +87,11 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
       if (cancelled) return;
       const block = blocks.find(b => b.block_id === blockId);
       if (block) {
-        setContent(block.content_md || '');
+        let rawContent = block.content_md || '';
+        if (blockId === 7) {
+          rawContent = rawContent.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
+        }
+        setContent(rawContent);
         setStatus(block.status);
       } else {
         setContent('');
@@ -103,7 +107,21 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
   const save = useCallback(async (text: string) => {
     setSaveState('saving');
     try {
-      const result = await db.updateBrandBlock(brandId, blockId, { content_md: text });
+      let fullText = text;
+
+      // If editing block 7, read the latest mockups from the database to merge them and avoid overwriting
+      if (blockId === 7) {
+        const blocks = await db.getBrandBlocks(brandId);
+        const latestBlock = blocks.find(b => b.block_id === 7);
+        const latestRaw = latestBlock?.content_md || '';
+        const matches = latestRaw.match(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g) || [];
+        const latestMockupsStr = matches.join('\n');
+        if (latestMockupsStr) {
+          fullText = text.trim() ? `${text.trim()}\n\n${latestMockupsStr.trim()}` : latestMockupsStr.trim();
+        }
+      }
+
+      const result = await db.updateBrandBlock(brandId, blockId, { content_md: fullText });
       if (!result) {
         console.error('[BlockEditor] Save returned undefined - update may have failed');
         setSaveState('idle');
