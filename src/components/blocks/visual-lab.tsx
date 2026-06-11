@@ -190,7 +190,7 @@ function getContrastRatio(hex1: string, hex2: string): number {
   return (bright + 0.05) / (dark + 0.05);
 }
 
-// Extraction algorithm via canvas pixel sampling
+// Extraction algorithm via canvas pixel sampling with frequency thresholding and merging
 function extractColorsFromImage(imgElement: HTMLImageElement): string[] {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -203,6 +203,7 @@ function extractColorsFromImage(imgElement: HTMLImageElement): string[] {
 
   const imgData = ctx.getImageData(0, 0, scale, scale).data;
   const colorCounts: Record<string, number> = {};
+  let totalValidPixels = 0;
 
   for (let i = 0; i < imgData.length; i += 4) {
     const r = imgData[i];
@@ -213,39 +214,66 @@ function extractColorsFromImage(imgElement: HTMLImageElement): string[] {
     // Ignore transparent pixels
     if (a < 50) continue;
 
-    // Ignore very dark and very bright pixels unless binned
+    // Ignore near-white background pixels to focus on corporate identity colors
     const isWhite = r > 240 && g > 240 && b > 240;
-    const isBlack = r < 20 && g < 20 && b < 20;
+    if (isWhite) continue;
 
-    const roundFactor = 24;
+    totalValidPixels++;
+
+    const roundFactor = 16;
     const cr = Math.round(r / roundFactor) * roundFactor;
     const cg = Math.round(g / roundFactor) * roundFactor;
     const cb = Math.round(b / roundFactor) * roundFactor;
 
     const key = `${Math.min(255, cr)},${Math.min(255, cg)},${Math.min(255, cb)}`;
-    if (!isWhite && !isBlack) {
-      colorCounts[key] = (colorCounts[key] || 0) + 1;
-    } else {
-      colorCounts[key] = (colorCounts[key] || 0) + 0.1; // Low weight for black/white
+    colorCounts[key] = (colorCounts[key] || 0) + 1;
+  }
+
+  if (totalValidPixels === 0) {
+    return ['#7361a8'];
+  }
+
+  // Convert to color list
+  let list = Object.entries(colorCounts).map(([key, count]) => {
+    const [r, g, b] = key.split(',').map(Number);
+    const hex = '#' + [r, g, b].map(x => {
+      const h = x.toString(16);
+      return h.length === 1 ? '0' + h : h;
+    }).join('');
+    return { hex, count, r, g, b };
+  }).sort((a, b) => b.count - a.count);
+
+  // Merge similar colors (Euclidean distance < 45)
+  const mergedList: typeof list = [];
+  for (const item of list) {
+    let matched = false;
+    for (const merged of mergedList) {
+      const dist = Math.sqrt(
+        Math.pow(item.r - merged.r, 2) +
+        Math.pow(item.g - merged.g, 2) +
+        Math.pow(item.b - merged.b, 2)
+      );
+      if (dist < 45) {
+        merged.count += item.count;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) {
+      mergedList.push(item);
     }
   }
 
-  const sorted = Object.entries(colorCounts)
-    .sort((a, b) => b[1] - a[1])
-    .map(([key]) => {
-      const [r, g, b] = key.split(',').map(Number);
-      return '#' + [r, g, b].map(x => {
-        const hex = x.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('');
-    });
+  // Sort again after merge
+  mergedList.sort((a, b) => b.count - a.count);
 
-  // Top 4 dominant colors
-  const defaults = ['#7361a8', '#e3599c', '#36a8e0', '#85bf57'];
-  const results = sorted.slice(0, 4);
-  while (results.length < 4) {
-    const nextDefault = defaults.find(d => !results.includes(d));
-    results.push(nextDefault || '#7361a8');
+  // Filter out colors below a 3% threshold of the logo pixels
+  const threshold = totalValidPixels * 0.03;
+  const filtered = mergedList.filter(item => item.count >= threshold);
+
+  let results = filtered.map(item => item.hex).slice(0, 4);
+  if (results.length === 0 && mergedList.length > 0) {
+    results = [mergedList[0].hex];
   }
   return results;
 }
@@ -272,7 +300,9 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   // Mockups states
   const [cardFlipped, setCardFlipped] = useState(false);
   const [mobileTab, setMobileTab] = useState<'splash' | 'home'>('splash');
-  const [mockupCategory, setMockupCategory] = useState<'card' | 'mobile' | 'letter' | 'merch'>('card');
+  const [mockupCategory, setMockupCategory] = useState<'card' | 'mobile' | 'letter' | 'merch' | 'ai'>('card');
+  const [aiPromptType, setAiPromptType] = useState<'card' | 'mobile' | 'letter' | 'tshirt' | 'tote'>('card');
+  const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [logoDimensions, setLogoDimensions] = useState({ width: 0, height: 0 });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -739,6 +769,20 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
                 <Shirt className="h-3 w-3" />
                 Merch
               </button>
+              <button
+                onClick={() => {
+                  setMockupCategory('ai');
+                  setCopiedPrompt(false);
+                }}
+                className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold cursor-pointer transition-all ${
+                  mockupCategory === 'ai' 
+                    ? 'bg-violet-600 text-white shadow-sm' 
+                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Inspiración IA
+              </button>
             </div>
           </div>
 
@@ -1080,6 +1124,106 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
                       <span className="text-[9px] text-slate-500 font-semibold mt-2.5">Camiseta de Marca</span>
                     </div>
 
+                  </div>
+                )}
+
+                {/* 5. MOCKUP: AI IMAGE PROMPT GENERATOR */}
+                {mockupCategory === 'ai' && (
+                  <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-5 text-left text-slate-300">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Sparkles className="h-5 w-5 text-violet-400 shrink-0" />
+                      <h5 className="text-sm font-bold text-white">Generador de Prompts para Mockups IA</h5>
+                    </div>
+
+                    <p className="text-[10px] leading-relaxed text-slate-400 mb-4">
+                      Las IA generadoras de imágenes (como Midjourney o Imagen 3) no pueden copiar y pegar tu logotipo de forma idéntica sobre objetos tridimensionales. Por ello, este generador diseña un <strong>prompt técnico detallado en inglés</strong> que describe tu marca, arquetipos y paleta de colores para conseguir el diseño más fiel posible.
+                    </p>
+
+                    {/* Template Selector */}
+                    <div className="flex flex-wrap gap-1.5 mb-4 select-none">
+                      {(['card', 'mobile', 'letter', 'tshirt', 'tote'] as const).map(type => {
+                        const labels: Record<string, string> = {
+                          card: 'Tarjeta Comercial',
+                          mobile: 'App Móvil',
+                          letter: 'Papelería A4',
+                          tshirt: 'Camiseta Merch',
+                          tote: 'Bolso Tote'
+                        };
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              setAiPromptType(type);
+                              setCopiedPrompt(false);
+                            }}
+                            className={`text-[9px] font-semibold px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                              aiPromptType === type 
+                                ? 'bg-violet-600/20 text-violet-300 border border-violet-500/40' 
+                                : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {labels[type]}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Compile the customized prompt */}
+                    {(() => {
+                      const brandName = activeBrand?.name || 'iARTESANA';
+                      const primaryName = getClosestColorName(primaryColor).name;
+                      const secondaryName = getClosestColorName(secondaryColor).name;
+
+                      let promptText = '';
+                      if (aiPromptType === 'card') {
+                        promptText = `A photorealistic studio mockup of a premium business card for the brand '${brandName}'. The card is made of thick textured cotton paper, colored in ${primaryName} (${primaryColor}) and ${secondaryName} (${secondaryColor}). Minimalist layout, modern typography. Studio lighting, soft shadows, high detail, 8k resolution, volumetric lighting.`;
+                      } else if (aiPromptType === 'mobile') {
+                        promptText = `A modern borderless smartphone displaying a premium mobile app splash screen for the brand '${brandName}'. The interface is styled with a sleek dark glassmorphism design, featuring ${primaryName} (${primaryColor}) as the background and accent glowing lines in ${secondaryName} (${secondaryColor}). Clean logo icon in the center. Volumetric lighting, high fidelity, 3D render style, clean interface design.`;
+                      } else if (aiPromptType === 'letter') {
+                        promptText = `A flatlay mockup of corporate stationery for the brand '${brandName}'. Includes an A4 letterhead invoice, an envelope, and a notebook on a clean stone desk. The color theme is ${primaryName} (${primaryColor}) with accent touches of ${secondaryName} (${secondaryColor}). Clean, elegant, premium brand identity, soft natural light, photorealistic, 8k.`;
+                      } else if (aiPromptType === 'tshirt') {
+                        promptText = `A professional product photograph of a black premium cotton t-shirt flat on a wooden surface, with a minimalist graphic print on the chest reading '${brandName}' alongside a custom geometric logo symbol. The symbol is printed in high quality in ${primaryName} (${primaryColor}) and ${secondaryName} (${secondaryColor}). Clean graphic design, studio product photography, commercial advertisement.`;
+                      } else if (aiPromptType === 'tote') {
+                        promptText = `An editorial lifestyle photograph of a natural canvas tote bag hanging on a simple wooden hook. Printed on the front is a large clean graphic logo for the brand '${brandName}' in ${primaryName} (${primaryColor}) and ${secondaryName} (${secondaryColor}). Warm morning sunlight, soft organic shadows, editorial photography, high detail.`;
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          <div className="relative">
+                            <textarea
+                              readOnly
+                              value={promptText}
+                              rows={4}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-[10px] leading-relaxed font-mono resize-none focus:outline-none focus:border-slate-700 text-slate-300"
+                            />
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(promptText);
+                                setCopiedPrompt(true);
+                                  setTimeout(() => setCopiedPrompt(false), 2000);
+                              }}
+                              className="absolute bottom-2 right-2 flex items-center gap-1 px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[8px] font-bold text-white transition-colors cursor-pointer"
+                            >
+                              {copiedPrompt ? (
+                                <>
+                                  <Check className="h-3 w-3 text-emerald-400" />
+                                  <span>Copiado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3 w-3" />
+                                  <span>Copiar Prompt</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          
+                          <div className="bg-slate-950 border border-slate-800/80 rounded-lg p-2.5 text-[9px] text-slate-500 leading-normal">
+                            💡 <strong>Instrucciones:</strong> Copia el prompt en inglés generado arriba y pégalo en tu generador de imágenes favorito (como Midjourney, Imagen 3 o DALL-E) para obtener maquetas fotorrealistas de alta gama inspiradas en tu identidad corporativa.
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </>
