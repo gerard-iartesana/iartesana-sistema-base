@@ -422,6 +422,27 @@ export function Presentation() {
 
     return (
       <div className="fixed inset-0 z-[100] flex flex-col bg-white">
+        {/* Top Progress Line (13 segments representing block validation progress) */}
+        <div className="flex h-1 w-full bg-slate-100 shrink-0">
+          {BLOCK_DEFINITIONS.map((def, idx) => {
+            const block = blocks.find(b => b.block_id === def.id);
+            const isValidated = block?.status === 'validado';
+            const stage = STAGES.find(s => s.key === def.stage);
+            
+            return (
+              <div 
+                key={def.id}
+                className="flex-1 h-full transition-all duration-300"
+                style={{
+                  backgroundColor: isValidated ? (stage?.color || '#8B5CF6') : '#e2e8f0',
+                  borderRight: idx < 12 ? '1px solid #ffffff' : 'none'
+                }}
+                title={`${def.id}. ${def.title} (${isValidated ? 'Validado' : 'Pendiente'})`}
+              />
+            );
+          })}
+        </div>
+
         {/* Top bar */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
           <div className="flex items-center gap-3">
