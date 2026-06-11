@@ -59,7 +59,7 @@ const statusConfig: Record<string, { label: string; dotColor: string; bgColor: s
 export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSelectBlock, brandBlocks }: BlockNavProps) {
   const stages = [
     ...ORIGINAL_STAGES,
-    { key: 'E' as Stage, label: 'Exportar y Compartir', color: '#36a8e0', bgColor: 'bg-slate-50', borderColor: 'border-slate-300' }
+    { key: 'E' as Stage, label: 'Exportar y Compartir', color: '#ffffff', bgColor: 'bg-slate-50', borderColor: 'border-slate-300' }
   ];
 
   return (
@@ -101,7 +101,7 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
             <button
               onClick={() => onSelectStage(stage.key)}
               className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-semibold transition-colors ${
-                isExpanded ? 'bg-slate-50/80 text-slate-800' : 'text-slate-500 hover:bg-slate-50/50 hover:text-slate-700'
+                isExpanded ? 'bg-slate-50/80 text-white' : 'text-slate-300 hover:bg-slate-50/50 hover:text-white'
               }`}
             >
               <div className="flex items-center gap-2.5 min-w-0">
@@ -136,10 +136,10 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
                     <button
                       key={block.id}
                       onClick={() => onSelectBlock(block.id)}
-                      className={`flex items-center gap-2.5 py-2 pl-9 pr-4 text-left transition-all ${
+                      className={`flex items-center gap-2.5 py-2 pl-5 pr-4 text-left transition-all ${
                         isSelected
-                          ? 'bg-white font-semibold text-slate-800 border-l-2'
-                          : 'text-slate-600 hover:bg-white/40 hover:text-slate-800 border-l-2 border-transparent'
+                          ? 'bg-white font-semibold text-white border-l-2'
+                          : 'text-slate-300 hover:bg-white/10 hover:text-white border-l-2 border-transparent'
                       }`}
                       style={isSelected ? { borderLeftColor: stage.color } : undefined}
                     >

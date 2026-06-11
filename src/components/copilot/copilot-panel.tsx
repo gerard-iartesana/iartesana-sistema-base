@@ -9,7 +9,7 @@ import { db } from '@/lib/db/local-storage';
 import { useBrand } from '@/lib/contexts/brand-context';
 import type { AgentName, AgentRun } from '@/lib/db/types';
 
-interface AgentConfig {
+export interface AgentConfig {
   key: AgentName;
   label: string;
   icon: React.ReactNode;
@@ -19,7 +19,7 @@ interface AgentConfig {
   color: string;
 }
 
-const AGENTS: AgentConfig[] = [
+export const AGENTS: AgentConfig[] = [
   {
     key: 'historiador',
     label: 'Historiador',
@@ -58,10 +58,15 @@ const AGENTS: AgentConfig[] = [
   },
 ];
 
-export function CopilotPanel() {
+export interface CopilotPanelProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  selectedAgent: AgentName | null;
+  setSelectedAgent: (agent: AgentName | null) => void;
+}
+
+export function CopilotPanel({ isOpen, setIsOpen, selectedAgent, setSelectedAgent }: CopilotPanelProps) {
   const { activeBrand } = useBrand();
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState<AgentName | null>(null);
   const [inputText, setInputText] = useState('');
   const [isRunning, setIsRunning] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -91,7 +96,7 @@ export function CopilotPanel() {
     setSelectedAgent(null);
     setInputText('');
     setResult(null);
-  }, [activeBrand]);
+  }, [activeBrand, setSelectedAgent]);
 
   const agent = selectedAgent ? AGENTS.find(a => a.key === selectedAgent) : null;
 

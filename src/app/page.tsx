@@ -9,14 +9,15 @@ import { BlockEditor } from '@/components/blocks/block-editor';
 import { NamingLab } from '@/components/blocks/naming-lab';
 import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
 import { RulesEditor } from '@/components/blocks/rules-editor';
-import { CopilotPanel } from '@/components/copilot/copilot-panel';
+import { CopilotPanel, AGENTS } from '@/components/copilot/copilot-panel';
 import { MarkdownExport } from '@/components/export/markdown-export';
 import { PromptGlobal } from '@/components/export/prompt-global';
 import { LiveLink } from '@/components/export/live-link';
 import { Presentation } from '@/components/export/presentation';
 import { db } from '@/lib/db/local-storage';
-import { BrandBlock, Marker, Stage } from '@/lib/db/types';
-import { LogOut, Sparkles } from 'lucide-react';
+import { BrandBlock, Marker, Stage, AgentName } from '@/lib/db/types';
+import { LogOut, Sparkles, Clock, AlertTriangle } from 'lucide-react';
+import { getStageForBlock } from '@/lib/data/block-definitions';
 
 export default function HomePage() {
   const { user, isLoading: authLoading, logout } = useAuth();
@@ -26,6 +27,8 @@ export default function HomePage() {
   const [brandBlocks, setBrandBlocks] = useState<BrandBlock[]>([]);
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [editorKey, setEditorKey] = useState(0);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const [copilotAgent, setCopilotAgent] = useState<AgentName | null>(null);
 
   // Load brand blocks and markers when active brand changes
   useEffect(() => {
@@ -55,6 +58,21 @@ export default function HomePage() {
     loadData();
   };
 
+  const totalBlocks = 13;
+  const validatedCount = brandBlocks.filter(b => b.status === 'validado').length;
+  const percentage = Math.round((validatedCount / totalBlocks) * 100);
+  const unresolvedMarkers = markers.filter(m => !m.resolved);
+  const pendienteCount = unresolvedMarkers.filter(m => m.type === 'pendiente').length;
+  const verificarCount = unresolvedMarkers.filter(m => m.type === 'verificar').length;
+
+  const handleSelectBlock = (blockId: number) => {
+    setSelectedBlockId(blockId);
+    const stage = getStageForBlock(blockId);
+    if (stage) {
+      setSelectedStage(stage);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -77,21 +95,55 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex bg-slate-50">
       {/* Sidebar Left */}
-      <aside className="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0 h-screen sticky top-0">
+      <aside className="w-72 border-r border-slate-200 bg-white flex flex-col shrink-0 h-screen sticky top-0">
         {/* Header */}
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 flex flex-col gap-2">
           <div className="flex items-center gap-2.5">
             <img src="/assets/logo/logo.svg" alt="iARTESANA Logo" className="w-8 h-8 object-contain shrink-0" />
             <div>
-              <h1 className="text-sm font-bold text-slate-800">Sistema Base</h1>
+              <h1 className="text-lg font-bold text-slate-800">Sistema Base</h1>
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Núcleo de Contexto</p>
             </div>
           </div>
-        </div>
 
-        {/* Brand Selector */}
-        <div className="px-4 py-3">
-          <BrandSelector blocks={brandBlocks} markers={markers} />
+          {/* Compact progress bar under brand logo/title */}
+          {activeBrand && (
+            <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-400 font-medium select-none">
+              {/* Progress percentage and count */}
+              <div className="flex items-center gap-1 shrink-0">
+                <span className="text-slate-300 font-semibold">{percentage}%</span>
+                <span className="text-slate-500">|</span>
+                <span className="text-slate-400">{validatedCount}/{totalBlocks}</span>
+              </div>
+
+              {/* Thin progress bar */}
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-800">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-500"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+
+              {/* Tiny markers indicators */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {pendienteCount > 0 && (
+                  <span className="flex items-center gap-0.5 text-amber-500 font-semibold" title="Pendientes">
+                    <Clock className="h-3 w-3" />
+                    <span>{pendienteCount}</span>
+                  </span>
+                )}
+                {verificarCount > 0 && (
+                  <span className="flex items-center gap-0.5 text-red-500 font-semibold" title="A verificar">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>{verificarCount}</span>
+                  </span>
+                )}
+                {pendienteCount === 0 && verificarCount === 0 && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" title="Al día" />
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Block Navigation */}
@@ -102,7 +154,7 @@ export default function HomePage() {
                 selectedStage={selectedStage}
                 selectedBlockId={selectedBlockId}
                 onSelectStage={setSelectedStage}
-                onSelectBlock={setSelectedBlockId}
+                onSelectBlock={handleSelectBlock}
                 brandBlocks={brandBlocks}
               />
             </div>
@@ -114,20 +166,41 @@ export default function HomePage() {
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Header Bar */}
         <header className="h-14 border-b border-slate-200 bg-white flex items-center justify-between px-6 shrink-0 z-30">
-          {/* Left side: Active brand metadata or name */}
-          <div className="flex items-center gap-2">
-            {activeBrand ? (
+          {/* Left side: AI Copilots */}
+          <div className="flex items-center gap-3">
+            {activeBrand && (
               <>
-                <span className="text-sm font-semibold text-slate-800">{activeBrand.name}</span>
-                <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">v{activeBrand.doc_version}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1 select-none">Copilotos IA:</span>
+                <div className="flex gap-1.5">
+                  {AGENTS.map(agent => (
+                    <button
+                      key={agent.key}
+                      onClick={() => {
+                        setCopilotAgent(agent.key);
+                        setIsCopilotOpen(true);
+                      }}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                        copilotAgent === agent.key && isCopilotOpen
+                          ? 'border-transparent text-white shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                      style={copilotAgent === agent.key && isCopilotOpen ? { backgroundColor: agent.color } : undefined}
+                    >
+                      {agent.icon}
+                      <span>{agent.label}</span>
+                    </button>
+                  ))}
+                </div>
               </>
-            ) : (
-              <span className="text-sm font-semibold text-slate-400">iARTESANA app</span>
             )}
           </div>
 
-          {/* Right side: User Avatar + Logout Button */}
-          <div className="flex items-center gap-3 select-none">
+          {/* Right side: Brand Selector + User Avatar + Logout Button */}
+          <div className="flex items-center gap-4 select-none">
+            <div className="w-56 shrink-0">
+              <BrandSelector blocks={brandBlocks} markers={markers} hideProgress={true} />
+            </div>
+
             {/* User Avatar */}
             {user.avatar_url ? (
               <img
@@ -199,8 +272,13 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Copilot Panel - manages its own open/close state */}
-              <CopilotPanel />
+              {/* Copilot Panel */}
+              <CopilotPanel
+                isOpen={isCopilotOpen}
+                setIsOpen={setIsCopilotOpen}
+                selectedAgent={copilotAgent}
+                setSelectedAgent={setCopilotAgent}
+              />
             </div>
           </>
         ) : (

@@ -32,6 +32,7 @@ export function getBlockById(id: number): BlockDefinition | undefined {
 }
 
 export function getStageForBlock(blockId: number): Stage | undefined {
+  if (blockId >= 101 && blockId <= 104) return 'E';
   return BLOCK_DEFINITIONS.find(b => b.id === blockId)?.stage;
 }
 

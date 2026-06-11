@@ -16,9 +16,10 @@ function slugify(text: string): string {
 interface BrandSelectorProps {
   blocks?: BrandBlock[];
   markers?: Marker[];
+  hideProgress?: boolean;
 }
 
-export function BrandSelector({ blocks, markers }: BrandSelectorProps) {
+export function BrandSelector({ blocks, markers, hideProgress = false }: BrandSelectorProps) {
   const { brands, activeBrand, setActiveBrand, refreshBrands, createBrand } = useBrand();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -161,7 +162,6 @@ export function BrandSelector({ blocks, markers }: BrandSelectorProps) {
                       backgroundColor: brand.status === 'activo' ? '#10B981' : brand.status === 'pausado' ? '#F59E0B' : '#94A3B8'
                     }} />
                     <span className="truncate font-medium">{brand.name}</span>
-                    <span className="ml-auto text-xs text-slate-400">v{brand.doc_version}</span>
                   </button>
                 ))
               )}
@@ -216,7 +216,7 @@ export function BrandSelector({ blocks, markers }: BrandSelectorProps) {
       </div>
 
       {/* Compact progress bar under brand name */}
-      {activeBrand && (
+      {activeBrand && !hideProgress && (
         <div className="mt-1.5 px-1 flex items-center justify-between gap-2.5 text-[10px] text-slate-400 font-medium select-none">
           {/* Progress percentage and count */}
           <div className="flex items-center gap-1 shrink-0">

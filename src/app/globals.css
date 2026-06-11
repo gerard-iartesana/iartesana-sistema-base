@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: dark;
   /* iARTESANA Corporate Palette */
   --color-verde: #85bf57;
   --color-azul: #36a8e0;
@@ -135,15 +136,15 @@ select.bg-slate-50, input.bg-slate-50, textarea.bg-slate-50 {
 }
 
 .text-slate-600, .text-slate-700 {
-  color: var(--color-text-secondary) !important;
+  color: #d1d5db !important; /* Light gray for body text/labels */
 }
 
 .text-slate-500 {
-  color: var(--color-text-muted) !important;
+  color: #9ca3af !important; /* Muted but visible gray */
 }
 
 .text-slate-400 {
-  color: #52525b !important; /* Brighter slate-400 for visibility in dark theme */
+  color: #a1a1aa !important; /* Zinc-400 */
 }
 
 /* Selection */
