@@ -60,6 +60,130 @@ const HeadingRenderer = ({ level, children, ...props }: any) => {
   return <Tag {...props}>{children}</Tag>;
 };
 
+interface SectionMatch {
+  iconSrc: string;
+  sectionTitle: string;
+  cleanedChildren: React.ReactNode[];
+}
+
+function matchSection(children: React.ReactNode): SectionMatch | null {
+  const childrenArray = React.Children.toArray(children);
+  if (childrenArray.length === 0) return null;
+
+  const firstChild = childrenArray[0];
+  let iconSrc = '';
+  let sectionTitle = '';
+  let restOfChildren = childrenArray;
+
+  // Case 1: First child is a <strong> element
+  if (
+    React.isValidElement(firstChild) &&
+    (firstChild.type === 'strong' ||
+      (firstChild.type as any)?.name === 'strong' ||
+      (firstChild.props as any)?.className?.includes('strong'))
+  ) {
+    const strongText = extractText((firstChild.props as any).children).trim();
+    const normalized = strongText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (normalized.startsWith('mision')) {
+      iconSrc = '/images/icono-mision.svg';
+      sectionTitle = 'Misión';
+      restOfChildren = childrenArray.slice(1);
+    } else if (normalized.startsWith('vision')) {
+      iconSrc = '/images/icono-vision.svg';
+      sectionTitle = 'Visión';
+      restOfChildren = childrenArray.slice(1);
+    } else if (normalized.startsWith('valores')) {
+      iconSrc = '/images/icono-valores.svg';
+      sectionTitle = 'Valores';
+      restOfChildren = childrenArray.slice(1);
+    }
+  }
+  // Case 2: First child is a plain text string
+  else if (typeof firstChild === 'string') {
+    const text = firstChild.trim();
+    const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (normalized.startsWith('mision')) {
+      iconSrc = '/images/icono-mision.svg';
+      sectionTitle = 'Misión';
+      const cleanedText = text.replace(/^[Mm]isi[oó]n[\s\.:\-]*/, '');
+      restOfChildren = [cleanedText, ...childrenArray.slice(1)];
+    } else if (normalized.startsWith('vision')) {
+      iconSrc = '/images/icono-vision.svg';
+      sectionTitle = 'Visión';
+      const cleanedText = text.replace(/^[Vv]isi[oó]n[\s\.:\-]*/, '');
+      restOfChildren = [cleanedText, ...childrenArray.slice(1)];
+    } else if (normalized.startsWith('valores')) {
+      iconSrc = '/images/icono-valores.svg';
+      sectionTitle = 'Valores';
+      const cleanedText = text.replace(/^[Vv]alores[\s\.:\-]*/, '');
+      restOfChildren = [cleanedText, ...childrenArray.slice(1)];
+    }
+  }
+
+  if (iconSrc) {
+    // Clean up any leading dot, colon, or space from the remaining content
+    const cleaned = [...restOfChildren];
+    if (cleaned.length > 0 && typeof cleaned[0] === 'string') {
+      cleaned[0] = cleaned[0].replace(/^[\s\.\:\-]*/, '');
+    }
+    return {
+      iconSrc,
+      sectionTitle,
+      cleanedChildren: cleaned,
+    };
+  }
+
+  return null;
+}
+
+const ParagraphRenderer = ({ children, ...props }: any) => {
+  const match = matchSection(children);
+  if (match) {
+    return (
+      <div className="mt-8 mb-6 first:mt-4">
+        <div className="flex items-center gap-3 mb-2.5 select-none">
+          <img
+            src={match.iconSrc}
+            alt={match.sectionTitle}
+            className="w-10 h-10 opacity-50 object-contain shrink-0"
+          />
+          <span className="text-xl font-bold tracking-tight text-white uppercase">
+            {match.sectionTitle}
+          </span>
+        </div>
+        <p className="text-base leading-relaxed pl-[52px] text-slate-300 m-0">
+          {match.cleanedChildren}
+        </p>
+      </div>
+    );
+  }
+  return <p {...props}>{children}</p>;
+};
+
+const LiRenderer = ({ children, ...props }: any) => {
+  const match = matchSection(children);
+  if (match) {
+    return (
+      <li className="list-none mt-8 mb-6 first:mt-4">
+        <div className="flex items-center gap-3 mb-2.5 select-none">
+          <img
+            src={match.iconSrc}
+            alt={match.sectionTitle}
+            className="w-10 h-10 opacity-50 object-contain shrink-0"
+          />
+          <span className="text-xl font-bold tracking-tight text-white uppercase">
+            {match.sectionTitle}
+          </span>
+        </div>
+        <p className="text-base leading-relaxed pl-[52px] text-slate-300 m-0">
+          {match.cleanedChildren}
+        </p>
+      </li>
+    );
+  }
+  return <li {...props}>{children}</li>;
+};
+
 export function Presentation() {
   const { activeBrand } = useBrand();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -169,8 +293,8 @@ export function Presentation() {
         </div>
 
         {/* Slide content */}
-        <div className="flex flex-1 items-center justify-center overflow-hidden px-16 py-12">
-          <div className="w-full max-w-3xl">
+        <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
+          <div className="w-full max-w-3xl my-auto">
             {/* Block number and stage */}
             <div className="mb-4 flex items-center gap-3">
               <span
@@ -198,7 +322,7 @@ export function Presentation() {
             <p className="mb-6 text-base text-slate-400">{blockDef.description}</p>
 
             {/* Content */}
-            <div className="max-h-[50vh] overflow-y-auto pr-2">
+            <div className="pr-2">
               {content.trim() ? (
                 <div className="markdown-preview max-w-none">
                   <ReactMarkdown
@@ -226,6 +350,8 @@ export function Presentation() {
                       h4: (props) => <HeadingRenderer level={4} {...props} />,
                       h5: (props) => <HeadingRenderer level={5} {...props} />,
                       h6: (props) => <HeadingRenderer level={6} {...props} />,
+                      p: (props) => <ParagraphRenderer {...props} />,
+                      li: (props) => <LiRenderer {...props} />,
                     }}
                   >
                     {content
