@@ -196,7 +196,7 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
 
   return (
     <div className="w-full flex flex-col items-center select-none">
-      <svg viewBox="0 0 500 500" className="w-full max-w-[340px] h-auto">
+      <svg viewBox="0 0 500 500" className="w-full max-w-[430px] h-auto">
         {/* Outer Category Labels */}
         <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Cambio</text>
         <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Estabilidad</text>
@@ -454,7 +454,7 @@ export function Presentation() {
             <div className="pr-2">
               {blockDef.id === 4 ? (
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center mt-4">
-                  <div className="md:col-span-6 markdown-preview max-w-none">
+                  <div className="md:col-span-5 markdown-preview max-w-none">
                     <ReactMarkdown
                       components={{
                         a: ({ href, children, ...props }) => {
@@ -485,11 +485,15 @@ export function Presentation() {
                       }}
                     >
                       {content
+                        .replace(/^### Arquetipos Seleccionados\s*\n?/gi, '')
+                        .replace(/^(?:[\*\-]\s*)?\*\*(La\s+[^*]+?)\*\*\:\s*\d+\s*%\s*\n?/gim, '')
+                        .replace(/^---\s*\n?/gi, '')
+                        .trim()
                         .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
                         .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
                     </ReactMarkdown>
                   </div>
-                  <div className="md:col-span-6 flex justify-center">
+                  <div className="md:col-span-7 flex justify-center">
                     <PresentationArchetypeWheel content={content} />
                   </div>
                 </div>
