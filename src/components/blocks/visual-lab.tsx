@@ -305,6 +305,22 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [logoDimensions, setLogoDimensions] = useState({ width: 0, height: 0 });
 
+  // Google AI Studio API integration states
+  const [apiKey, setApiKey] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  // Model selection states
+  const [prompterModel, setPrompterModel] = useState<'gemini-3.5-flash' | 'gemini-2.5-flash' | 'gemini-2.0-flash' | 'gemini-1.5-flash'>('gemini-3.5-flash');
+  const [imageModel, setImageModel] = useState<'gemini-3.1-flash-image' | 'imagen-3.0-generate-002'>('gemini-3.1-flash-image');
+
+  // Prompt refinement states
+  const [userIdea, setUserIdea] = useState('Una tarjeta elegante en papel rugoso');
+  const [refinedPrompt, setRefinedPrompt] = useState('');
+  const [isRefining, setIsRefining] = useState(false);
+  const [promptError, setPromptError] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -326,6 +342,180 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
       setAnalysisReport(null);
     }
   }, [activeBrand?.logo_path, activeBrand?.id]);
+
+  // Load API Key from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedKey = localStorage.getItem('sb_gemini_api_key') || '';
+      setApiKey(savedKey);
+    }
+  }, []);
+
+  const handleSaveApiKey = (key: string) => {
+    setApiKey(key);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sb_gemini_api_key', key);
+    }
+  };
+
+  const handleRefinePrompt = async (userIdeaText: string) => {
+    if (!apiKey) {
+      setPromptError('Introduce tu API Key primero');
+      return;
+    }
+    setIsRefining(true);
+    setPromptError(null);
+    setRefinedPrompt('');
+
+    try {
+      // Get arquetipos to contextualize
+      let archetypesStr = '';
+      try {
+        const blocks = await db.getBrandBlocks(brandId);
+        const b4 = blocks.find(b => b.block_id === 4);
+        if (b4?.content_md) {
+          const selected = parseArchetypes(b4.content_md);
+          const names = Object.keys(selected);
+          if (names.length > 0) {
+            archetypesStr = names.join(' y ');
+          }
+        }
+      } catch (err) {
+        console.error('[VisualLab] Failed to fetch archetypes for prompt refiner:', err);
+      }
+
+      const brandName = activeBrand?.name || 'iARTESANA';
+      const primaryName = extractedColors[0] ? getClosestColorName(extractedColors[0]).name : 'No definido';
+      const secondaryName = extractedColors[1] ? getClosestColorName(extractedColors[1]).name : 'No definido';
+      const primaryHex = extractedColors[0] || 'No definido';
+      const secondaryHex = extractedColors[1] || 'No definido';
+      const brandColorsText = `Color principal: ${primaryName} (${primaryHex}), Color secundario: ${secondaryName} (${secondaryHex}).`;
+      const archetypesText = archetypesStr ? `Arquetipos de marca: ${archetypesStr}.` : 'Arquetipos no definidos.';
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${prompterModel}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: `You are an expert branding designer and prompt engineer. Your task is to write a highly detailed, professional, and photorealistic English text-to-image prompt to generate a mockup for the brand '${brandName}'.
+
+Brand Context:
+- Colors: ${brandColorsText}
+- Archetypes: ${archetypesText}
+- Format: ${aiPromptType} (e.g. business card, mobile screen, corporate stationery letterhead, t-shirt merch, tote bag)
+
+User's basic idea: "${userIdeaText}"
+
+Requirements for the generated prompt:
+1. Write it completely in English.
+2. Incorporate the brand's colors and visual style matching the brand context.
+3. Keep it professional, realistic, describing details like lighting, textures (cotton, wood, glass), composition, and camera settings.
+4. Output ONLY the prompt itself. Do not include any introduction, explanations, quotes, markdown formatting, or surrounding text. Just output the raw prompt.`
+                }
+              ]
+            }
+          ]
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || `Error del servidor (Código ${response.status})`);
+      }
+
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (resultText) {
+        setRefinedPrompt(resultText.trim());
+      } else {
+        throw new Error('No se recibió respuesta del modelo Prompter.');
+      }
+    } catch (err: any) {
+      console.error('[VisualLab] Prompt refinement error:', err);
+      setPromptError(err.message || 'Error de conexión. Verifica tu API Key.');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const handleGenerateImage = async (promptText: string) => {
+    if (!apiKey) {
+      setApiError('Introduce tu API Key primero');
+      return;
+    }
+    setIsGenerating(true);
+    setApiError(null);
+    setGeneratedImage(null);
+
+    try {
+      let response;
+      if (imageModel === 'gemini-3.1-flash-image') {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }],
+            generationConfig: {
+              responseModalities: ["IMAGE"]
+            }
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || `Error del servidor (Código ${response.status})`);
+        }
+
+        const imagePart = data.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+        if (imagePart?.inlineData?.data) {
+          const mimeType = imagePart.inlineData.mimeType || 'image/jpeg';
+          setGeneratedImage(`data:${mimeType};base64,${imagePart.inlineData.data}`);
+        } else {
+          throw new Error('No se recibió la imagen en la respuesta de Gemini.');
+        }
+
+      } else {
+        // imagen-3.0-generate-002
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            instances: [{ prompt: promptText }],
+            parameters: {
+              sampleCount: 1,
+              aspectRatio: "1:1",
+              outputMimeType: "image/jpeg"
+            }
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.error?.message || `Error del servidor (Código ${response.status})`);
+        }
+
+        const base64 = data.predictions?.[0]?.bytesBase64Encoded;
+        if (base64) {
+          setGeneratedImage(`data:image/jpeg;base64,${base64}`);
+        } else {
+          throw new Error('No se recibió la imagen en la respuesta de Imagen 3.');
+        }
+      }
+    } catch (err: any) {
+      console.error('[VisualLab] Image generation error:', err);
+      setApiError(err.message || 'Error de conexión. Límite de cuota excedido (Error 429) o API Key no válida.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1127,103 +1317,238 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
                   </div>
                 )}
 
-                {/* 5. MOCKUP: AI IMAGE PROMPT GENERATOR */}
+                {/* 5. MOCKUP: AI IMAGE GENERATOR AND PROMPT PANEL */}
                 {mockupCategory === 'ai' && (
                   <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-5 text-left text-slate-300">
                     <div className="flex items-center gap-2 mb-3">
                       <Sparkles className="h-5 w-5 text-violet-400 shrink-0" />
-                      <h5 className="text-sm font-bold text-white">Generador de Prompts para Mockups IA</h5>
+                      <h5 className="text-sm font-bold text-white font-sans font-extrabold">Diseño con IA (Gemini Developer API)</h5>
                     </div>
 
-                    <p className="text-[10px] leading-relaxed text-slate-400 mb-4">
-                      Las IA generadoras de imágenes (como Midjourney o Imagen 3) no pueden copiar y pegar tu logotipo de forma idéntica sobre objetos tridimensionales. Por ello, este generador diseña un <strong>prompt técnico detallado en inglés</strong> que describe tu marca, arquetipos y paleta de colores para conseguir el diseño más fiel posible.
+                    <p className="text-[10px] leading-relaxed text-slate-400 mb-4 font-sans">
+                      Los generadores de imágenes no pueden copiar tu logo directamente. Este panel utiliza <strong>Gemini 3.5 Flash</strong> para redactar un prompt en inglés que describe la papelería o formato con tus colores y arquetipos, y luego genera la imagen final.
                     </p>
 
-                    {/* Template Selector */}
-                    <div className="flex flex-wrap gap-1.5 mb-4 select-none">
-                      {(['card', 'mobile', 'letter', 'tshirt', 'tote'] as const).map(type => {
-                        const labels: Record<string, string> = {
-                          card: 'Tarjeta Comercial',
-                          mobile: 'App Móvil',
-                          letter: 'Papelería A4',
-                          tshirt: 'Camiseta Merch',
-                          tote: 'Bolso Tote'
-                        };
-                        return (
-                          <button
-                            key={type}
-                            onClick={() => {
-                              setAiPromptType(type);
-                              setCopiedPrompt(false);
-                            }}
-                            className={`text-[9px] font-semibold px-2.5 py-1 rounded transition-colors cursor-pointer ${
-                              aiPromptType === type 
-                                ? 'bg-violet-600/20 text-violet-300 border border-violet-500/40' 
-                                : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200'
-                            }`}
+                    {/* API Key and Model Config */}
+                    <div className="bg-slate-950 border border-slate-800/80 rounded-lg p-3 mb-4 space-y-3 select-none">
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between items-center text-[9px] font-sans font-semibold">
+                          <span className="text-slate-400">GOOGLE AI STUDIO API KEY</span>
+                          <a 
+                            href="https://aistudio.google.com/" 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="text-violet-400 hover:text-violet-300 underline"
                           >
-                            {labels[type]}
-                          </button>
-                        );
-                      })}
+                            Clave Gratis ↗
+                          </a>
+                        </div>
+                        <input
+                          type="password"
+                          placeholder="Pega tu API Key de Google aquí (AIzaSy...)"
+                          value={apiKey}
+                          onChange={(e) => handleSaveApiKey(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-[9.5px] font-mono text-white focus:outline-none focus:border-violet-500 transition-colors"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-[9px] font-sans">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-400 font-semibold uppercase">Prompter (Texto)</span>
+                          <select
+                            value={prompterModel}
+                            onChange={(e) => setPrompterModel(e.target.value as any)}
+                            className="bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[9px] text-slate-300 focus:outline-none focus:border-violet-500 cursor-pointer"
+                          >
+                            <option value="gemini-3.5-flash">Gemini 3.5 Flash (Rec.)</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                          </select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-slate-400 font-semibold uppercase">Generador (Imagen)</span>
+                          <select
+                            value={imageModel}
+                            onChange={(e) => setImageModel(e.target.value as any)}
+                            className="bg-slate-900 border border-slate-800 rounded px-1.5 py-1 text-[9px] text-slate-300 focus:outline-none focus:border-violet-500 cursor-pointer"
+                          >
+                            <option value="gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
+                            <option value="imagen-3.0-generate-002">Imagen 3.0 (predict)</option>
+                          </select>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Compile the customized prompt */}
-                    {(() => {
-                      const brandName = activeBrand?.name || 'iARTESANA';
-                      const primaryName = getClosestColorName(primaryColor).name;
-                      const secondaryName = getClosestColorName(secondaryColor).name;
+                    {/* Template / Idea Selector */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 block mb-1">¿Qué quieres diseñar?</label>
+                        <div className="flex flex-wrap gap-1.5 mb-2 select-none">
+                          {(['card', 'mobile', 'letter', 'tshirt', 'tote'] as const).map(type => {
+                            const labels: Record<string, string> = {
+                              card: 'Tarjeta Comercial',
+                              mobile: 'App Móvil',
+                              letter: 'Papelería A4',
+                              tshirt: 'Camiseta Merch',
+                              tote: 'Bolso Tote'
+                            };
+                            return (
+                              <button
+                                key={type}
+                                onClick={() => {
+                                  setAiPromptType(type);
+                                  setCopiedPrompt(false);
+                                  setGeneratedImage(null);
+                                  setApiError(null);
+                                  const baseIdeas: Record<string, string> = {
+                                    card: 'Una tarjeta elegante en papel rugoso',
+                                    mobile: 'Una pantalla de inicio moderna y limpia con estilo noche',
+                                    letter: 'Papelería de oficina minimalista sobre una mesa de madera',
+                                    tshirt: 'Una camiseta de algodón orgánico con el logo centrado',
+                                    tote: 'Un bolso de mano colgado al aire con luz natural'
+                                  };
+                                  setUserIdea(baseIdeas[type]);
+                                }}
+                                className={`text-[9px] font-semibold px-2.5 py-1 rounded transition-colors cursor-pointer ${
+                                  aiPromptType === type 
+                                    ? 'bg-violet-600/20 text-violet-300 border border-violet-500/40' 
+                                    : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                {labels[type]}
+                              </button>
+                            );
+                          })}
+                        </div>
 
-                      let promptText = '';
-                      if (aiPromptType === 'card') {
-                        promptText = `A photorealistic studio mockup of a premium business card for the brand '${brandName}'. The card is made of thick textured cotton paper, colored in ${primaryName} (${primaryColor}) and ${secondaryName} (${secondaryColor}). Minimalist layout, modern typography. Studio lighting, soft shadows, high detail, 8k resolution, volumetric lighting.`;
-                      } else if (aiPromptType === 'mobile') {
-                        promptText = `A modern borderless smartphone displaying a premium mobile app splash screen for the brand '${brandName}'. The interface is styled with a sleek dark glassmorphism design, featuring ${primaryName} (${primaryColor}) as the background and accent glowing lines in ${secondaryName} (${secondaryColor}). Clean logo icon in the center. Volumetric lighting, high fidelity, 3D render style, clean interface design.`;
-                      } else if (aiPromptType === 'letter') {
-                        promptText = `A flatlay mockup of corporate stationery for the brand '${brandName}'. Includes an A4 letterhead invoice, an envelope, and a notebook on a clean stone desk. The color theme is ${primaryName} (${primaryColor}) with accent touches of ${secondaryName} (${secondaryColor}). Clean, elegant, premium brand identity, soft natural light, photorealistic, 8k.`;
-                      } else if (aiPromptType === 'tshirt') {
-                        promptText = `A professional product photograph of a black premium cotton t-shirt flat on a wooden surface, with a minimalist graphic print on the chest reading '${brandName}' alongside a custom geometric logo symbol. The symbol is printed in high quality in ${primaryName} (${primaryColor}) and ${secondaryName} (${secondaryColor}). Clean graphic design, studio product photography, commercial advertisement.`;
-                      } else if (aiPromptType === 'tote') {
-                        promptText = `An editorial lifestyle photograph of a natural canvas tote bag hanging on a simple wooden hook. Printed on the front is a large clean graphic logo for the brand '${brandName}' in ${primaryName} (${primaryColor}) and ${secondaryName} (${secondaryColor}). Warm morning sunlight, soft organic shadows, editorial photography, high detail.`;
-                      }
+                        <div className="relative flex items-center">
+                          <input
+                            type="text"
+                            placeholder="Escribe tu idea (ej. una tarjeta elegante con relieve...)"
+                            value={userIdea}
+                            onChange={(e) => setUserIdea(e.target.value)}
+                            className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-28 py-2 text-[10px] text-white focus:outline-none focus:border-violet-500 font-sans"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && userIdea.trim() && apiKey) {
+                                handleRefinePrompt(userIdea);
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => handleRefinePrompt(userIdea)}
+                            disabled={isRefining || !apiKey || !userIdea}
+                            className="absolute right-1 top-1 bottom-1 flex items-center gap-1 bg-violet-600 hover:bg-violet-700 text-white font-bold text-[9px] py-1.5 px-3 rounded shadow transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          >
+                            {isRefining ? (
+                              <>
+                                <div className="w-2.5 h-2.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                <span>Optimizando...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="h-2.5 w-2.5 text-violet-200" />
+                                <span>Optimizar</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
 
-                      return (
-                        <div className="space-y-3">
+                      {/* Display error for prompt refinement */}
+                      {promptError && (
+                        <div className="bg-red-950/60 border border-red-900/40 rounded-lg p-2.5 text-[9px] text-red-300 font-sans">
+                          <span>⚠️ Error: {promptError}</span>
+                        </div>
+                      )}
+
+                      {/* Display Refined Prompt Textarea */}
+                      {refinedPrompt && (
+                        <div className="space-y-1.5 animate-fadeIn">
+                          <label className="text-[10px] font-bold text-slate-400 block font-sans">Prompt Final Optimizado para IA (Inglés):</label>
                           <div className="relative">
                             <textarea
-                              readOnly
-                              value={promptText}
+                              value={refinedPrompt}
+                              onChange={(e) => setRefinedPrompt(e.target.value)}
                               rows={4}
-                              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-[10px] leading-relaxed font-mono resize-none focus:outline-none focus:border-slate-700 text-slate-300"
+                              className="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-[10px] leading-relaxed font-mono resize-none focus:outline-none focus:border-violet-500 text-slate-300"
                             />
                             <button
                               onClick={() => {
-                                navigator.clipboard.writeText(promptText);
+                                navigator.clipboard.writeText(refinedPrompt);
                                 setCopiedPrompt(true);
-                                  setTimeout(() => setCopiedPrompt(false), 2000);
+                                setTimeout(() => setCopiedPrompt(false), 2000);
                               }}
-                              className="absolute bottom-2 right-2 flex items-center gap-1 px-2.5 py-1.5 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[8px] font-bold text-white transition-colors cursor-pointer"
+                              className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded bg-slate-900 border border-slate-800 hover:border-slate-700 text-[8px] font-bold text-white transition-colors cursor-pointer select-none"
                             >
                               {copiedPrompt ? (
                                 <>
-                                  <Check className="h-3 w-3 text-emerald-400" />
+                                  <Check className="h-2.5 w-2.5 text-emerald-400" />
                                   <span>Copiado</span>
                                 </>
                               ) : (
                                 <>
-                                  <Copy className="h-3 w-3" />
-                                  <span>Copiar Prompt</span>
+                                  <Copy className="h-2.5 w-2.5" />
+                                  <span>Copiar</span>
                                 </>
                               )}
                             </button>
                           </div>
-                          
-                          <div className="bg-slate-950 border border-slate-800/80 rounded-lg p-2.5 text-[9px] text-slate-500 leading-normal">
-                            💡 <strong>Instrucciones:</strong> Copia el prompt en inglés generado arriba y pégalo en tu generador de imágenes favorito (como Midjourney, Imagen 3 o DALL-E) para obtener maquetas fotorrealistas de alta gama inspiradas en tu identidad corporativa.
+                        </div>
+                      )}
+
+                      {/* Action Generate Button */}
+                      {refinedPrompt && (
+                        <button
+                          onClick={() => handleGenerateImage(refinedPrompt)}
+                          disabled={isGenerating || !apiKey}
+                          className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-2 px-4 shadow transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer select-none"
+                        >
+                          {isGenerating ? (
+                            <>
+                              <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin shrink-0" />
+                              <span>Generando Mockup con {imageModel}...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="h-3.5 w-3.5 shrink-0 animate-pulse" />
+                              <span>Generar Mockup por IA</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                      {/* Error Display */}
+                      {apiError && (
+                        <div className="bg-red-950/60 border border-red-900/40 rounded-lg p-3 text-[9.5px] leading-relaxed text-red-300 font-sans flex items-start gap-2 select-none">
+                          <span className="font-bold text-[11px] leading-none">⚠️</span>
+                          <p>{apiError}</p>
+                        </div>
+                      )}
+
+                      {/* Generated Image Result Card */}
+                      {generatedImage && (
+                        <div className="border border-slate-800 rounded-lg p-3 bg-slate-950/60 space-y-3 animate-fadeIn">
+                          <div className="flex justify-between items-center select-none text-[9px] font-sans">
+                            <span className="font-bold text-white">Imagen Generada</span>
+                            <a 
+                              href={generatedImage} 
+                              download={`mockup-${aiPromptType}-${activeBrand?.slug || 'logo'}.jpg`}
+                              className="text-violet-400 hover:text-violet-300 font-bold underline cursor-pointer"
+                            >
+                              Descargar JPG
+                            </a>
+                          </div>
+                          <div className="border border-slate-900 rounded-lg overflow-hidden bg-slate-900 flex justify-center items-center shadow-inner">
+                            <img 
+                              src={generatedImage} 
+                              alt="Mockup Generado por IA" 
+                              className="max-h-[300px] w-full object-contain" 
+                            />
                           </div>
                         </div>
-                      );
-                    })()}
+                      )}
+                    </div>
                   </div>
                 )}
               </>
