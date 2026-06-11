@@ -96,15 +96,13 @@ export default function HomePage() {
         </div>
 
         {/* Brand Selector */}
-        <div className="px-4 py-3 border-b border-slate-100">
+        <div className="px-4 py-3">
           <BrandSelector blocks={brandBlocks} markers={markers} />
         </div>
 
-
-
         {/* Block Navigation */}
         {activeBrand && (
-          <div className="flex-1 overflow-y-auto border-b border-slate-100">
+          <div className="flex-1 overflow-y-auto">
             <BlockNav
               selectedStage={selectedStage}
               selectedBlockId={selectedBlockId}
@@ -117,13 +115,13 @@ export default function HomePage() {
 
         {/* Export Link */}
         {activeBrand && (
-          <div className="px-4 py-2 border-b border-slate-100">
+          <div className="px-4 py-2">
             <Link
               href={`/marca/${activeBrand.slug}/exportar`}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-violet-600 hover:bg-violet-50 transition-all w-full"
+              className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-xs font-semibold text-slate-500 hover:bg-slate-50/50 hover:text-slate-700 transition-colors rounded-lg"
             >
-              <FileOutput size={14} />
-              Panel de exportaciones
+              <FileOutput className="h-4 w-4 shrink-0 text-slate-400" />
+              <span className="truncate">Panel de exportaciones</span>
             </Link>
           </div>
         )}

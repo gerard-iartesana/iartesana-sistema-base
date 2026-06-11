@@ -29,7 +29,7 @@ const statusConfig: Record<string, { label: string; dotColor: string; bgColor: s
 
 export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSelectBlock, brandBlocks }: BlockNavProps) {
   return (
-    <div className="flex flex-col divide-y divide-slate-100">
+    <div className="flex flex-col">
       {STAGES.map(stage => {
         const isExpanded = stage.key === selectedStage;
         const stageBlocks = getBlocksByStage(stage.key);

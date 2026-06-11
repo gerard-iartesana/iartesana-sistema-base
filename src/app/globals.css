@@ -98,6 +98,10 @@ body {
   background-color: rgba(15, 15, 17, 0.3) !important;
 }
 
+.bg-slate-50\/80 {
+  background-color: var(--color-surface-raised) !important;
+}
+
 /* Raised items / Inputs */
 .bg-slate-100 {
   background-color: var(--color-surface-raised) !important;
