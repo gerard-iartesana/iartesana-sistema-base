@@ -370,10 +370,24 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
     setRefinedPrompt('');
 
     try {
-      // Get arquetipos to contextualize
+      // Get context from brand blocks (Block 1: Historia, Block 2: Propuesta, Block 4: Arquetipos)
+      let historyText = '';
+      let valuePropText = '';
       let archetypesStr = '';
+
       try {
         const blocks = await db.getBrandBlocks(brandId);
+        
+        const b1 = blocks.find(b => b.block_id === 1);
+        if (b1?.content_md) {
+          historyText = b1.content_md;
+        }
+
+        const b2 = blocks.find(b => b.block_id === 2);
+        if (b2?.content_md) {
+          valuePropText = b2.content_md;
+        }
+
         const b4 = blocks.find(b => b.block_id === 4);
         if (b4?.content_md) {
           const selected = parseArchetypes(b4.content_md);
@@ -383,7 +397,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
           }
         }
       } catch (err) {
-        console.error('[VisualLab] Failed to fetch archetypes for prompt refiner:', err);
+        console.error('[VisualLab] Failed to fetch brand context blocks for prompt refiner:', err);
       }
 
       const brandName = activeBrand?.name || 'iARTESANA';
@@ -392,7 +406,9 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
       const primaryHex = extractedColors[0] || 'No definido';
       const secondaryHex = extractedColors[1] || 'No definido';
       const brandColorsText = `Color principal: ${primaryName} (${primaryHex}), Color secundario: ${secondaryName} (${secondaryHex}).`;
-      const archetypesText = archetypesStr ? `Arquetipos de marca: ${archetypesStr}.` : 'Arquetipos no definidos.';
+      const archetypesText = archetypesStr ? `Arquetipos de la marca: ${archetypesStr}.` : 'Arquetipos no definidos.';
+      const historyContextText = historyText ? `Historia y Sector de la marca: ${historyText.substring(0, 600)}` : 'Historia y sector no definidos.';
+      const valuePropContextText = valuePropText ? `Propuesta de valor y valores de marca: ${valuePropText.substring(0, 600)}` : 'Propuesta de valor no definida.';
 
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${prompterModel}:generateContent?key=${apiKey}`, {
         method: 'POST',
@@ -404,22 +420,25 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
             {
               parts: [
                 {
-                  text: `You are an expert branding designer and prompt engineer. Your task is to write a highly detailed, professional, and photorealistic English text-to-image prompt to generate a mockup incorporating the logo provided in the reference input image.
+                  text: `Eres un diseñador de marca experto y especialista en prompts de IA. Tu tarea es escribir un prompt fotorealista, detallado y profesional en ESPAÑOL para generar un mockup de marca que incorpore de manera perfecta el logotipo proporcionado en la imagen de referencia.
 
-Brand Context:
-- Colors: ${brandColorsText}
-- Archetypes: ${archetypesText}
-- Format: ${aiPromptType} (e.g. business card, mobile screen, corporate stationery letterhead, t-shirt merch, tote bag)
+Contexto de la Marca:
+- Nombre de la marca: ${brandName}
+- Colores corporativos: ${brandColorsText}
+- ${archetypesText}
+- ${historyContextText}
+- ${valuePropContextText}
+- Formato del mockup: ${aiPromptType} (por ejemplo, tarjeta comercial, pantalla de app móvil, papel membretado de oficina A4, camiseta merch, bolso de tela tote bag)
 
-User's basic idea: "${userIdeaText}"
+Idea base del usuario: "${userIdeaText}"
 
-Requirements for the generated prompt:
-1. Write it completely in English.
-2. Incorporate the brand's colors and visual style matching the brand context.
-3. The prompt must instruct the model to cleanly print/place the logo sent as reference (the input image) onto the mockup (e.g. card, t-shirt, tote bag, screen).
-4. CRITICAL: The prompt must NOT mention any specific brand name, letters, or text to be generated (do NOT mention "${brandName}"). It must only refer to it as "the provided reference logo" or "this logo".
-5. Keep it professional, realistic, describing details like lighting, textures (cotton, wood, glass), composition, and camera settings.
-6. Output ONLY the prompt itself. Do not include any introduction, explanations, quotes, markdown formatting, or surrounding text. Just output the raw prompt.`
+Requisitos obligatorios del prompt resultante:
+1. Escribe el prompt COMPLETAMENTE EN ESPAÑOL.
+2. Alinea el estilo estético del mockup, los materiales (ej. vidrio, metal pulido, madera rústica, papel de algodón), la iluminación (ej. luces led modernas, luz natural cálida) y el entorno con el SECTOR e IDENTIDAD de la marca. Por ejemplo, si es una marca tecnológica, utiliza entornos limpios, digitales y modernos; si es una marca ecológica o artesanal, usa materiales naturales, texturas orgánicas y luz natural.
+3. El prompt debe indicar al modelo que coloque e integre de forma limpia y realista el logotipo de referencia (que se enviará como imagen de entrada) sobre el objeto.
+4. CRITICAL: El prompt NO debe indicar al modelo generar texto con el nombre de la marca "${brandName}" o cualquier otra letra específica. Debe referirse al logo únicamente como "este logotipo" o "el logotipo proporcionado en la imagen de referencia".
+5. Describe detalles realistas de fotografía de producto: tipo de cámara, ángulo de visión de primer plano, profundidad de campo, enfoque nítido, sombras suaves, texturas realistas.
+6. Devuelve ÚNICAMENTE el texto del prompt, sin introducciones, explicaciones, comillas ni formato markdown.`
                 }
               ]
             }
