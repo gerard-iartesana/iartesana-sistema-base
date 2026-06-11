@@ -14,7 +14,7 @@ import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
 import { RulesEditor } from '@/components/blocks/rules-editor';
 import { CopilotPanel } from '@/components/copilot/copilot-panel';
 import { db } from '@/lib/db/local-storage';
-import { BrandBlock } from '@/lib/db/types';
+import { BrandBlock, Marker } from '@/lib/db/types';
 import { LogOut, Sparkles, FileOutput } from 'lucide-react';
 import Link from 'next/link';
 
@@ -24,25 +24,35 @@ export default function HomePage() {
   const [selectedStage, setSelectedStage] = useState<'A' | 'B' | 'C' | 'D'>('A');
   const [selectedBlockId, setSelectedBlockId] = useState<number>(1);
   const [brandBlocks, setBrandBlocks] = useState<BrandBlock[]>([]);
+  const [markers, setMarkers] = useState<Marker[]>([]);
   const [editorKey, setEditorKey] = useState(0);
 
-  // Load brand blocks when active brand changes
+  // Load brand blocks and markers when active brand changes
   useEffect(() => {
     if (activeBrand) {
-      loadBlocks();
+      loadData();
     } else {
       setBrandBlocks([]);
+      setMarkers([]);
     }
   }, [activeBrand?.id]);
 
-  const loadBlocks = async () => {
+  const loadData = async () => {
     if (!activeBrand) return;
-    const blocks = await db.getBrandBlocks(activeBrand.id);
-    setBrandBlocks(blocks);
+    try {
+      const [blocks, fetchedMarkers] = await Promise.all([
+        db.getBrandBlocks(activeBrand.id),
+        db.getMarkers(activeBrand.id),
+      ]);
+      setBrandBlocks(blocks);
+      setMarkers(fetchedMarkers);
+    } catch (err) {
+      console.error('[HomePage] Failed to load brand data:', err);
+    }
   };
 
   const handleBlockUpdate = () => {
-    loadBlocks();
+    loadData();
   };
 
   if (authLoading) {
@@ -98,7 +108,7 @@ export default function HomePage() {
         {/* Brand Card */}
         {activeBrand && (
           <div className="px-4 py-3 border-b border-slate-100">
-            <BrandCard />
+            <BrandCard blocks={brandBlocks} markers={markers} />
           </div>
         )}
 
@@ -188,6 +198,7 @@ export default function HomePage() {
                     <MarkerPanel
                       brandId={activeBrand.id}
                       blockId={selectedBlockId}
+                      onMarkersChange={loadData}
                     />
                   </div>
                 </div>

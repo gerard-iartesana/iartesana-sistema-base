@@ -9,9 +9,10 @@ interface MarkerPanelProps {
   brandId: string;
   blockId: number;
   onInsertMarker?: (template: string) => void;
+  onMarkersChange?: () => void;
 }
 
-export function MarkerPanel({ brandId, blockId, onInsertMarker }: MarkerPanelProps) {
+export function MarkerPanel({ brandId, blockId, onInsertMarker, onMarkersChange }: MarkerPanelProps) {
   const [markers, setMarkers] = useState<Marker[]>([]);
   const [showResolved, setShowResolved] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -40,11 +41,13 @@ export function MarkerPanel({ brandId, blockId, onInsertMarker }: MarkerPanelPro
   const handleResolve = async (id: string) => {
     await db.resolveMarker(id);
     await loadMarkers();
+    onMarkersChange?.();
   };
 
   const handleDelete = async (id: string) => {
     await db.deleteMarker(id);
     await loadMarkers();
+    onMarkersChange?.();
   };
 
   const handleAdd = async () => {
@@ -58,6 +61,7 @@ export function MarkerPanel({ brandId, blockId, onInsertMarker }: MarkerPanelPro
     setNewText('');
     setShowAddForm(false);
     await loadMarkers();
+    onMarkersChange?.();
   };
 
   const handleInsertTemplate = (type: MarkerType) => {

@@ -6,15 +6,24 @@ import { useBrand } from '@/lib/contexts/brand-context';
 import { db } from '@/lib/db/local-storage';
 import type { BrandBlock, Marker } from '@/lib/db/types';
 
-export function BrandCard() {
+interface BrandCardProps {
+  blocks?: BrandBlock[];
+  markers?: Marker[];
+}
+
+export function BrandCard({ blocks: propBlocks, markers: propMarkers }: BrandCardProps) {
   const { activeBrand } = useBrand();
-  const [blocks, setBlocks] = useState<BrandBlock[]>([]);
-  const [markers, setMarkers] = useState<Marker[]>([]);
+  const [localBlocks, setLocalBlocks] = useState<BrandBlock[]>([]);
+  const [localMarkers, setLocalMarkers] = useState<Marker[]>([]);
 
   useEffect(() => {
+    // If props are provided, we don't need to load data locally.
+    // However, if only one is provided, we still load the other.
+    if (propBlocks && propMarkers) return;
+    
     if (!activeBrand) {
-      setBlocks([]);
-      setMarkers([]);
+      setLocalBlocks([]);
+      setLocalMarkers([]);
       return;
     }
     let cancelled = false;
@@ -24,15 +33,18 @@ export function BrandCard() {
         db.getMarkers(activeBrand!.id),
       ]);
       if (!cancelled) {
-        setBlocks(fetchedBlocks);
-        setMarkers(fetchedMarkers);
+        setLocalBlocks(fetchedBlocks);
+        setLocalMarkers(fetchedMarkers);
       }
     }
     loadData();
     return () => { cancelled = true; };
-  }, [activeBrand]);
+  }, [activeBrand, propBlocks, propMarkers]);
 
   if (!activeBrand) return null;
+
+  const blocks = propBlocks || localBlocks;
+  const markers = propMarkers || localMarkers;
 
   const totalBlocks = 13;
   const validatedCount = blocks.filter(b => b.status === 'validado').length;
