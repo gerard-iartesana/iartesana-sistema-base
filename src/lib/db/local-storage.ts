@@ -497,7 +497,7 @@ async function createShareLink(input: {
 }): Promise<ShareLink> {
   const { data, error } = await supabase
     .from('sb_share_links')
-    .insert(input)
+    .insert({ ...input, active: true })
     .select()
     .single();
   if (error) throw error;

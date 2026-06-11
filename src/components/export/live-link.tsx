@@ -60,7 +60,7 @@ export function LiveLink() {
 
   const handleCopyLink = (linkId: string) => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const url = `${baseUrl}/s/${linkId}`;
+    const url = `${baseUrl}/share/${linkId}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopyFeedback(linkId);
       setTimeout(() => setCopyFeedback(null), 2000);
@@ -146,7 +146,7 @@ export function LiveLink() {
         <div className="divide-y divide-slate-100">
           {links.map(link => {
             const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-            const url = `${baseUrl}/s/${link.id}`;
+            const url = `${baseUrl}/share/${link.id}`;
             return (
               <div key={link.id} className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50/50">
                 {/* Active indicator */}
