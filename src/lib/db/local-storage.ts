@@ -176,10 +176,10 @@ async function updateBrandBlock(
   input: Partial<Pick<BrandBlock, 'content_md' | 'status' | 'updated_by'>>
 ): Promise<BrandBlock | undefined> {
   const memberId = await getMemberId();
-  const updateData: Record<string, unknown> = {
-    ...input,
-    updated_by: memberId,
-  };
+  const updateData: Record<string, unknown> = { ...input };
+  if (memberId) {
+    updateData.updated_by = memberId;
+  }
 
   const { data, error } = await supabase
     .from('sb_brand_blocks')
@@ -188,7 +188,10 @@ async function updateBrandBlock(
     .eq('block_id', blockId)
     .select()
     .single();
-  if (error) { console.error('[db] updateBrandBlock:', error); return undefined; }
+  if (error) {
+    console.error('[db] updateBrandBlock:', error, { brandId, blockId, updateData });
+    return undefined;
+  }
 
   // Sync markers if content changed
   if (input.content_md !== undefined) {

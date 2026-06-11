@@ -74,7 +74,6 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
-  const initialLoadRef = useRef(true);
 
   // Load block data
   useEffect(() => {
@@ -91,7 +90,6 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         setStatus('vacio');
       }
       setSaveState('idle');
-      initialLoadRef.current = true;
     }
     load();
     return () => { cancelled = true; };
@@ -100,19 +98,25 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
   // Save function
   const save = useCallback(async (text: string) => {
     setSaveState('saving');
-    await db.updateBrandBlock(brandId, blockId, { content_md: text });
-    onSave?.();
-    setTimeout(() => setSaveState('saved'), 200);
-    setTimeout(() => setSaveState('idle'), 2500);
+    try {
+      const result = await db.updateBrandBlock(brandId, blockId, { content_md: text });
+      if (!result) {
+        console.error('[BlockEditor] Save returned undefined - update may have failed');
+        setSaveState('idle');
+        return;
+      }
+      onSave?.();
+      setTimeout(() => setSaveState('saved'), 200);
+      setTimeout(() => setSaveState('idle'), 2500);
+    } catch (err) {
+      console.error('[BlockEditor] Save error:', err);
+      setSaveState('idle');
+    }
   }, [brandId, blockId, onSave]);
 
   // Autosave with debounce
   const handleContentChange = (value: string) => {
     setContent(value);
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
-      return;
-    }
     setSaveState('idle');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => save(value), 2000);
