@@ -6,6 +6,7 @@ import { useBrand } from '@/lib/contexts/brand-context';
 import { db } from '@/lib/db/local-storage';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
 import type { BrandBlock } from '@/lib/db/types';
+import ReactMarkdown from 'react-markdown';
 
 export function Presentation() {
   const { activeBrand } = useBrand();
@@ -142,39 +143,34 @@ export function Presentation() {
             <p className="mb-6 text-base text-slate-400">{blockDef.description}</p>
 
             {/* Content */}
-            <div className="max-h-[50vh] overflow-y-auto">
+            <div className="max-h-[50vh] overflow-y-auto pr-2">
               {content.trim() ? (
-                <div className="prose prose-sm prose-slate max-w-none">
-                  {content.split('\n').map((line, i) => {
-                    if (!line.trim()) return <br key={i} />;
-                    // Render markers with styling
-                    const rendered = line
-                      .replace(
-                        /\[(pendiente):\s*([^\]]+)\]/gi,
-                        '<span class="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700">⏳ $2</span>'
-                      )
-                      .replace(
-                        /\[(verificar):\s*([^\]]+)\]/gi,
-                        '<span class="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">⚠️ $2</span>'
-                      );
-
-                    if (line.startsWith('### ')) {
-                      return <h3 key={i} className="mt-4 mb-2 text-lg font-semibold text-slate-800" dangerouslySetInnerHTML={{ __html: rendered.slice(4) }} />;
-                    }
-                    if (line.startsWith('## ')) {
-                      return <h2 key={i} className="mt-5 mb-2 text-xl font-bold text-slate-800" dangerouslySetInnerHTML={{ __html: rendered.slice(3) }} />;
-                    }
-                    if (line.startsWith('# ')) {
-                      return <h1 key={i} className="mt-6 mb-3 text-2xl font-bold text-slate-900" dangerouslySetInnerHTML={{ __html: rendered.slice(2) }} />;
-                    }
-                    if (line.startsWith('- ')) {
-                      return <li key={i} className="ml-4 list-disc text-base text-slate-700" dangerouslySetInnerHTML={{ __html: rendered.slice(2) }} />;
-                    }
-                    if (line.startsWith('> ')) {
-                      return <blockquote key={i} className="border-l-3 border-slate-300 pl-4 text-base text-slate-600 italic" dangerouslySetInnerHTML={{ __html: rendered.slice(2) }} />;
-                    }
-                    return <p key={i} className="text-base text-slate-700 leading-relaxed" dangerouslySetInnerHTML={{ __html: rendered }} />;
-                  })}
+                <div className="markdown-preview max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      a: ({ href, children, ...props }) => {
+                        if (href === '#marker-pendiente') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        if (href === '#marker-verificar') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        return <a href={href} {...props}>{children}</a>;
+                      },
+                    }}
+                  >
+                    {content
+                      .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                      .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                  </ReactMarkdown>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/auth-context';
 import { useBrand } from '@/lib/contexts/brand-context';
 import { BrandSelector } from '@/components/sidebar/brand-selector';
-import { SearchGlobal } from '@/components/sidebar/search-global';
 import { BlockNav } from '@/components/blocks/block-nav';
 import { BlockEditor } from '@/components/blocks/block-editor';
 import { NamingLab } from '@/components/blocks/naming-lab';
@@ -103,12 +102,7 @@ export default function HomePage() {
           <BrandSelector blocks={brandBlocks} markers={markers} />
         </div>
 
-        {/* Search */}
-        {activeBrand && (
-          <div className="px-4 py-2 border-b border-slate-100">
-            <SearchGlobal />
-          </div>
-        )}
+
 
         {/* Block Navigation */}
         {activeBrand && (
