@@ -15,6 +15,51 @@ import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
 import type { BrandBlock } from '@/lib/db/types';
 import ReactMarkdown from 'react-markdown';
 
+function extractText(children: React.ReactNode): string {
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return children.toString();
+  if (Array.isArray(children)) {
+    return children.map(extractText).join('');
+  }
+  if (React.isValidElement(children)) {
+    return extractText((children.props as any)?.children);
+  }
+  return '';
+}
+
+const HeadingRenderer = ({ level, children, ...props }: any) => {
+  const text = extractText(children);
+  const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  let iconSrc = '';
+  if (normalized.includes('mision')) {
+    iconSrc = '/images/icono-mision.svg';
+  } else if (normalized.includes('vision')) {
+    iconSrc = '/images/icono-vision.svg';
+  } else if (normalized.includes('valores')) {
+    iconSrc = '/images/icono-valores.svg';
+  }
+
+  const Tag = `h${level}` as any;
+
+  if (iconSrc) {
+    return (
+      <div className="flex flex-col items-start gap-2.5 mt-6 mb-4 select-none">
+        <img
+          src={iconSrc}
+          alt={text}
+          className="w-12 h-12 opacity-50 object-contain"
+        />
+        <Tag {...props} className="!m-0">
+          {children}
+        </Tag>
+      </div>
+    );
+  }
+
+  return <Tag {...props}>{children}</Tag>;
+};
+
 export function Presentation() {
   const { activeBrand } = useBrand();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -175,6 +220,12 @@ export function Presentation() {
                         }
                         return <a href={href} {...props}>{children}</a>;
                       },
+                      h1: (props) => <HeadingRenderer level={1} {...props} />,
+                      h2: (props) => <HeadingRenderer level={2} {...props} />,
+                      h3: (props) => <HeadingRenderer level={3} {...props} />,
+                      h4: (props) => <HeadingRenderer level={4} {...props} />,
+                      h5: (props) => <HeadingRenderer level={5} {...props} />,
+                      h6: (props) => <HeadingRenderer level={6} {...props} />,
                     }}
                   >
                     {content
