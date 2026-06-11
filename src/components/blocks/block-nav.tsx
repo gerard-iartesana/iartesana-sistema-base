@@ -69,16 +69,15 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
                 isExpanded ? 'bg-slate-50/80 text-slate-800' : 'text-slate-500 hover:bg-slate-50/50 hover:text-slate-700'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <span
-                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white"
-                  style={{ backgroundColor: stage.color }}
-                >
-                  {(() => {
-                    const Icon = stageIcons[stage.key];
-                    return Icon ? <Icon className="h-3 w-3" /> : stage.key;
-                  })()}
-                </span>
+              <div className="flex items-center gap-2.5 min-w-0">
+                {(() => {
+                  const Icon = stageIcons[stage.key];
+                  return Icon ? (
+                    <Icon className="h-4 w-4 shrink-0" style={{ color: stage.color }} />
+                  ) : (
+                    <span className="font-bold text-xs shrink-0" style={{ color: stage.color }}>{stage.key}</span>
+                  );
+                })()}
                 <span className="truncate">{stage.label}</span>
                 {stageStatusMarker}
               </div>
@@ -109,12 +108,12 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
                       }`}
                       style={isSelected ? { borderLeftColor: stage.color } : undefined}
                     >
-                      {/* Block number badge */}
+                      {/* Block number */}
                       <span
-                        className={`flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded text-[9px] font-bold ${
-                          isSelected ? 'text-white' : 'bg-slate-200 text-slate-500'
+                        className={`w-4 shrink-0 text-center text-[10px] font-mono font-medium ${
+                          isSelected ? 'font-bold' : 'text-slate-400'
                         }`}
-                        style={isSelected ? { backgroundColor: stage.color } : undefined}
+                        style={isSelected ? { color: stage.color } : undefined}
                       >
                         {block.id}
                       </span>

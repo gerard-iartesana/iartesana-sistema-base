@@ -98,15 +98,14 @@ export function Presentation() {
         {/* Top bar */}
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
           <div className="flex items-center gap-3">
-            <span
-              className="flex h-6 w-6 items-center justify-center rounded text-white animate-pulse-slow"
-              style={{ backgroundColor: stage?.color || '#8B5CF6' }}
-            >
-              {(() => {
-                const Icon = stageIcons[blockDef.stage];
-                return Icon ? <Icon className="h-3.5 w-3.5" /> : blockDef.stage;
-              })()}
-            </span>
+            {(() => {
+              const Icon = stageIcons[blockDef.stage];
+              return Icon ? (
+                <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: stage?.color || '#8B5CF6' }} />
+              ) : (
+                <span className="font-bold text-xs shrink-0" style={{ color: stage?.color || '#8B5CF6' }}>{blockDef.stage}</span>
+              );
+            })()}
             <span className="text-sm font-medium text-slate-500">{activeBrand.name}</span>
           </div>
           <div className="flex items-center gap-4">
@@ -129,10 +128,10 @@ export function Presentation() {
             {/* Block number and stage */}
             <div className="mb-4 flex items-center gap-3">
               <span
-                className="flex h-10 w-10 items-center justify-center rounded-lg text-lg font-bold text-white"
-                style={{ backgroundColor: stage?.color || '#8B5CF6' }}
+                className="text-3xl font-black font-mono tracking-tight shrink-0 select-none"
+                style={{ color: stage?.color || '#8B5CF6' }}
               >
-                {blockDef.id}
+                {blockDef.id < 10 ? `0${blockDef.id}` : blockDef.id}
               </span>
               <div>
                 <p
