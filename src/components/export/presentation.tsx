@@ -186,7 +186,9 @@ const LiRenderer = ({ children, ...props }: any) => {
 };
 
 function PresentationArchetypeWheel({ content }: { content: string }) {
+  console.log('[PresentationArchetypeWheel] content:', JSON.stringify(content));
   const selected = parseArchetypes(content);
+  console.log('[PresentationArchetypeWheel] selected:', selected);
 
   const cx = 250;
   const cy = 250;

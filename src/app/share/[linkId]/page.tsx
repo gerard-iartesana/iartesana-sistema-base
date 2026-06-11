@@ -179,7 +179,9 @@ const LiRenderer = ({ children, ...props }: any) => {
 };
 
 function SharePageArchetypeWheel({ content }: { content: string }) {
+  console.log('[SharePageArchetypeWheel] content:', JSON.stringify(content));
   const selected = parseArchetypes(content);
+  console.log('[SharePageArchetypeWheel] selected:', selected);
 
   const cx = 250;
   const cy = 250;

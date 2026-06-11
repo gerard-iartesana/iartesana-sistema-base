@@ -189,11 +189,19 @@ async function updateBrandBlock(
     updateData.updated_by = memberId;
   }
 
+  // Use upsert to handle cases where the block record was not pre-created
   const { data, error } = await supabase
     .from('sb_brand_blocks')
-    .update(updateData)
-    .eq('brand_id', brandId)
-    .eq('block_id', blockId)
+    .upsert(
+      {
+        brand_id: brandId,
+        block_id: blockId,
+        ...updateData,
+      },
+      {
+        onConflict: 'brand_id,block_id',
+      }
+    )
     .select()
     .single();
   if (error) {

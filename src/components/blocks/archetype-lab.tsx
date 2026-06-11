@@ -109,16 +109,19 @@ export function parseArchetypes(markdown: string): Record<string, number> {
   const archetypes: Record<string, number> = {};
   const regex = /\*\*([^*]+?)\*\*\s*[\:\-]?\s*(\d+)\s*%/gi;
   let match;
-  const cleanMarkdown = markdown.replace(/\r\n/g, '\n');
+  const cleanMarkdown = (markdown || '').replace(/\r\n/g, '\n');
+  console.log('[parseArchetypes] Input markdown:', JSON.stringify(cleanMarkdown));
   while ((match = regex.exec(cleanMarkdown)) !== null) {
     const name = match[1].trim();
     const value = parseInt(match[2], 10);
     const normalizedMatchName = normalizeArchetypeName(name);
     const def = ARCHETYPES.find(a => normalizeArchetypeName(a.name) === normalizedMatchName);
+    console.log('[parseArchetypes] Match:', { name, value, normalizedMatchName, matchedDef: def?.name });
     if (def) {
       archetypes[def.name] = value;
     }
   }
+  console.log('[parseArchetypes] Result:', archetypes);
   return archetypes;
 }
 
