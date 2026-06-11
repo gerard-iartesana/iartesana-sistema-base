@@ -195,17 +195,17 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
   const textR = 215;
 
   return (
-    <div className="w-full flex flex-col items-center select-none bg-slate-950/20 border border-slate-800/40 rounded-2xl p-4 shadow-inner">
+    <div className="w-full flex flex-col items-center select-none">
       <svg viewBox="0 0 500 500" className="w-full max-w-[340px] h-auto">
         {/* Outer Category Labels */}
-        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[10px] font-black tracking-widest fill-slate-500 uppercase">Cambio</text>
-        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[10px] font-black tracking-widest fill-slate-500 uppercase">Estabilidad</text>
+        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Cambio</text>
+        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Estabilidad</text>
         
         <text
           x={cx + r + 25}
           y={cy}
           textAnchor="middle"
-          className="text-[10px] font-black tracking-widest fill-slate-500 uppercase"
+          className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase"
           transform={`rotate(90, ${cx + r + 25}, ${cy})`}
         >
           Colectividad
@@ -214,7 +214,7 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
           x={cx - r - 25}
           y={cy}
           textAnchor="middle"
-          className="text-[10px] font-black tracking-widest fill-slate-500 uppercase"
+          className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase"
           transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
         >
           Individualismo
@@ -272,15 +272,17 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
                 x={tx}
                 y={ty}
                 textAnchor={textAnchor}
-                className={`text-[8px] font-bold ${
-                  isSelected ? 'fill-white' : 'fill-slate-600'
+                className={`transition-all duration-300 ${
+                  isSelected 
+                    ? 'text-[11px] font-black fill-white' 
+                    : 'text-[8.5px] font-semibold fill-slate-500'
                 }`}
               >
                 <tspan x={tx} dy="0">
                   {arc.name.replace('La ', '').toUpperCase()}
                 </tspan>
                 {isSelected && (
-                  <tspan x={tx} dy="9" fill={catColor} className="font-mono font-semibold">
+                  <tspan x={tx} dy="11" fill={catColor} className="font-mono font-bold text-[9.5px]">
                     {percentage}%
                   </tspan>
                 )}

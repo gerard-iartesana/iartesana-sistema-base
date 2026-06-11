@@ -242,14 +242,14 @@ export function ArchetypeLab({ brandId, onUpdate }: ArchetypeLabProps) {
         <div className="lg:col-span-7 flex justify-center">
           <svg viewBox="0 0 500 500" className="w-full max-w-[420px] h-auto select-none">
             {/* Outer Category Labels */}
-            <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[10px] font-black tracking-widest fill-slate-500 uppercase">Cambio</text>
-            <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[10px] font-black tracking-widest fill-slate-500 uppercase">Estabilidad</text>
+            <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Cambio</text>
+            <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Estabilidad</text>
             
             <text
               x={cx + r + 25}
               y={cy}
               textAnchor="middle"
-              className="text-[10px] font-black tracking-widest fill-slate-500 uppercase"
+              className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase"
               transform={`rotate(90, ${cx + r + 25}, ${cy})`}
             >
               Colectividad
@@ -258,7 +258,7 @@ export function ArchetypeLab({ brandId, onUpdate }: ArchetypeLabProps) {
               x={cx - r - 25}
               y={cy}
               textAnchor="middle"
-              className="text-[10px] font-black tracking-widest fill-slate-500 uppercase"
+              className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase"
               transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
             >
               Individualismo
@@ -323,15 +323,17 @@ export function ArchetypeLab({ brandId, onUpdate }: ArchetypeLabProps) {
                     x={tx}
                     y={ty}
                     textAnchor={textAnchor}
-                    className={`text-[8px] font-bold transition-all duration-300 pointer-events-none ${
-                      isSelected ? 'fill-white' : 'fill-slate-600 group-hover:fill-slate-400'
+                    className={`transition-all duration-300 pointer-events-none ${
+                      isSelected 
+                        ? 'text-[10.5px] font-black fill-white' 
+                        : 'text-[8.5px] font-semibold fill-slate-500 group-hover:fill-slate-300'
                     }`}
                   >
                     <tspan x={tx} dy="0">
                       {arc.name.replace('La ', '').toUpperCase()}
                     </tspan>
                     {isSelected && (
-                      <tspan x={tx} dy="9" fill={catColor} className="font-mono font-semibold">
+                      <tspan x={tx} dy="11" fill={catColor} className="font-mono font-bold text-[9.5px]">
                         {percentage}%
                       </tspan>
                     )}
