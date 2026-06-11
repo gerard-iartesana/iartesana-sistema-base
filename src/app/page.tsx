@@ -9,6 +9,7 @@ import { BlockEditor } from '@/components/blocks/block-editor';
 import { NamingLab } from '@/components/blocks/naming-lab';
 import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
 import { RulesEditor } from '@/components/blocks/rules-editor';
+import { ArchetypeLab } from '@/components/blocks/archetype-lab';
 import { CopilotPanel, AGENTS } from '@/components/copilot/copilot-panel';
 import { MarkdownExport } from '@/components/export/markdown-export';
 import { PromptGlobal } from '@/components/export/prompt-global';
@@ -249,6 +250,17 @@ export default function HomePage() {
                       {selectedBlockId === 3 && (
                         <div className="mt-6">
                           <NamingLab brandId={activeBrand.id} />
+                        </div>
+                      )}
+                      {selectedBlockId === 4 && (
+                        <div className="mt-6">
+                          <ArchetypeLab
+                            brandId={activeBrand.id}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
                         </div>
                       )}
                       {selectedBlockId === 10 && (

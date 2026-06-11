@@ -14,6 +14,7 @@ import { db } from '@/lib/db/local-storage';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
 import type { BrandBlock } from '@/lib/db/types';
 import ReactMarkdown from 'react-markdown';
+import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
 
 function extractText(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
@@ -184,6 +185,132 @@ const LiRenderer = ({ children, ...props }: any) => {
   return <li {...props}>{children}</li>;
 };
 
+function PresentationArchetypeWheel({ content }: { content: string }) {
+  const selected = parseArchetypes(content);
+
+  const cx = 250;
+  const cy = 250;
+  const r = 180;
+  const iconR = 120;
+  const textR = 215;
+
+  return (
+    <div className="w-full flex flex-col items-center select-none bg-slate-950/20 border border-slate-800/40 rounded-2xl p-4 shadow-inner">
+      <svg viewBox="0 0 500 500" className="w-full max-w-[340px] h-auto">
+        {/* Outer Category Labels */}
+        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[10px] font-black tracking-widest fill-slate-500 uppercase">Cambio</text>
+        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[10px] font-black tracking-widest fill-slate-500 uppercase">Estabilidad</text>
+        
+        <text
+          x={cx + r + 25}
+          y={cy}
+          textAnchor="middle"
+          className="text-[10px] font-black tracking-widest fill-slate-500 uppercase"
+          transform={`rotate(90, ${cx + r + 25}, ${cy})`}
+        >
+          Colectividad
+        </text>
+        <text
+          x={cx - r - 25}
+          y={cy}
+          textAnchor="middle"
+          className="text-[10px] font-black tracking-widest fill-slate-500 uppercase"
+          transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
+        >
+          Individualismo
+        </text>
+
+        {/* Render the 12 sectors */}
+        {ARCHETYPES.map((arc, i) => {
+          const startAngle = ((arc.angleStart - 90) * Math.PI) / 180;
+          const endAngle = ((arc.angleEnd - 90) * Math.PI) / 180;
+          const midAngle = startAngle + (endAngle - startAngle) / 2;
+
+          const x1 = cx + r * Math.cos(startAngle);
+          const y1 = cy + r * Math.sin(startAngle);
+          const x2 = cx + r * Math.cos(endAngle);
+          const y2 = cy + r * Math.sin(endAngle);
+
+          const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+
+          const ix = cx + iconR * Math.cos(midAngle);
+          const iy = cy + iconR * Math.sin(midAngle);
+
+          const tx = cx + textR * Math.cos(midAngle);
+          const ty = cy + textR * Math.sin(midAngle);
+
+          let textAnchor: 'inherit' | 'end' | 'middle' | 'start' = 'middle';
+          const cosValue = Math.cos(midAngle);
+          if (cosValue > 0.2) textAnchor = 'start';
+          else if (cosValue < -0.2) textAnchor = 'end';
+
+          const isSelected = selected[arc.name] !== undefined;
+          const percentage = selected[arc.name] || 0;
+          const catColor = CATEGORY_COLORS[arc.category];
+
+          return (
+            <g key={arc.name}>
+              {/* Slice Path */}
+              <path
+                d={pathData}
+                fill={isSelected ? catColor : '#1d1d21'}
+                fillOpacity={isSelected ? 0.3 + 0.7 * (percentage / 100) : 0.4}
+                stroke="#0f0f11"
+                strokeWidth="2.5"
+              />
+
+              {/* Icon */}
+              <g
+                transform={`translate(${ix - 12}, ${iy - 12})`}
+                className={isSelected ? 'text-white' : 'text-slate-600'}
+              >
+                {ICON_PATHS[arc.icon]}
+              </g>
+
+              {/* Text label */}
+              <text
+                x={tx}
+                y={ty}
+                textAnchor={textAnchor}
+                className={`text-[8px] font-bold ${
+                  isSelected ? 'fill-white' : 'fill-slate-600'
+                }`}
+              >
+                <tspan x={tx} dy="0">
+                  {arc.name.replace('La ', '').toUpperCase()}
+                </tspan>
+                {isSelected && (
+                  <tspan x={tx} dy="9" fill={catColor} className="font-mono font-semibold">
+                    {percentage}%
+                  </tspan>
+                )}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Inner center ring */}
+        <circle cx={cx} cy={cy} r="25" fill="#0f0f11" stroke="#2a2a2f" strokeWidth="1" />
+      </svg>
+
+      {/* Legend below the wheel */}
+      <div className="mt-4 flex flex-wrap justify-center gap-4">
+        {Object.entries(selected).map(([name, pct]) => {
+          const arc = ARCHETYPES.find(a => a.name === name);
+          if (!arc) return null;
+          return (
+            <div key={name} className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/80">
+              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[arc.category] }} />
+              <span className="text-xs font-bold text-white">{name}</span>
+              <span className="text-xs font-mono font-bold" style={{ color: CATEGORY_COLORS[arc.category] }}>{pct}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function Presentation() {
   const { activeBrand } = useBrand();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -294,7 +421,7 @@ export function Presentation() {
 
         {/* Slide content */}
         <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
-          <div className="w-full max-w-3xl my-auto">
+          <div className={`w-full my-auto ${blockDef.id === 4 ? 'max-w-5xl' : 'max-w-3xl'}`}>
             {/* Block number and stage */}
             <div className="mb-4 flex items-center gap-3">
               <span
@@ -323,7 +450,48 @@ export function Presentation() {
 
             {/* Content */}
             <div className="pr-2">
-              {content.trim() ? (
+              {blockDef.id === 4 ? (
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center mt-4">
+                  <div className="md:col-span-6 markdown-preview max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        a: ({ href, children, ...props }) => {
+                          if (href === '#marker-pendiente') {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                                {children}
+                              </span>
+                            );
+                          }
+                          if (href === '#marker-verificar') {
+                            return (
+                              <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                                {children}
+                              </span>
+                            );
+                          }
+                          return <a href={href} {...props}>{children}</a>;
+                        },
+                        h1: (props) => <HeadingRenderer level={1} {...props} />,
+                        h2: (props) => <HeadingRenderer level={2} {...props} />,
+                        h3: (props) => <HeadingRenderer level={3} {...props} />,
+                        h4: (props) => <HeadingRenderer level={4} {...props} />,
+                        h5: (props) => <HeadingRenderer level={5} {...props} />,
+                        h6: (props) => <HeadingRenderer level={6} {...props} />,
+                        p: (props) => <ParagraphRenderer {...props} />,
+                        li: (props) => <LiRenderer {...props} />,
+                      }}
+                    >
+                      {content
+                        .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                        .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                    </ReactMarkdown>
+                  </div>
+                  <div className="md:col-span-6 flex justify-center">
+                    <PresentationArchetypeWheel content={content} />
+                  </div>
+                </div>
+              ) : content.trim() ? (
                 <div className="markdown-preview max-w-none">
                   <ReactMarkdown
                     components={{
