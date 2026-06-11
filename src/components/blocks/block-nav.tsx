@@ -3,7 +3,14 @@
 import React from 'react';
 import { STAGES, getBlocksByStage } from '@/lib/data/block-definitions';
 import type { Stage, BrandBlock } from '@/lib/db/types';
-import { CheckCircle2, Clock, ChevronDown, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Clock, ChevronDown, ChevronRight, Sparkles, MessageSquare, Users, Shield } from 'lucide-react';
+
+const stageIcons: Record<string, React.ComponentType<any>> = {
+  'A': Sparkles,
+  'B': MessageSquare,
+  'C': Users,
+  'D': Shield,
+};
 
 interface BlockNavProps {
   selectedStage: Stage;
@@ -64,10 +71,13 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
             >
               <div className="flex items-center gap-2 min-w-0">
                 <span
-                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold text-white"
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white"
                   style={{ backgroundColor: stage.color }}
                 >
-                  {stage.key}
+                  {(() => {
+                    const Icon = stageIcons[stage.key];
+                    return Icon ? <Icon className="h-3 w-3" /> : stage.key;
+                  })()}
                 </span>
                 <span className="truncate">{stage.label}</span>
                 {stageStatusMarker}

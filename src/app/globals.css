@@ -1,25 +1,151 @@
 @import "tailwindcss";
 
 :root {
-  --color-stage-a: #8B5CF6;
-  --color-stage-b: #3B82F6;
-  --color-stage-c: #10B981;
-  --color-stage-d: #F59E0B;
-  --color-pendiente: #F59E0B;
-  --color-verificar: #EF4444;
+  /* iARTESANA Corporate Palette */
+  --color-verde: #85bf57;
+  --color-azul: #36a8e0;
+  --color-negro: #000000;
+  --color-morado: #7361a8;
+  --color-magenta: #e3599c;
+
+  /* Dark theme design tokens matching App Interna */
+  --color-bg: #0f0f11;
+  --color-surface: #17171a;
+  --color-surface-raised: #1d1d21;
+  --color-border: #2a2a2f;
+  --color-border-subtle: #222228;
+  --color-text: #ececef;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+  --color-hover: #22222a;
+
+  /* Stages mapping */
+  --color-stage-a: var(--color-morado);
+  --color-stage-b: var(--color-magenta);
+  --color-stage-c: var(--color-azul);
+  --color-stage-d: var(--color-verde);
+
+  --color-pendiente: var(--color-verde);
+  --color-verificar: #ef4444;
+
   --sidebar-width: 320px;
   --copilot-width: 380px;
+}
+
+@theme {
+  /* Redefine Tailwind color scales for stages to use iARTESANA corporate colors in dark mode */
+  --color-violet-500: #7361a8;
+  --color-violet-600: #625096;
+  --color-violet-700: #514083;
+  --color-violet-50: rgba(115, 97, 168, 0.12);
+  --color-violet-100: rgba(115, 97, 168, 0.2);
+  --color-violet-200: rgba(115, 97, 168, 0.3);
+  --color-violet-300: rgba(115, 97, 168, 0.4);
+
+  --color-blue-500: #e3599c;
+  --color-blue-600: #cf4587;
+  --color-blue-700: #b93272;
+  --color-blue-50: rgba(227, 89, 156, 0.12);
+  --color-blue-100: rgba(227, 89, 156, 0.2);
+  --color-blue-200: rgba(227, 89, 156, 0.3);
+  --color-blue-300: rgba(227, 89, 156, 0.4);
+
+  --color-emerald-500: #36a8e0;
+  --color-emerald-600: #2595cd;
+  --color-emerald-700: #1981b8;
+  --color-emerald-50: rgba(54, 168, 224, 0.12);
+  --color-emerald-100: rgba(54, 168, 224, 0.2);
+  --color-emerald-200: rgba(54, 168, 224, 0.3);
+  --color-emerald-300: rgba(54, 168, 224, 0.4);
+
+  --color-amber-500: #85bf57;
+  --color-amber-600: #72aa46;
+  --color-amber-700: #609437;
+  --color-amber-50: rgba(133, 191, 87, 0.12);
+  --color-amber-100: rgba(133, 191, 87, 0.2);
+  --color-amber-200: rgba(133, 191, 87, 0.3);
+  --color-amber-300: rgba(133, 191, 87, 0.4);
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* === DARK THEME GLOBAL CLASS OVERRIDES === */
 body {
   font-family: var(--font-geist-sans), 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #FAFBFC;
-  color: #1E293B;
+  background-color: var(--color-bg) !important;
+  color: var(--color-text) !important;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Surfaces */
+.bg-white {
+  background-color: var(--color-surface) !important;
+}
+
+.bg-slate-50 {
+  background-color: var(--color-bg) !important;
+}
+
+.bg-slate-50\/50 {
+  background-color: rgba(15, 15, 17, 0.5) !important;
+}
+
+.bg-slate-50\/30 {
+  background-color: rgba(15, 15, 17, 0.3) !important;
+}
+
+/* Raised items / Inputs */
+.bg-slate-100 {
+  background-color: var(--color-surface-raised) !important;
+}
+
+select.bg-slate-50, input.bg-slate-50, textarea.bg-slate-50 {
+  background-color: var(--color-surface-raised) !important;
+}
+
+/* Hovers */
+.hover\:bg-slate-50:hover {
+  background-color: var(--color-hover) !important;
+}
+
+.hover\:bg-slate-100:hover {
+  background-color: var(--color-hover) !important;
+}
+
+/* Borders */
+.border-slate-100, .border-slate-200 {
+  border-color: var(--color-border) !important;
+}
+
+.border-slate-100\/80 {
+  border-color: var(--color-border-subtle) !important;
+}
+
+/* Text overrides */
+.text-slate-800, .text-slate-900 {
+  color: var(--color-text) !important;
+}
+
+.text-slate-600, .text-slate-700 {
+  color: var(--color-text-secondary) !important;
+}
+
+.text-slate-500 {
+  color: var(--color-text-muted) !important;
+}
+
+.text-slate-400 {
+  color: #52525b !important; /* Brighter slate-400 for visibility in dark theme */
+}
+
+/* Selection */
+::selection {
+  background-color: rgba(56, 189, 248, 0.25) !important;
+  color: var(--color-text) !important;
 }
 
 /* Scrollbar styling */
@@ -33,43 +159,43 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: var(--color-border) !important;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: var(--color-hover) !important;
 }
 
 /* Marker highlight styles in rendered markdown */
 .marker-pendiente {
-  background-color: #FEF3C7;
-  color: #92400E;
+  background-color: rgba(133, 191, 87, 0.15) !important;
+  color: var(--color-verde) !important;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #FDE68A;
+  border: 1px solid rgba(133, 191, 87, 0.3) !important;
 }
 
 .marker-verificar {
-  background-color: #FEE2E2;
-  color: #991B1B;
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #ef4444 !important;
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.875rem;
   font-weight: 500;
-  border: 1px solid #FECACA;
+  border: 1px solid rgba(239, 68, 68, 0.3) !important;
 }
 
-/* Markdown preview styles */
+/* === MARKDOWN PREVIEW DARK THEME STYLING === */
 .markdown-preview h1 {
   font-size: 1.5rem;
   font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
-  color: #0F172A;
-  border-bottom: 1px solid #E2E8F0;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
   padding-bottom: 0.5rem;
 }
 
@@ -78,7 +204,7 @@ body {
   font-weight: 600;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
-  color: #1E293B;
+  color: var(--color-text);
 }
 
 .markdown-preview h3 {
@@ -86,13 +212,13 @@ body {
   font-weight: 600;
   margin-top: 1rem;
   margin-bottom: 0.5rem;
-  color: #334155;
+  color: var(--color-text);
 }
 
 .markdown-preview p {
   margin-bottom: 0.75rem;
   line-height: 1.7;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .markdown-preview ul,
@@ -104,36 +230,39 @@ body {
 .markdown-preview li {
   margin-bottom: 0.25rem;
   line-height: 1.6;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 
 .markdown-preview blockquote {
-  border-left: 3px solid #8B5CF6;
+  border-left: 3px solid var(--color-azul);
   padding-left: 1rem;
   margin: 1rem 0;
-  color: #64748B;
+  color: var(--color-text-muted);
   font-style: italic;
 }
 
 .markdown-preview code {
-  background-color: #F1F5F9;
+  background-color: var(--color-surface-raised);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.875em;
   font-family: var(--font-geist-mono), monospace;
+  color: var(--color-azul);
 }
 
 .markdown-preview pre {
-  background-color: #F1F5F9;
+  background-color: var(--color-surface-raised);
   padding: 1rem;
   border-radius: 8px;
   overflow-x: auto;
   margin-bottom: 1rem;
+  border: 1px solid var(--color-border);
 }
 
 .markdown-preview pre code {
   background: none;
   padding: 0;
+  color: inherit;
 }
 
 .markdown-preview table {
@@ -144,30 +273,34 @@ body {
 
 .markdown-preview th,
 .markdown-preview td {
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--color-border);
   padding: 0.5rem 0.75rem;
   text-align: left;
 }
 
 .markdown-preview th {
-  background-color: #F8FAFC;
+  background-color: var(--color-surface-raised);
   font-weight: 600;
-  color: #334155;
+  color: var(--color-text);
+}
+
+.markdown-preview td {
+  color: var(--color-text-secondary);
 }
 
 .markdown-preview hr {
   border: none;
-  border-top: 1px solid #E2E8F0;
+  border-top: 1px solid var(--color-border);
   margin: 1.5rem 0;
 }
 
 .markdown-preview strong {
   font-weight: 600;
-  color: #1E293B;
+  color: var(--color-text);
 }
 
 .markdown-preview a {
-  color: #8B5CF6;
+  color: var(--color-azul);
   text-decoration: underline;
 }
 
@@ -181,39 +314,46 @@ body {
   animation: fadeIn 0.3s ease-out;
 }
 
-/* Presentation mode */
+/* Presentation mode dark theme customizations */
 .presentation-slide {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   padding: 4rem 6rem;
+  background-color: var(--color-surface) !important;
 }
 
 .presentation-slide h1 {
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 2rem;
+  color: var(--color-text);
 }
 
 .presentation-slide h2 {
   font-size: 1.75rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
+  color: var(--color-text);
 }
 
-/* Textarea editor */
+/* Textarea editor styling */
 .editor-textarea {
   font-family: var(--font-geist-mono), 'Fira Code', monospace;
   font-size: 0.9rem;
   line-height: 1.6;
   tab-size: 2;
   resize: none;
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
 }
 
 .editor-textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 2px rgba(54, 168, 224, 0.25);
+  border-color: var(--color-azul) !important;
 }
 
 /* Transition utilities */
@@ -222,7 +362,7 @@ body {
 }
 
 /* Status badges */
-.status-vacio { background-color: #F1F5F9; color: #64748B; }
-.status-borrador { background-color: #DBEAFE; color: #1D4ED8; }
-.status-en_revision { background-color: #FEF3C7; color: #92400E; }
-.status-validado { background-color: #D1FAE5; color: #065F46; }
+.status-vacio { background-color: rgba(100, 116, 139, 0.15) !important; color: #94a3b8 !important; }
+.status-borrador { background-color: rgba(227, 89, 156, 0.15) !important; color: var(--color-magenta) !important; }
+.status-en_revision { background-color: rgba(133, 191, 87, 0.15) !important; color: var(--color-verde) !important; }
+.status-validado { background-color: rgba(54, 168, 224, 0.15) !important; color: var(--color-azul) !important; }

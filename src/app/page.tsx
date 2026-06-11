@@ -79,9 +79,7 @@ export default function HomePage() {
         <div className="px-5 py-4 border-b border-slate-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-sm">
-                <span className="text-xs font-bold text-white">iA</span>
-              </div>
+              <img src="/assets/logo/logo.svg" alt="iARTESANA Logo" className="w-8 h-8 object-contain shrink-0" />
               <div>
                 <h1 className="text-sm font-bold text-slate-800">Sistema Base</h1>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">Núcleo de Contexto</p>

@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield } from 'lucide-react';
+
+const stageIcons: Record<string, React.ComponentType<any>> = {
+  'A': Sparkles,
+  'B': MessageSquare,
+  'C': Users,
+  'D': Shield,
+};
 import { useBrand } from '@/lib/contexts/brand-context';
 import { db } from '@/lib/db/local-storage';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
@@ -92,10 +99,13 @@ export function Presentation() {
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
           <div className="flex items-center gap-3">
             <span
-              className="flex h-6 w-6 items-center justify-center rounded text-xs font-bold text-white"
+              className="flex h-6 w-6 items-center justify-center rounded text-white animate-pulse-slow"
               style={{ backgroundColor: stage?.color || '#8B5CF6' }}
             >
-              {blockDef.stage}
+              {(() => {
+                const Icon = stageIcons[blockDef.stage];
+                return Icon ? <Icon className="h-3.5 w-3.5" /> : blockDef.stage;
+              })()}
             </span>
             <span className="text-sm font-medium text-slate-500">{activeBrand.name}</span>
           </div>

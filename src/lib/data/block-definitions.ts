@@ -1,10 +1,10 @@
 import type { BlockDefinition, Stage } from '@/lib/db/types';
 
 export const STAGES: { key: Stage; label: string; color: string; bgColor: string; borderColor: string }[] = [
-  { key: 'A', label: 'Esencia y Alma', color: '#8B5CF6', bgColor: 'bg-violet-50', borderColor: 'border-violet-300' },
-  { key: 'B', label: 'Personalidad y Voz', color: '#3B82F6', bgColor: 'bg-blue-50', borderColor: 'border-blue-300' },
-  { key: 'C', label: 'Operaciones y Públicos', color: '#10B981', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-300' },
-  { key: 'D', label: 'Gobierno y Salvaguardas', color: '#F59E0B', bgColor: 'bg-amber-50', borderColor: 'border-amber-300' },
+  { key: 'A', label: 'Esencia y Alma', color: '#7361a8', bgColor: 'bg-violet-50', borderColor: 'border-violet-300' },
+  { key: 'B', label: 'Personalidad y Voz', color: '#e3599c', bgColor: 'bg-blue-50', borderColor: 'border-blue-300' },
+  { key: 'C', label: 'Operaciones y Públicos', color: '#36a8e0', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-300' },
+  { key: 'D', label: 'Gobierno y Salvaguardas', color: '#85bf57', bgColor: 'bg-amber-50', borderColor: 'border-amber-300' },
 ];
 
 export const BLOCK_DEFINITIONS: BlockDefinition[] = [
