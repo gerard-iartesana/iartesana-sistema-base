@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FileDown, Copy, Check, FileText } from 'lucide-react';
 import { useBrand } from '@/lib/contexts/brand-context';
 import { db } from '@/lib/db/local-storage';
-import { exportFullMarkdown } from '@/lib/utils/export';
+import { exportFullMarkdown, convertMarkdownToHtmlForClipboard } from '@/lib/utils/export';
 
 export function MarkdownExport() {
   const { activeBrand } = useBrand();
@@ -30,11 +30,27 @@ export function MarkdownExport() {
     return () => { cancelled = true; };
   }, [activeBrand]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(markdown).then(() => {
+  const handleCopy = async () => {
+    try {
+      const htmlContent = convertMarkdownToHtmlForClipboard(markdown);
+      const textBlob = new Blob([markdown], { type: 'text/plain' });
+      const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': textBlob,
+          'text/html': htmlBlob,
+        })
+      ]);
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
-    });
+    } catch (err) {
+      console.error('[MarkdownExport] Copy failed, falling back to writeText:', err);
+      navigator.clipboard.writeText(markdown).then(() => {
+        setCopyFeedback(true);
+        setTimeout(() => setCopyFeedback(false), 2000);
+      });
+    }
   };
 
   const handleDownload = () => {

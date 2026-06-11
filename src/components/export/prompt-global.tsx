@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Copy, FileDown, Check, Info, AlertTriangle, FileText } from 'lucide-react';
 import { useBrand } from '@/lib/contexts/brand-context';
 import { db } from '@/lib/db/local-storage';
-import { exportPromptGlobal, getPromptGlobalInfo } from '@/lib/utils/export';
+import { exportPromptGlobal, getPromptGlobalInfo, convertMarkdownToHtmlForClipboard } from '@/lib/utils/export';
 import { getBlockById } from '@/lib/data/block-definitions';
 
 export function PromptGlobal() {
@@ -34,11 +34,27 @@ export function PromptGlobal() {
     return () => { cancelled = true; };
   }, [activeBrand]);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(prompt).then(() => {
+  const handleCopy = async () => {
+    try {
+      const htmlContent = convertMarkdownToHtmlForClipboard(prompt);
+      const textBlob = new Blob([prompt], { type: 'text/plain' });
+      const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': textBlob,
+          'text/html': htmlBlob,
+        })
+      ]);
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 2000);
-    });
+    } catch (err) {
+      console.error('[PromptGlobal] Copy failed, falling back to writeText:', err);
+      navigator.clipboard.writeText(prompt).then(() => {
+        setCopyFeedback(true);
+        setTimeout(() => setCopyFeedback(false), 2000);
+      });
+    }
   };
 
   const handleDownload = (ext: 'md' | 'txt') => {

@@ -122,6 +122,37 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
     saveTimeoutRef.current = setTimeout(() => save(value), 2000);
   };
 
+  // HTML to Markdown Paste Handler
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const html = e.clipboardData.getData('text/html');
+    if (html) {
+      e.preventDefault();
+      const rawMarkdown = convertHtmlToMarkdown(html);
+      const markdown = rawMarkdown
+        .replace(/\r\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        const before = text.substring(0, start);
+        const after = text.substring(end, text.length);
+        const newValue = before + markdown + after;
+
+        handleContentChange(newValue);
+
+        // Reset cursor selection to after the pasted markdown
+        setTimeout(() => {
+          textarea.focus();
+          textarea.setSelectionRange(start + markdown.length, start + markdown.length);
+        }, 0);
+      }
+    }
+  };
+
   // Status change
   const handleStatusChange = async (newStatus: BlockStatus) => {
     if (newStatus === 'validado') {
@@ -290,6 +321,7 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
               ref={textareaRef}
               value={content}
               onChange={e => handleContentChange(e.target.value)}
+              onPaste={handlePaste}
               placeholder={`Escribe el contenido de "${blockDef.title}" en Markdown…\n\nUsa [pendiente: texto] para marcar huecos y [verificar: texto] para datos a confirmar.`}
               className="editor-textarea flex-1 w-full bg-white px-5 py-4 text-slate-700 placeholder-slate-300 outline-none border-none"
               spellCheck={false}
@@ -312,4 +344,70 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
       </div>
     </div>
   );
+}
+
+// ---------------------------------------------------------------------------
+// HTML-to-Markdown parser for pasting rich text
+// ---------------------------------------------------------------------------
+function convertHtmlToMarkdown(html: string): string {
+  if (typeof window === 'undefined') return '';
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  return nodeToMarkdown(doc.body).trim();
+}
+
+function nodeToMarkdown(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent || '';
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return '';
+  }
+
+  const element = node as Element;
+  const tag = element.tagName.toLowerCase();
+
+  // Recursively process children
+  let childrenMarkdown = '';
+  for (let i = 0; i < element.childNodes.length; i++) {
+    childrenMarkdown += nodeToMarkdown(element.childNodes[i]);
+  }
+
+  switch (tag) {
+    case 'h1':
+      return `\n# ${childrenMarkdown.trim()}\n\n`;
+    case 'h2':
+      return `\n## ${childrenMarkdown.trim()}\n\n`;
+    case 'h3':
+      return `\n### ${childrenMarkdown.trim()}\n\n`;
+    case 'h4':
+    case 'h5':
+    case 'h6':
+      return `\n#### ${childrenMarkdown.trim()}\n\n`;
+    case 'p':
+      return `\n${childrenMarkdown.trim()}\n\n`;
+    case 'strong':
+    case 'b':
+      return `**${childrenMarkdown}**`;
+    case 'em':
+    case 'i':
+      return `*${childrenMarkdown}*`;
+    case 'code':
+      return `\`${childrenMarkdown}\``;
+    case 'pre':
+      return `\n\`\`\`\n${childrenMarkdown}\n\`\`\`\n\n`;
+    case 'br':
+      return '\n';
+    case 'li':
+      return `\n- ${childrenMarkdown.trim()}`;
+    case 'ul':
+    case 'ol':
+      return `\n${childrenMarkdown}\n\n`;
+    case 'a':
+      const href = element.getAttribute('href') || '';
+      return `[${childrenMarkdown}](${href})`;
+    default:
+      return childrenMarkdown;
+  }
 }

@@ -128,3 +128,54 @@ export function getPromptGlobalInfo(blocks: BrandBlock[], markers: Marker[]): {
 
   return { includedBlocks, excludedBlocks, pendienteCount };
 }
+
+/**
+ * Converts markdown string into simple HTML formatting suitable for copy-paste into rich-text processors (Word, Docs).
+ */
+export function convertMarkdownToHtmlForClipboard(markdown: string): string {
+  let html = markdown
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    
+    // Headers
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    
+    // Bold and italic
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    
+    // Links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    
+    // Lists
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
+    
+    // Horizontal rules
+    .replace(/^---$/gm, '<hr />')
+    
+    // Paragraphs
+    .split('\n\n')
+    .map(p => {
+      const trimmed = p.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('<h') || trimmed.startsWith('<li>') || trimmed.startsWith('<hr')) {
+        return trimmed;
+      }
+      if (trimmed.includes('<li>')) {
+        return `<ul>${trimmed}</ul>`;
+      }
+      return `<p>${trimmed.replace(/\n/g, '<br />')}</p>`;
+    })
+    .join('\n');
+    
+  return `<html><body>${html}</body></html>`;
+}
