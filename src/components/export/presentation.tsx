@@ -196,16 +196,16 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
 
   return (
     <div className="w-full flex flex-col items-center select-none">
-      <svg viewBox="0 0 500 500" className="w-full max-w-[430px] h-auto">
+      <svg viewBox="0 0 500 500" className="w-full max-w-[460px] h-auto">
         {/* Outer Category Labels */}
-        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Cambio</text>
-        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase">Estabilidad</text>
+        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Cambio</text>
+        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Estabilidad</text>
         
         <text
           x={cx + r + 25}
           y={cy}
           textAnchor="middle"
-          className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase"
+          className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase"
           transform={`rotate(90, ${cx + r + 25}, ${cy})`}
         >
           Colectividad
@@ -214,7 +214,7 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
           x={cx - r - 25}
           y={cy}
           textAnchor="middle"
-          className="text-[8px] font-bold tracking-widest fill-slate-600 opacity-55 uppercase"
+          className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase"
           transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
         >
           Individualismo
@@ -274,15 +274,15 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
                 textAnchor={textAnchor}
                 className={`transition-all duration-300 ${
                   isSelected 
-                    ? 'text-[11px] font-black fill-white' 
-                    : 'text-[8.5px] font-semibold fill-slate-500'
+                    ? 'text-[22px] font-medium fill-white' 
+                    : 'text-[12px] font-normal fill-slate-600 opacity-60'
                 }`}
               >
                 <tspan x={tx} dy="0">
-                  {arc.name.replace('La ', '').toUpperCase()}
+                  {arc.name.replace('La ', '')}
                 </tspan>
                 {isSelected && (
-                  <tspan x={tx} dy="11" fill={catColor} className="font-mono font-bold text-[9.5px]">
+                  <tspan x={tx} dy="22" fill={catColor} className="font-mono font-medium text-[17px]">
                     {percentage}%
                   </tspan>
                 )}
@@ -423,7 +423,7 @@ export function Presentation() {
 
         {/* Slide content */}
         <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
-          <div className={`w-full my-auto ${blockDef.id === 4 ? 'max-w-5xl' : 'max-w-3xl'}`}>
+          <div className="w-full max-w-3xl my-auto">
             {/* Block number and stage */}
             <div className="mb-4 flex items-center gap-3">
               <span
@@ -453,47 +453,53 @@ export function Presentation() {
             {/* Content */}
             <div className="pr-2">
               {blockDef.id === 4 ? (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center mt-4">
-                  <div className="md:col-span-5 markdown-preview max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        a: ({ href, children, ...props }) => {
-                          if (href === '#marker-pendiente') {
-                            return (
-                              <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
-                                {children}
-                              </span>
-                            );
-                          }
-                          if (href === '#marker-verificar') {
-                            return (
-                              <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
-                                {children}
-                              </span>
-                            );
-                          }
-                          return <a href={href} {...props}>{children}</a>;
-                        },
-                        h1: (props) => <HeadingRenderer level={1} {...props} />,
-                        h2: (props) => <HeadingRenderer level={2} {...props} />,
-                        h3: (props) => <HeadingRenderer level={3} {...props} />,
-                        h4: (props) => <HeadingRenderer level={4} {...props} />,
-                        h5: (props) => <HeadingRenderer level={5} {...props} />,
-                        h6: (props) => <HeadingRenderer level={6} {...props} />,
-                        p: (props) => <ParagraphRenderer {...props} />,
-                        li: (props) => <LiRenderer {...props} />,
-                      }}
-                    >
-                      {content
-                        .replace(/^### Arquetipos Seleccionados\s*\n?/gi, '')
-                        .replace(/^(?:[\*\-]\s*)?\*\*(La\s+[^*]+?)\*\*\:\s*\d+\s*%\s*\n?/gim, '')
-                        .replace(/^---\s*\n?/gi, '')
-                        .trim()
-                        .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
-                        .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
-                    </ReactMarkdown>
-                  </div>
-                  <div className="md:col-span-7 flex justify-center">
+                <div className="flex flex-col items-center mt-4 w-full">
+                  {(() => {
+                    const cleanContent = content
+                      .replace(/^### Arquetipos Seleccionados\s*\n?/gi, '')
+                      .replace(/^(?:[\*\-]\s*)?\*\*(La\s+[^*]+?)\*\*\:\s*\d+\s*%\s*\n?/gim, '')
+                      .replace(/^---\s*\n?/gi, '')
+                      .trim();
+                    
+                    return cleanContent ? (
+                      <div className="markdown-preview max-w-none w-full text-center mb-8">
+                        <ReactMarkdown
+                          components={{
+                            a: ({ href, children, ...props }) => {
+                              if (href === '#marker-pendiente') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              if (href === '#marker-verificar') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              return <a href={href} {...props}>{children}</a>;
+                            },
+                            h1: (props) => <HeadingRenderer level={1} {...props} />,
+                            h2: (props) => <HeadingRenderer level={2} {...props} />,
+                            h3: (props) => <HeadingRenderer level={3} {...props} />,
+                            h4: (props) => <HeadingRenderer level={4} {...props} />,
+                            h5: (props) => <HeadingRenderer level={5} {...props} />,
+                            h6: (props) => <HeadingRenderer level={6} {...props} />,
+                            p: (props) => <ParagraphRenderer {...props} />,
+                            li: (props) => <LiRenderer {...props} />,
+                          }}
+                        >
+                          {cleanContent
+                            .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                            .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                        </ReactMarkdown>
+                      </div>
+                    ) : null;
+                  })()}
+                  <div className="w-full flex justify-center mt-2">
                     <PresentationArchetypeWheel content={content} />
                   </div>
                 </div>
