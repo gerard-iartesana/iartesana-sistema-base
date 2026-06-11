@@ -171,9 +171,9 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
   }
 
   return (
-    <div className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" style={{ minHeight: '500px' }}>
+    <div className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm" style={{ minHeight: '500px' }}>
       {/* Header */}
-      <div className="flex items-start justify-between border-b border-slate-200 px-5 py-4">
+      <div className="sticky top-0 bg-white z-20 flex items-start justify-between border-b border-slate-200 px-5 py-4 rounded-t-xl shadow-sm">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-600">

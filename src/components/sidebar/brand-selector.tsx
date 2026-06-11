@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronDown, Plus, Search, X } from 'lucide-react';
 import { useBrand } from '@/lib/contexts/brand-context';
-import type { Brand } from '@/lib/db/types';
+import type { Brand, BrandBlock, Marker } from '@/lib/db/types';
 import { BrandCard } from './brand-card';
 
 function slugify(text: string): string {
@@ -15,7 +15,12 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-export function BrandSelector() {
+interface BrandSelectorProps {
+  blocks?: BrandBlock[];
+  markers?: Marker[];
+}
+
+export function BrandSelector({ blocks, markers }: BrandSelectorProps) {
   const { brands, activeBrand, setActiveBrand, refreshBrands, createBrand } = useBrand();
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -180,7 +185,7 @@ export function BrandSelector() {
       </div>
 
       {/* Active brand card */}
-      {activeBrand && <BrandCard />}
+      {activeBrand && <BrandCard blocks={blocks} markers={markers} />}
     </div>
   );
 }

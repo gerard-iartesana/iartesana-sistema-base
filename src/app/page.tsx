@@ -102,15 +102,8 @@ export default function HomePage() {
 
         {/* Brand Selector */}
         <div className="px-4 py-3 border-b border-slate-100">
-          <BrandSelector />
+          <BrandSelector blocks={brandBlocks} markers={markers} />
         </div>
-
-        {/* Brand Card */}
-        {activeBrand && (
-          <div className="px-4 py-3 border-b border-slate-100">
-            <BrandCard blocks={brandBlocks} markers={markers} />
-          </div>
-        )}
 
         {/* Export Link */}
         {activeBrand && (
