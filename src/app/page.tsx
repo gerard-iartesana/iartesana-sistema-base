@@ -169,9 +169,7 @@ export default function HomePage() {
           {/* Left side: AI Copilots */}
           <div className="flex items-center gap-3">
             {activeBrand && (
-              <>
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1 select-none">Copilotos IA:</span>
-                <div className="flex gap-1.5">
+              <div className="flex gap-1.5">
                   {AGENTS.map(agent => (
                     <button
                       key={agent.key}
@@ -191,7 +189,6 @@ export default function HomePage() {
                     </button>
                   ))}
                 </div>
-              </>
             )}
           </div>
 

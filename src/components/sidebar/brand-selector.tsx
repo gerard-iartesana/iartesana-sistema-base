@@ -114,7 +114,7 @@ export function BrandSelector({ blocks, markers, hideProgress = false }: BrandSe
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50/50 cursor-pointer"
         >
           <span className="truncate">
             {activeBrand ? activeBrand.name : 'Seleccionar marca…'}
@@ -154,14 +154,16 @@ export function BrandSelector({ blocks, markers, hideProgress = false }: BrandSe
                   <button
                     key={brand.id}
                     onClick={() => handleSelect(brand)}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50 ${
-                      activeBrand?.id === brand.id ? 'bg-violet-50 text-violet-700' : 'text-slate-700'
+                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                      activeBrand?.id === brand.id
+                        ? 'bg-violet-500/20 text-white font-semibold'
+                        : 'text-slate-300 hover:text-white hover:bg-white/5'
                     }`}
                   >
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{
                       backgroundColor: brand.status === 'activo' ? '#10B981' : brand.status === 'pausado' ? '#F59E0B' : '#94A3B8'
                     }} />
-                    <span className="truncate font-medium">{brand.name}</span>
+                    <span className="truncate">{brand.name}</span>
                   </button>
                 ))
               )}
