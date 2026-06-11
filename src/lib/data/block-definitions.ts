@@ -1,0 +1,40 @@
+import type { BlockDefinition, Stage } from '@/lib/db/types';
+
+export const STAGES: { key: Stage; label: string; color: string; bgColor: string; borderColor: string }[] = [
+  { key: 'A', label: 'Esencia y Alma', color: '#8B5CF6', bgColor: 'bg-violet-50', borderColor: 'border-violet-300' },
+  { key: 'B', label: 'Personalidad y Voz', color: '#3B82F6', bgColor: 'bg-blue-50', borderColor: 'border-blue-300' },
+  { key: 'C', label: 'Operaciones y Públicos', color: '#10B981', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-300' },
+  { key: 'D', label: 'Gobierno y Salvaguardas', color: '#F59E0B', bgColor: 'bg-amber-50', borderColor: 'border-amber-300' },
+];
+
+export const BLOCK_DEFINITIONS: BlockDefinition[] = [
+  { id: 1, stage: 'A', title: 'Historia Narrativa', description: 'Trayectoria real del fundador, decisiones críticas, escala humana del negocio.', sort: 1 },
+  { id: 2, stage: 'A', title: 'Propuesta de Valor Diferencial', description: 'Qué se perdería el cliente si la marca no existiera; misión, visión, valores.', sort: 2 },
+  { id: 3, stage: 'A', title: 'Laboratorio de Naming', description: 'Candidatos con significado/sonoridad/viabilidad internacional + registro de vetos con su porqué.', sort: 3 },
+  { id: 4, stage: 'B', title: 'Matriz de Arquetipos', description: 'Arquetipo primario y secundario con descripción aplicada (no la rueda decorativa: roles reales).', sort: 4 },
+  { id: 5, stage: 'B', title: 'Tensión y Equilibrio de Voz', description: 'El balance que define la voz (ej. "cercanía CON profesionalidad"), registros falsos a evitar.', sort: 5 },
+  { id: 6, stage: 'B', title: 'Identidad Verbal y Glosario', description: 'Reglas de tuteo por mercado, palabras prohibidas del sector, vocabulario nativo, tagline.', sort: 6 },
+  { id: 7, stage: 'B', title: 'Conceptualización Visual', description: 'Tipografía, paleta (con hex/Pantone), formas y líneas, versatilidad a una tinta.', sort: 7 },
+  { id: 8, stage: 'C', title: 'Segmentación No-Demográfica', description: 'Fichas de cliente ideal por comportamiento/valores + perfiles excluidos explícitos.', sort: 8 },
+  { id: 9, stage: 'C', title: 'Relación B2B / Aliados y Propietarios', description: 'Promesa central a socios/propietarios, barreras infranqueables de gestión.', sort: 9 },
+  { id: 10, stage: 'C', title: 'Biblioteca de Conocimiento Operativo', description: 'Recomendaciones no incentivadas, FAQs críticas, normativas, políticas diferenciales.', sort: 10 },
+  { id: 11, stage: 'D', title: 'Líneas Rojas', description: '"Qué nunca hacemos": lista numerada estricta.', sort: 11 },
+  { id: 12, stage: 'D', title: 'Protocolos de Incidencias', description: '"Cuando algo va mal": listón de atención, flujos de escalado obligatorio a humanos.', sort: 12 },
+  { id: 13, stage: 'D', title: 'Implicaciones Directas para Agentes de IA', description: 'Instrucciones imperativas ejecutables derivadas de todo lo anterior.', sort: 13 },
+];
+
+export function getBlocksByStage(stage: Stage): BlockDefinition[] {
+  return BLOCK_DEFINITIONS.filter(b => b.stage === stage);
+}
+
+export function getBlockById(id: number): BlockDefinition | undefined {
+  return BLOCK_DEFINITIONS.find(b => b.id === id);
+}
+
+export function getStageForBlock(blockId: number): Stage | undefined {
+  return BLOCK_DEFINITIONS.find(b => b.id === blockId)?.stage;
+}
+
+export function getStageInfo(stage: Stage) {
+  return STAGES.find(s => s.key === stage);
+}

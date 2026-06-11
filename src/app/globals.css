@@ -1,0 +1,228 @@
+@import "tailwindcss";
+
+:root {
+  --color-stage-a: #8B5CF6;
+  --color-stage-b: #3B82F6;
+  --color-stage-c: #10B981;
+  --color-stage-d: #F59E0B;
+  --color-pendiente: #F59E0B;
+  --color-verificar: #EF4444;
+  --sidebar-width: 320px;
+  --copilot-width: 380px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-geist-sans), 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #FAFBFC;
+  color: #1E293B;
+  min-height: 100vh;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Marker highlight styles in rendered markdown */
+.marker-pendiente {
+  background-color: #FEF3C7;
+  color: #92400E;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #FDE68A;
+}
+
+.marker-verificar {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #FECACA;
+}
+
+/* Markdown preview styles */
+.markdown-preview h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #0F172A;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 0.5rem;
+}
+
+.markdown-preview h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #1E293B;
+}
+
+.markdown-preview h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #334155;
+}
+
+.markdown-preview p {
+  margin-bottom: 0.75rem;
+  line-height: 1.7;
+  color: #475569;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.markdown-preview li {
+  margin-bottom: 0.25rem;
+  line-height: 1.6;
+  color: #475569;
+}
+
+.markdown-preview blockquote {
+  border-left: 3px solid #8B5CF6;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #64748B;
+  font-style: italic;
+}
+
+.markdown-preview code {
+  background-color: #F1F5F9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.markdown-preview pre {
+  background-color: #F1F5F9;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.markdown-preview pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1rem;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+  border: 1px solid #E2E8F0;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.markdown-preview th {
+  background-color: #F8FAFC;
+  font-weight: 600;
+  color: #334155;
+}
+
+.markdown-preview hr {
+  border: none;
+  border-top: 1px solid #E2E8F0;
+  margin: 1.5rem 0;
+}
+
+.markdown-preview strong {
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.markdown-preview a {
+  color: #8B5CF6;
+  text-decoration: underline;
+}
+
+/* Autoguardado animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.save-indicator {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Presentation mode */
+.presentation-slide {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 6rem;
+}
+
+.presentation-slide h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+}
+
+.presentation-slide h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+/* Textarea editor */
+.editor-textarea {
+  font-family: var(--font-geist-mono), 'Fira Code', monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  tab-size: 2;
+  resize: none;
+}
+
+.editor-textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+/* Transition utilities */
+.transition-sidebar {
+  transition: width 0.3s ease, transform 0.3s ease;
+}
+
+/* Status badges */
+.status-vacio { background-color: #F1F5F9; color: #64748B; }
+.status-borrador { background-color: #DBEAFE; color: #1D4ED8; }
+.status-en_revision { background-color: #FEF3C7; color: #92400E; }
+.status-validado { background-color: #D1FAE5; color: #065F46; }
