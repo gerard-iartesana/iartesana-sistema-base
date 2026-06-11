@@ -10,6 +10,7 @@ import { NamingLab } from '@/components/blocks/naming-lab';
 import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
 import { RulesEditor } from '@/components/blocks/rules-editor';
 import { ArchetypeLab } from '@/components/blocks/archetype-lab';
+import { VisualLab } from '@/components/blocks/visual-lab';
 import { CopilotPanel, AGENTS } from '@/components/copilot/copilot-panel';
 import { MarkdownExport } from '@/components/export/markdown-export';
 import { PromptGlobal } from '@/components/export/prompt-global';
@@ -255,6 +256,17 @@ export default function HomePage() {
                       {selectedBlockId === 4 && (
                         <div className="mt-6">
                           <ArchetypeLab
+                            brandId={activeBrand.id}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
+                        </div>
+                      )}
+                      {selectedBlockId === 7 && (
+                        <div className="mt-6">
+                          <VisualLab
                             brandId={activeBrand.id}
                             onUpdate={() => {
                               setEditorKey(prev => prev + 1);
