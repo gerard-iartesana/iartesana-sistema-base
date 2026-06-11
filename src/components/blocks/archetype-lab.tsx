@@ -147,34 +147,28 @@ export function updateMarkdownArchetypes(currentMarkdown: string, selectedArchet
 
 interface ArchetypeLabProps {
   brandId: string;
+  content_md: string;
   onUpdate: () => void;
 }
 
-export function ArchetypeLab({ brandId, onUpdate }: ArchetypeLabProps) {
+export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProps) {
   const [selected, setSelected] = useState<Record<string, number>>({});
   const [rawContent, setRawContent] = useState('');
   const [activeTab, setActiveTab] = useState<'wheel' | 'list'>('wheel');
   const savingRef = useRef(false);
 
-  // Load block content on mount and when brandId changes
+  // Sync state with content_md prop when it changes
   useEffect(() => {
-    async function loadData() {
-      const blocks = await db.getBrandBlocks(brandId);
-      const block = blocks.find(b => b.block_id === 4);
-      if (block) {
-        setRawContent(block.content_md || '');
-        const parsed = parseArchetypes(block.content_md || '');
-        setSelected(parsed);
-      }
-    }
-    loadData();
-  }, [brandId]);
+    setRawContent(content_md);
+    const parsed = parseArchetypes(content_md);
+    setSelected(parsed);
+  }, [content_md]);
 
   const saveToDb = async (newSelected: Record<string, number>) => {
     if (savingRef.current) return;
     savingRef.current = true;
     try {
-      const updatedMarkdown = updateMarkdownArchetypes(rawContent, newSelected);
+      const updatedMarkdown = updateMarkdownArchetypes(content_md, newSelected);
       setRawContent(updatedMarkdown);
       await db.updateBrandBlock(brandId, 4, { content_md: updatedMarkdown });
       onUpdate();

@@ -267,17 +267,18 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
                 x={tx}
                 y={ty}
                 textAnchor={textAnchor}
+                fill={isSelected ? '#ffffff' : '#9ca3af'}
                 className={`transition-all duration-300 ${
                   isSelected 
-                    ? 'text-[22px] font-medium fill-white' 
-                    : 'text-[12px] font-normal fill-slate-600 opacity-60'
+                    ? 'text-[22px] font-bold' 
+                    : 'text-[12px] font-medium'
                 }`}
               >
                 <tspan x={tx} dy="0">
                   {arc.name.replace('La ', '')}
                 </tspan>
                 {isSelected && (
-                  <tspan x={tx} dy="22" fill={catColor} className="font-mono font-medium text-[17px]">
+                  <tspan x={tx} dy="22" fill={catColor} className="font-mono font-bold text-[17px]">
                     {percentage}%
                   </tspan>
                 )}

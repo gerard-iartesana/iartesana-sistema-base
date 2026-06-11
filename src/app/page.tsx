@@ -257,6 +257,7 @@ export default function HomePage() {
                         <div className="mt-6">
                           <ArchetypeLab
                             brandId={activeBrand.id}
+                            content_md={brandBlocks.find(b => b.block_id === 4)?.content_md || ''}
                             onUpdate={() => {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
