@@ -50,6 +50,97 @@ const COLOR_NAMES: ColorNameDef[] = [
   { name: 'Rosa Pastel', r: 244, g: 196, b: 243, role: 'Suavidad / Detalle' },
 ];
 
+interface PantoneDef {
+  code: string;
+  r: number;
+  g: number;
+  b: number;
+}
+
+const PANTONE_DICTIONARY: PantoneDef[] = [
+  { code: 'Pantone Black C', r: 44, g: 44, b: 44 },
+  { code: 'Pantone Cool Gray 1 C', r: 232, g: 233, b: 232 },
+  { code: 'Pantone Cool Gray 7 C', r: 151, g: 153, b: 155 },
+  { code: 'Pantone Cool Gray 11 C', r: 83, g: 86, b: 90 },
+  { code: 'Pantone 293 C (Azul Real)', r: 0, g: 61, b: 165 },
+  { code: 'Pantone 286 C (Azul Marino)', r: 0, g: 51, b: 160 },
+  { code: 'Pantone 300 C (Azul Corporativo)', r: 0, g: 94, b: 184 },
+  { code: 'Pantone 219 C (Rosa Fuerte)', r: 218, g: 24, b: 132 },
+  { code: 'Pantone 185 C (Rojo Vivo)', r: 228, g: 0, b: 43 },
+  { code: 'Pantone 485 C (Rojo)', r: 218, g: 41, b: 28 },
+  { code: 'Pantone 021 C (Naranja)', r: 254, g: 80, b: 0 },
+  { code: 'Pantone 116 C (Amarillo)', r: 255, g: 205, b: 0 },
+  { code: 'Pantone 354 C (Verde Brillante)', r: 0, g: 177, b: 64 },
+  { code: 'Pantone 347 C (Verde)', r: 0, g: 154, b: 68 },
+  { code: 'Pantone 2685 C (Morado Oscuro)', r: 58, g: 0, b: 120 },
+  { code: 'Pantone 2587 C (Morado)', r: 130, g: 70, b: 175 },
+  { code: 'Pantone Reflex Blue C', r: 10, g: 17, b: 114 },
+  { code: 'Pantone Warm Red C', r: 249, g: 66, b: 58 },
+  { code: 'Pantone 3278 C (Turquesa Oscuro)', r: 0, g: 139, b: 122 },
+  { code: 'Pantone 312 C (Turquesa)', r: 0, g: 169, b: 224 },
+  { code: 'Pantone 137 C (Amarillo Oro)', r: 255, g: 163, b: 0 },
+  { code: 'Pantone 7427 C (Burdeos)', r: 158, g: 27, b: 50 },
+  { code: 'Pantone 226 C (Fucsia)', r: 216, g: 0, b: 94 },
+  { code: 'Pantone 375 C (Verde Lima)', r: 118, g: 192, b: 67 },
+  { code: 'Pantone 424 C (Plomo)', r: 112, g: 115, b: 114 },
+  { code: 'Pantone 877 C (Plata)', r: 138, g: 144, b: 151 },
+  { code: 'Pantone 871 C (Oro)', r: 134, g: 117, b: 79 },
+  { code: 'Pantone 15-0343 C (Greenery)', r: 136, g: 176, b: 75 },
+  { code: 'Pantone 18-3838 C (Ultra Violet)', r: 95, g: 75, b: 139 },
+  { code: 'Pantone 16-1546 C (Living Coral)', r: 255, g: 111, b: 97 },
+  { code: 'Pantone 19-4052 C (Classic Blue)', r: 15, g: 76, b: 129 },
+  { code: 'Pantone 17-5104 C (Ultimate Gray)', r: 147, g: 149, b: 151 },
+  { code: 'Pantone 13-0647 C (Illuminating)', r: 245, g: 223, b: 77 },
+  { code: 'Pantone 17-3938 C (Very Peri)', r: 102, g: 103, b: 171 },
+  { code: 'Pantone 18-1750 C (Viva Magenta)', r: 190, g: 52, b: 85 },
+  { code: 'Pantone 13-1023 C (Peach Fuzz)', r: 255, g: 190, b: 152 },
+];
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  let rgb = hex.replace(/^#/, '');
+  if (rgb.length === 3) {
+    rgb = rgb.split('').map(char => char + char).join('');
+  }
+  const r = parseInt(rgb.substring(0, 2), 16);
+  const g = parseInt(rgb.substring(2, 4), 16);
+  const b = parseInt(rgb.substring(4, 6), 16);
+  return { r, g, b };
+}
+
+function rgbToCmyk(r: number, g: number, b: number): { c: number; m: number; y: number; k: number } {
+  const rPrime = r / 255;
+  const gPrime = g / 255;
+  const bPrime = b / 255;
+
+  const k = 1 - Math.max(rPrime, gPrime, bPrime);
+  if (k === 1) {
+    return { c: 0, m: 0, y: 0, k: 100 };
+  }
+
+  const c = Math.round(((1 - rPrime - k) / (1 - k)) * 100);
+  const m = Math.round(((1 - gPrime - k) / (1 - k)) * 100);
+  const y = Math.round(((1 - bPrime - k) / (1 - k)) * 100);
+  const kPercent = Math.round(k * 100);
+
+  return { c, m, y, k: kPercent };
+}
+
+function getClosestPantone(r: number, g: number, b: number): string {
+  let minDistance = Infinity;
+  let closest = PANTONE_DICTIONARY[0].code;
+
+  for (const p of PANTONE_DICTIONARY) {
+    const dist = Math.sqrt(
+      Math.pow(r - p.r, 2) + Math.pow(g - p.g, 2) + Math.pow(b - p.b, 2)
+    );
+    if (dist < minDistance) {
+      minDistance = dist;
+      closest = p.code;
+    }
+  }
+  return closest;
+}
+
 function getClosestColorName(hex: string): { name: string; role: string } {
   let rgb = hex.replace(/^#/, '');
   if (rgb.length === 3) {
@@ -482,6 +573,10 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
                   const passesDark = darkRatio >= 4.5 ? 'Pasa' : darkRatio >= 3.0 ? 'Pasa G' : 'Falla';
                   const passesLight = lightRatio >= 4.5 ? 'Pasa' : lightRatio >= 3.0 ? 'Pasa G' : 'Falla';
 
+                  const rgb = hexToRgb(hex);
+                  const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+                  const pantone = getClosestPantone(rgb.r, rgb.g, rgb.b);
+
                   return (
                     <div key={idx} className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 flex flex-col justify-between">
                       <div>
@@ -504,6 +599,18 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
                         {/* Title info */}
                         <p className="text-[10px] font-bold text-white truncate">{nameRole.name}</p>
                         <p className="text-[9px] font-mono text-slate-500 font-semibold">{hex.toUpperCase()}</p>
+
+                        {/* CMYK & Pantone codes */}
+                        <div className="mt-1.5 space-y-0.5 text-[8px] font-medium text-slate-400 border-t border-slate-800/40 pt-1">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500 font-semibold">CMYK:</span>
+                            <span className="font-mono text-slate-300">{cmyk.c}% {cmyk.m}% {cmyk.y}% {cmyk.k}%</span>
+                          </div>
+                          <div className="flex justify-between truncate" title={pantone}>
+                            <span className="text-slate-500 font-semibold">Pantone:</span>
+                            <span className="font-bold text-violet-400 truncate">{pantone.replace(/ \([^)]+\)/g, '')}</span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Readability WCAG Badges */}
