@@ -188,17 +188,17 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
   const textR = 215;
 
   return (
-    <div className="w-full flex flex-col items-center select-none bg-slate-50/50 rounded-2xl border border-slate-100 p-6">
-      <svg viewBox="-100 -50 700 600" className="w-full max-w-[480px] h-auto">
+    <div className="w-full flex flex-col items-center select-none">
+      <svg viewBox="-100 -50 700 600" className="w-full max-w-[560px] h-auto">
         {/* Outer Category Labels */}
-        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase">Cambio</text>
-        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase">Estabilidad</text>
+        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Cambio</text>
+        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Estabilidad</text>
         
         <text
           x={cx + r + 25}
           y={cy}
           textAnchor="middle"
-          className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase"
+          className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase"
           transform={`rotate(90, ${cx + r + 25}, ${cy})`}
         >
           Colectividad
@@ -207,7 +207,7 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
           x={cx - r - 25}
           y={cy}
           textAnchor="middle"
-          className="text-[10px] font-bold tracking-widest fill-slate-400 uppercase"
+          className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase"
           transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
         >
           Individualismo
@@ -246,16 +246,16 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
               {/* Slice Path */}
               <path
                 d={pathData}
-                fill={isSelected ? catColor : '#f1f5f9'}
-                fillOpacity={isSelected ? 0.2 + 0.8 * (percentage / 100) : 0.6}
-                stroke="#ffffff"
+                fill={isSelected ? catColor : '#1d1d21'}
+                fillOpacity={isSelected ? 0.3 + 0.7 * (percentage / 100) : 0.4}
+                stroke="#0f0f11"
                 strokeWidth="2.5"
               />
 
               {/* Icon */}
               <g
                 transform={`translate(${ix - 12}, ${iy - 12})`}
-                className={isSelected ? 'text-slate-800' : 'text-slate-400'}
+                className={isSelected ? 'text-white' : 'text-slate-600'}
               >
                 {ICON_PATHS[arc.icon]}
               </g>
@@ -267,15 +267,15 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
                 textAnchor={textAnchor}
                 className={`transition-all duration-300 ${
                   isSelected 
-                    ? 'text-[22px] font-bold fill-slate-800' 
-                    : 'text-[12px] font-medium fill-slate-400 opacity-70'
+                    ? 'text-[22px] font-medium fill-white' 
+                    : 'text-[12px] font-normal fill-slate-600 opacity-60'
                 }`}
               >
                 <tspan x={tx} dy="0">
                   {arc.name.replace('La ', '')}
                 </tspan>
                 {isSelected && (
-                  <tspan x={tx} dy="22" fill={catColor} className="font-mono font-bold text-[17px]">
+                  <tspan x={tx} dy="22" fill={catColor} className="font-mono font-medium text-[17px]">
                     {percentage}%
                   </tspan>
                 )}
@@ -285,7 +285,7 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
         })}
 
         {/* Inner center ring */}
-        <circle cx={cx} cy={cy} r="25" fill="#ffffff" stroke="#e2e8f0" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r="25" fill="#0f0f11" stroke="#2a2a2f" strokeWidth="1" />
       </svg>
     </div>
   );
@@ -525,14 +525,13 @@ export default function SharePage() {
                         if (savedList.length > 0) {
                           customElements = (
                             <div className="mt-8 border-t border-slate-100 pt-6">
-                              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Mockups de conceptualización visual</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {savedList.map(([key, base64]) => {
                                   const label = labels[key] || key;
                                   return (
-                                    <div key={key} className="flex flex-col gap-2 bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-sm animate-fade-in">
-                                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider select-none px-0.5">{label}</span>
-                                      <div className="overflow-hidden rounded-lg shadow-sm border border-slate-100 aspect-[16/10] flex justify-center items-center bg-white">
+                                    <div key={key} className="flex flex-col gap-2">
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none px-0.5">{label}</span>
+                                      <div className="overflow-hidden rounded-lg shadow-md aspect-[16/10] flex justify-center items-center bg-transparent">
                                         <img 
                                           src={base64} 
                                           alt={`Mockup ${label}`} 
