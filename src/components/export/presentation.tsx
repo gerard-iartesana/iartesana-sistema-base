@@ -298,6 +298,50 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
   );
 }
 
+interface SavedMockups {
+  card?: string;
+  mobile?: string;
+  letter?: string;
+  tshirt?: string;
+  tote?: string;
+}
+
+const CATEGORY_MAP: Record<string, keyof SavedMockups> = {
+  'Tarjeta': 'card',
+  'Movil': 'mobile',
+  'Papel A4': 'letter',
+  'Camiseta': 'tshirt',
+  'Bolso Tote': 'tote'
+};
+
+const REVERSE_CATEGORY_MAP: Record<keyof SavedMockups, string> = {
+  card: 'Tarjeta',
+  mobile: 'Movil',
+  letter: 'Papel A4',
+  tshirt: 'Camiseta',
+  tote: 'Bolso Tote'
+};
+
+function parseSavedMockups(md: string): SavedMockups {
+  const mockups: SavedMockups = {};
+  const regex = /!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\((data:image\/[^)]+)\)/g;
+  let match;
+  while ((match = regex.exec(md)) !== null) {
+    const label = match[1];
+    const base64 = match[2];
+    const key = CATEGORY_MAP[label];
+    if (key) {
+      mockups[key] = base64;
+    }
+  }
+  return mockups;
+}
+
+function cleanMarkdownMockups(md: string): string {
+  const regex = /\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g;
+  return md.replace(regex, '').trim();
+}
+
 export function Presentation() {
   const { activeBrand } = useBrand();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -487,6 +531,89 @@ export function Presentation() {
                   <div className="w-full flex justify-center mt-2">
                     <PresentationArchetypeWheel content={content} />
                   </div>
+                </div>
+              ) : blockDef.id === 7 ? (
+                <div className="space-y-8 w-full">
+                  {/* Clean text description */}
+                  {(() => {
+                    const cleanContent = cleanMarkdownMockups(content);
+                    return cleanContent ? (
+                      <div className="markdown-preview max-w-none">
+                        <ReactMarkdown
+                          components={{
+                            a: ({ href, children, ...props }) => {
+                              if (href === '#marker-pendiente') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              if (href === '#marker-verificar') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              return <a href={href} {...props}>{children}</a>;
+                            },
+                            h1: (props) => <HeadingRenderer level={1} {...props} />,
+                            h2: (props) => <HeadingRenderer level={2} {...props} />,
+                            h3: (props) => <HeadingRenderer level={3} {...props} />,
+                            h4: (props) => <HeadingRenderer level={4} {...props} />,
+                            h5: (props) => <HeadingRenderer level={5} {...props} />,
+                            h6: (props) => <HeadingRenderer level={6} {...props} />,
+                            p: (props) => <ParagraphRenderer {...props} />,
+                            li: (props) => <LiRenderer {...props} />,
+                          }}
+                        >
+                          {cleanContent
+                            .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                            .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-4 text-center">
+                        <p className="text-sm text-slate-400 italic">Conceptualización visual de marca</p>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Grid gallery of saved mockups */}
+                  {(() => {
+                    const saved = parseSavedMockups(content);
+                    const savedList = Object.entries(saved).filter(([_, val]) => !!val);
+                    if (savedList.length === 0) return null;
+
+                    return (
+                      <div className="mt-8 border-t border-slate-100 pt-6">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5 select-none">
+                          <Sparkles className="h-4 w-4 text-violet-500" />
+                          Mockups de Identidad Visual Guardados
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {savedList.map(([key, base64]) => {
+                            const label = REVERSE_CATEGORY_MAP[key as keyof SavedMockups] || key;
+                            return (
+                              <div key={key} className="bg-slate-50 border border-slate-150 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
+                                <div className="flex justify-between items-center px-1 select-none">
+                                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide">{label}</span>
+                                </div>
+                                <div className="border border-slate-200/60 rounded-lg overflow-hidden bg-white aspect-[3/2] flex justify-center items-center shadow-inner">
+                                  <img 
+                                    src={base64} 
+                                    alt={`Mockup ${label}`} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : content.trim() ? (
                 <div className="markdown-preview max-w-none">

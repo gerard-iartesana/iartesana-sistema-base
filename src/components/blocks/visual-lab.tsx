@@ -321,6 +321,132 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   const [isRefining, setIsRefining] = useState(false);
   const [promptError, setPromptError] = useState<string | null>(null);
 
+  // State for parsed mockups from block 7 content_md
+  interface SavedMockups {
+    card?: string;
+    mobile?: string;
+    letter?: string;
+    tshirt?: string;
+    tote?: string;
+  }
+  const [savedMockups, setSavedMockups] = useState<SavedMockups>({});
+  
+  // View mode switcher: 'interactive' | 'ai' for each format
+  const [viewModes, setViewModes] = useState<Record<string, 'interactive' | 'ai'>>({
+    card: 'interactive',
+    mobile: 'interactive',
+    letter: 'interactive',
+    tshirt: 'interactive',
+    tote: 'interactive'
+  });
+
+  const [isSavingMockup, setIsSavingMockup] = useState<string | null>(null);
+
+  const CATEGORY_MAP: Record<string, keyof SavedMockups> = {
+    'Tarjeta': 'card',
+    'Movil': 'mobile',
+    'Papel A4': 'letter',
+    'Camiseta': 'tshirt',
+    'Bolso Tote': 'tote'
+  };
+
+  const REVERSE_CATEGORY_MAP: Record<keyof SavedMockups, string> = {
+    card: 'Tarjeta',
+    mobile: 'Movil',
+    letter: 'Papel A4',
+    tshirt: 'Camiseta',
+    tote: 'Bolso Tote'
+  };
+
+  function parseSavedMockups(md: string): SavedMockups {
+    const mockups: SavedMockups = {};
+    const regex = /!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\((data:image\/[^)]+)\)/g;
+    let match;
+    while ((match = regex.exec(md)) !== null) {
+      const label = match[1];
+      const base64 = match[2];
+      const key = CATEGORY_MAP[label];
+      if (key) {
+        mockups[key] = base64;
+      }
+    }
+    return mockups;
+  }
+
+  function updateSavedMockupInMarkdown(md: string, key: keyof SavedMockups, base64: string | null): string {
+    const label = REVERSE_CATEGORY_MAP[key];
+    const regex = new RegExp(`\\s*\\n*!\\[Mockup ${label}\\]\\(data:image\\/[^)]+\\)`, 'g');
+    let cleanMd = md.replace(regex, '').trim();
+    if (base64) {
+      cleanMd = cleanMd ? `${cleanMd}\n\n![Mockup ${label}](${base64})` : `![Mockup ${label}](${base64})`;
+    }
+    return cleanMd;
+  }
+
+  const handleSaveMockup = async (key: keyof SavedMockups, base64: string) => {
+    setIsSavingMockup(key);
+    try {
+      const blocks = await db.getBrandBlocks(brandId);
+      const block7 = blocks.find(b => b.block_id === 7);
+      const currentContent = block7?.content_md || '';
+      
+      const newContent = updateSavedMockupInMarkdown(currentContent, key, base64);
+      
+      // Update block 7
+      await db.updateBrandBlock(brandId, 7, {
+        content_md: newContent,
+        status: block7?.status || 'borrador'
+      });
+      
+      // Update local state
+      setSavedMockups(prev => ({
+        ...prev,
+        [key]: base64
+      }));
+      setViewModes(prev => ({
+        ...prev,
+        [key]: 'ai'
+      }));
+      
+      onUpdate();
+    } catch (err) {
+      console.error('[VisualLab] Failed to save mockup:', err);
+    } finally {
+      setIsSavingMockup(null);
+    }
+  };
+
+  const handleDeleteMockup = async (key: keyof SavedMockups) => {
+    try {
+      const blocks = await db.getBrandBlocks(brandId);
+      const block7 = blocks.find(b => b.block_id === 7);
+      const currentContent = block7?.content_md || '';
+      
+      const newContent = updateSavedMockupInMarkdown(currentContent, key, null);
+      
+      // Update block 7
+      await db.updateBrandBlock(brandId, 7, {
+        content_md: newContent,
+        status: block7?.status || 'borrador'
+      });
+      
+      // Update local state
+      setSavedMockups(prev => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+      setViewModes(prev => ({
+        ...prev,
+        [key]: 'interactive'
+      }));
+      
+      onUpdate();
+    } catch (err) {
+      console.error('[VisualLab] Failed to delete mockup:', err);
+    }
+  };
+
 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -344,6 +470,39 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
       setAnalysisReport(null);
     }
   }, [activeBrand?.logo_path, activeBrand?.id]);
+
+  // Load and parse saved mockups from Block 7 content_md
+  useEffect(() => {
+    if (!brandId) return;
+    let cancelled = false;
+    async function loadBlock7() {
+      try {
+        const blocks = await db.getBrandBlocks(brandId);
+        const block7 = blocks.find(b => b.block_id === 7);
+        if (!cancelled && block7?.content_md) {
+          const parsed = parseSavedMockups(block7.content_md);
+          setSavedMockups(parsed);
+          
+          // Auto-switch viewMode if mockups exist
+          setViewModes(prev => {
+            const updated = { ...prev };
+            Object.keys(parsed).forEach(k => {
+              if (parsed[k as keyof SavedMockups]) {
+                updated[k] = 'ai';
+              }
+            });
+            return updated;
+          });
+        } else if (!cancelled) {
+          setSavedMockups({});
+        }
+      } catch (err) {
+        console.error('[VisualLab] Failed to load mockups from block 7:', err);
+      }
+    }
+    loadBlock7();
+    return () => { cancelled = true; };
+  }, [brandId, activeBrand]);
 
   // Load API Key from localStorage
   useEffect(() => {
@@ -1043,113 +1202,150 @@ Requisitos obligatorios del prompt resultante:
                 {/* 1. MOCKUP: BUSINESS CARD (3D Flippable) */}
                 {mockupCategory === 'card' && (
                   <div className="flex flex-col items-center gap-6 select-none">
-                    <p className="text-[10px] text-slate-500 font-medium">Haz clic en la tarjeta para voltearla (giro 3D)</p>
-                    <div 
-                      style={cardStyle} 
-                      className="w-[340px] h-[200px] cursor-pointer"
-                      onClick={() => setCardFlipped(!cardFlipped)}
-                    >
-                      <div style={cardInnerStyle} className="w-full h-full">
-                        {/* CARD FRONT */}
-                        <div 
-                          style={{
-                            ...cardFaceStyle,
-                            backgroundColor: primaryColor,
-                            color: '#FFFFFF'
-                          }} 
-                          className="rounded-2xl border border-white/10 shadow-2xl flex flex-col justify-between p-6 overflow-hidden"
+                    {savedMockups.card && (
+                      <div className="flex bg-slate-900/60 p-0.5 rounded-lg border border-slate-800/80 mb-2 self-center">
+                        <button 
+                          onClick={() => setViewModes(prev => ({ ...prev, card: 'interactive' }))}
+                          className={`text-[9px] font-bold px-3 py-1 rounded cursor-pointer transition-colors ${viewModes.card === 'interactive' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
                         >
-                          {/* Design elements */}
-                          <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
-                          <div className="absolute left-10 bottom-0 w-24 h-12 rounded-t-full" style={{ backgroundColor: secondaryColor, opacity: 0.2 }} />
-                          
-                          <div className="flex justify-between items-start">
-                            <span className="text-[9px] font-bold tracking-widest uppercase opacity-85">iARTESANA Corporativa</span>
-                            <span className="w-2.5 h-2.5 rounded-full bg-white/40" />
-                          </div>
-                          
-                          {/* Center logo */}
-                          <div className="my-auto flex justify-center">
-                            <img 
-                              src={logoSrc} 
-                              alt="Card Front Logo" 
-                              className="max-h-[50px] max-w-[220px] object-contain brightness-0 invert" 
-                            />
-                          </div>
-
-                          <div className="flex justify-between items-end text-[8px] tracking-wider opacity-60 font-mono">
-                            <span>SISTEMA BASE</span>
-                            <span>{activeBrand?.name.toUpperCase()}</span>
-                          </div>
-                        </div>
-
-                        {/* CARD BACK */}
-                        <div 
-                          style={{
-                            ...cardBackFaceStyle,
-                            backgroundColor: '#0f0f12',
-                            color: '#ECECEF'
-                          }} 
-                          className="rounded-2xl border border-slate-800 shadow-2xl flex flex-col justify-between p-6 overflow-hidden text-left"
+                          Diseño Interactivo CSS
+                        </button>
+                        <button 
+                          onClick={() => setViewModes(prev => ({ ...prev, card: 'ai' }))}
+                          className={`text-[9px] font-bold px-3 py-1 rounded cursor-pointer transition-colors ${viewModes.card === 'ai' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
                         >
-                          <div className="absolute left-0 top-0 w-24 h-24 rounded-full blur-2xl opacity-10" style={{ backgroundColor: primaryColor }} />
-                          
-                          <div className="flex justify-between items-start">
-                            {/* Personal information */}
-                            <div>
-                              <p className="text-xs font-black text-white">{user?.name || 'Gerard iARTESANA'}</p>
-                              <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5" style={{ color: accentColor }}>
-                                {user?.role === 'admin' ? 'Director Creativo' : 'Consultor de Marca'}
-                              </p>
-                            </div>
-                            {/* Tiny Logo */}
-                            <img 
-                              src={logoSrc} 
-                              alt="Card Back Logo" 
-                              className="max-h-[28px] max-w-[100px] object-contain" 
-                              style={{ filter: `drop-shadow(0px 1px 2px rgba(0,0,0,0.4))` }}
-                            />
-                          </div>
-
-                          {/* Contact Details */}
-                          <div className="space-y-1.5 font-mono text-[8px] text-slate-400 border-t border-slate-900 pt-3">
-                            <p className="flex items-center gap-1.5">
-                              <span className="text-slate-600 font-bold">M:</span>
-                              <span>{user?.email || 'hola@iartesana.es'}</span>
-                            </p>
-                            <p className="flex items-center gap-1.5">
-                              <span className="text-slate-600 font-bold">T:</span>
-                              <span>+34 900 123 456</span>
-                            </p>
-                            <p className="flex items-center gap-1.5">
-                              <span className="text-slate-600 font-bold">W:</span>
-                              <span className="font-semibold text-slate-300">iartesana.es/{activeBrand?.slug}</span>
-                            </p>
-                          </div>
-                        </div>
+                          Diseño Guardado IA
+                        </button>
                       </div>
-                    </div>
+                    )}
+
+                    {viewModes.card === 'ai' && savedMockups.card ? (
+                      <div className="relative group border border-slate-800 rounded-xl overflow-hidden bg-slate-950 flex flex-col justify-center items-center shadow-2xl w-[340px] h-[200px]">
+                        <img 
+                          src={savedMockups.card} 
+                          alt="Mockup Tarjeta Guardada" 
+                          className="w-full h-full object-cover" 
+                        />
+                        <button
+                          onClick={() => handleDeleteMockup('card')}
+                          className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors"
+                          title="Eliminar diseño IA"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-[10px] text-slate-500 font-medium">Haz clic en la tarjeta para voltearla (giro 3D)</p>
+                        <div 
+                          style={cardStyle} 
+                          className="w-[340px] h-[200px] cursor-pointer"
+                          onClick={() => setCardFlipped(!cardFlipped)}
+                        >
+                          <div style={cardInnerStyle} className="w-full h-full">
+                            {/* CARD FRONT */}
+                            <div 
+                              style={{
+                                ...cardFaceStyle,
+                                backgroundColor: primaryColor,
+                                color: '#FFFFFF'
+                              }} 
+                              className="rounded-2xl border border-white/10 shadow-2xl flex flex-col justify-between p-6 overflow-hidden"
+                            >
+                              {/* Design elements */}
+                              <div className="absolute right-0 top-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+                              <div className="absolute left-10 bottom-0 w-24 h-12 rounded-t-full" style={{ backgroundColor: secondaryColor, opacity: 0.2 }} />
+                              
+                              <div className="flex justify-between items-start">
+                                <span className="text-[9px] font-bold tracking-widest uppercase opacity-85">iARTESANA Corporativa</span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-white/40" />
+                              </div>
+                              
+                              {/* Center logo */}
+                              <div className="my-auto flex justify-center">
+                                <img 
+                                  src={logoSrc} 
+                                  alt="Card Front Logo" 
+                                  className="max-h-[50px] max-w-[220px] object-contain brightness-0 invert" 
+                                />
+                              </div>
+
+                              <div className="flex justify-between items-end text-[8px] tracking-wider opacity-60 font-mono">
+                                <span>SISTEMA BASE</span>
+                                <span>{activeBrand?.name.toUpperCase()}</span>
+                              </div>
+                            </div>
+
+                            {/* CARD BACK */}
+                            <div 
+                              style={{
+                                ...cardBackFaceStyle,
+                                backgroundColor: '#0f0f12',
+                                color: '#ECECEF'
+                              }} 
+                              className="rounded-2xl border border-slate-800 shadow-2xl flex flex-col justify-between p-6 overflow-hidden text-left"
+                            >
+                              <div className="absolute left-0 top-0 w-24 h-24 rounded-full blur-2xl opacity-10" style={{ backgroundColor: primaryColor }} />
+                              
+                              <div className="flex justify-between items-start">
+                                {/* Personal information */}
+                                <div>
+                                  <p className="text-xs font-black text-white">{user?.name || 'Gerard iARTESANA'}</p>
+                                  <p className="text-[9px] font-bold uppercase tracking-wider mt-0.5" style={{ color: accentColor }}>
+                                    {user?.role === 'admin' ? 'Director Creativo' : 'Consultor de Marca'}
+                                  </p>
+                                </div>
+                                {/* Tiny Logo */}
+                                <img 
+                                  src={logoSrc} 
+                                  alt="Card Back Logo" 
+                                  className="max-h-[28px] max-w-[100px] object-contain" 
+                                  style={{ filter: `drop-shadow(0px 1px 2px rgba(0,0,0,0.4))` }}
+                                />
+                              </div>
+
+                              {/* Contact Details */}
+                              <div className="space-y-1.5 font-mono text-[8px] text-slate-400 border-t border-slate-900 pt-3">
+                                <p className="flex items-center gap-1.5">
+                                  <span className="text-slate-600 font-bold">M:</span>
+                                  <span>{user?.email || 'hola@iartesana.es'}</span>
+                                </p>
+                                <p className="flex items-center gap-1.5">
+                                  <span className="text-slate-600 font-bold">T:</span>
+                                  <span>+34 900 123 456</span>
+                                </p>
+                                <p className="flex items-center gap-1.5">
+                                  <span className="text-slate-600 font-bold">W:</span>
+                                  <span className="font-semibold text-slate-300">iartesana.es/{activeBrand?.slug}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
                 {/* 2. MOCKUP: MOBILE APP SCREEN */}
                 {mockupCategory === 'mobile' && (
                   <div className="flex flex-col items-center gap-4 select-none">
-                    {/* Switcher inside phone */}
-                    <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 mb-2">
-                      <button 
-                        onClick={() => setMobileTab('splash')}
-                        className={`text-[9px] font-bold px-3 py-1 rounded ${mobileTab === 'splash' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                      >
-                        Splash Screen
-                      </button>
-                      <button 
-                        onClick={() => setMobileTab('home')}
-                        className={`text-[9px] font-bold px-3 py-1 rounded ${mobileTab === 'home' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
-                      >
-                        App Interface
-                      </button>
-                    </div>
+                    {savedMockups.mobile && (
+                      <div className="flex bg-slate-900/60 p-0.5 rounded-lg border border-slate-800/80 mb-2 self-center">
+                        <button 
+                          onClick={() => setViewModes(prev => ({ ...prev, mobile: 'interactive' }))}
+                          className={`text-[9px] font-bold px-3 py-1 rounded cursor-pointer transition-colors ${viewModes.mobile === 'interactive' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                          Diseño Interactivo CSS
+                        </button>
+                        <button 
+                          onClick={() => setViewModes(prev => ({ ...prev, mobile: 'ai' }))}
+                          className={`text-[9px] font-bold px-3 py-1 rounded cursor-pointer transition-colors ${viewModes.mobile === 'ai' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                          Diseño Guardado IA
+                        </button>
+                      </div>
+                    )}
 
                     {/* Smartphone Bezel */}
                     <div className="w-[220px] h-[400px] rounded-[36px] border-[6px] border-slate-800 bg-[#0c0c0e] shadow-2xl relative overflow-hidden flex flex-col">
@@ -1160,83 +1356,117 @@ Requisitos obligatorios del prompt resultante:
 
                       {/* Screen Content */}
                       <div className="flex-1 flex flex-col overflow-hidden relative">
-                        
-                        {/* TAB A: SPLASH SCREEN */}
-                        {mobileTab === 'splash' && (
-                          <div 
-                            className="flex-1 flex flex-col items-center justify-center p-4"
-                            style={{ 
-                              background: `radial-gradient(circle at center, #1b1921 0%, #0c0c0e 100%)`
-                            }}
-                          >
-                            {/* Logo with pulsing glow */}
-                            <div className="relative flex items-center justify-center p-4">
-                              <div className="absolute inset-0 rounded-full blur-xl animate-pulse opacity-40" style={{ backgroundColor: primaryColor }} />
-                              <img src={logoSrc} alt="Phone Splash Logo" className="max-h-[50px] max-w-[150px] object-contain relative z-10" />
-                            </div>
-                            
-                            {/* Bottom loader */}
-                            <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-2">
-                              <div className="h-0.5 w-16 bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-violet-500 to-emerald-500 w-1/2 rounded-full animate-infinite" style={{ animation: 'shimmer 1.5s infinite linear' }} />
-                              </div>
-                              <span className="text-[7px] font-mono tracking-widest text-slate-500 uppercase">Cargando...</span>
-                            </div>
+                        {viewModes.mobile === 'ai' && savedMockups.mobile ? (
+                          <div className="flex-1 relative bg-slate-950 w-full h-full">
+                            <img 
+                              src={savedMockups.mobile} 
+                              alt="Mockup Móvil Guardado" 
+                              className="w-full h-full object-cover" 
+                            />
+                            <button
+                              onClick={() => handleDeleteMockup('mobile')}
+                              className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors z-35"
+                              title="Eliminar diseño IA"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           </div>
-                        )}
-
-                        {/* TAB B: APP DASHBOARD */}
-                        {mobileTab === 'home' && (
-                          <div className="flex-1 flex flex-col bg-slate-950 text-slate-200">
-                            {/* Nav bar */}
-                            <div className="h-10 border-b border-slate-900 bg-slate-900/60 px-3 flex items-center justify-between pt-3">
-                              <span className="text-[7px] font-bold text-slate-400">Menú</span>
-                              <img src={logoSrc} alt="Phone Nav Logo" className="max-h-[14px] max-w-[65px] object-contain" />
-                              <span className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[7px] font-bold">U</span>
-                            </div>
-                            
-                            {/* Scrollable feed */}
-                            <div className="flex-1 p-3 overflow-y-auto space-y-2.5">
-                              {/* Welcome banner */}
-                              <div 
-                                className="rounded-lg p-2.5 text-white relative overflow-hidden"
-                                style={{ backgroundColor: primaryColor }}
-                              >
-                                <p className="text-[7px] font-mono tracking-widest uppercase opacity-75">Workspace</p>
-                                <p className="text-[9px] font-bold mt-0.5">Bienvenido a {activeBrand?.name}</p>
-                                <div className="absolute -right-4 -bottom-4 w-12 h-12 rounded-full bg-white/10 blur-md" />
-                              </div>
-
-                              {/* Quick Stats Grid */}
-                              <div className="grid grid-cols-2 gap-1.5">
-                                <div className="bg-slate-900/80 border border-slate-900 rounded-lg p-2 text-left">
-                                  <span className="text-[6px] font-bold text-slate-500 uppercase">PROYECTOS</span>
-                                  <p className="text-[10px] font-bold text-white mt-0.5">14 Activos</p>
-                                </div>
-                                <div className="bg-slate-900/80 border border-slate-900 rounded-lg p-2 text-left">
-                                  <span className="text-[6px] font-bold text-slate-500 uppercase">Alineación</span>
-                                  <p className="text-[10px] font-bold text-emerald-400 mt-0.5">95% Óptima</p>
-                                </div>
-                              </div>
-
-                              {/* Sample list item styled with accent */}
-                              <div className="bg-slate-900/40 border border-slate-900 rounded-lg p-2 flex items-center justify-between text-[8px]">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
-                                  <span className="font-semibold text-slate-300">Identidad Digital</span>
-                                </div>
-                                <span className="text-[7px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">10:45</span>
-                              </div>
-
-                              {/* Button styled with secondary */}
+                        ) : (
+                          <>
+                            {/* Switcher inside phone */}
+                            <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 m-2 self-center z-10">
                               <button 
-                                className="w-full rounded-md text-[8px] font-bold py-1.5 text-center text-white transition-colors"
-                                style={{ backgroundColor: secondaryColor }}
+                                onClick={() => setMobileTab('splash')}
+                                className={`text-[8px] font-bold px-2 py-0.5 rounded cursor-pointer ${mobileTab === 'splash' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
                               >
-                                Acciones Rápidas
+                                Splash
+                              </button>
+                              <button 
+                                onClick={() => setMobileTab('home')}
+                                className={`text-[8px] font-bold px-2 py-0.5 rounded cursor-pointer ${mobileTab === 'home' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                              >
+                                Home
                               </button>
                             </div>
-                          </div>
+
+                            {/* TAB A: SPLASH SCREEN */}
+                            {mobileTab === 'splash' && (
+                              <div 
+                                className="flex-1 flex flex-col items-center justify-center p-4"
+                                style={{ 
+                                  background: `radial-gradient(circle at center, #1b1921 0%, #0c0c0e 100%)`
+                                }}
+                              >
+                                {/* Logo with pulsing glow */}
+                                <div className="relative flex items-center justify-center p-4">
+                                  <div className="absolute inset-0 rounded-full blur-xl animate-pulse opacity-40" style={{ backgroundColor: primaryColor }} />
+                                  <img src={logoSrc} alt="Phone Splash Logo" className="max-h-[50px] max-w-[150px] object-contain relative z-10" />
+                                </div>
+                                
+                                {/* Bottom loader */}
+                                <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center gap-2">
+                                  <div className="h-0.5 w-16 bg-slate-800 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-violet-500 to-emerald-500 w-1/2 rounded-full animate-infinite" style={{ animation: 'shimmer 1.5s infinite linear' }} />
+                                  </div>
+                                  <span className="text-[7px] font-mono tracking-widest text-slate-500 uppercase">Cargando...</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* TAB B: APP DASHBOARD */}
+                            {mobileTab === 'home' && (
+                              <div className="flex-1 flex flex-col bg-slate-950 text-slate-200">
+                                {/* Nav bar */}
+                                <div className="h-8 border-b border-slate-900 bg-slate-900/60 px-3 flex items-center justify-between pt-1">
+                                  <span className="text-[7px] font-bold text-slate-400">Menú</span>
+                                  <img src={logoSrc} alt="Phone Nav Logo" className="max-h-[14px] max-w-[65px] object-contain" />
+                                  <span className="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[7px] font-bold">U</span>
+                                </div>
+                                
+                                {/* Scrollable feed */}
+                                <div className="flex-1 p-3 overflow-y-auto space-y-2.5">
+                                  {/* Welcome banner */}
+                                  <div 
+                                    className="rounded-lg p-2.5 text-white relative overflow-hidden"
+                                    style={{ backgroundColor: primaryColor }}
+                                  >
+                                    <p className="text-[7px] font-mono tracking-widest uppercase opacity-75">Workspace</p>
+                                    <p className="text-[9px] font-bold mt-0.5">Bienvenido a {activeBrand?.name}</p>
+                                    <div className="absolute -right-4 -bottom-4 w-12 h-12 rounded-full bg-white/10 blur-md" />
+                                  </div>
+
+                                  {/* Quick Stats Grid */}
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <div className="bg-slate-900/80 border border-slate-900 rounded-lg p-2 text-left">
+                                      <span className="text-[6px] font-bold text-slate-500 uppercase">PROYECTOS</span>
+                                      <p className="text-[10px] font-bold text-white mt-0.5">14 Activos</p>
+                                    </div>
+                                    <div className="bg-slate-900/80 border border-slate-900 rounded-lg p-2 text-left">
+                                      <span className="text-[6px] font-bold text-slate-500 uppercase">Alineación</span>
+                                      <p className="text-[10px] font-bold text-emerald-400 mt-0.5">95% Óptima</p>
+                                    </div>
+                                  </div>
+
+                                  {/* Sample list item styled with accent */}
+                                  <div className="bg-slate-900/40 border border-slate-900 rounded-lg p-2 flex items-center justify-between text-[8px]">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: accentColor }} />
+                                      <span className="font-semibold text-slate-300">Identidad Digital</span>
+                                    </div>
+                                    <span className="text-[7px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">10:45</span>
+                                  </div>
+
+                                  {/* Button styled with secondary */}
+                                  <button 
+                                    className="w-full rounded-md text-[8px] font-bold py-1.5 text-center text-white transition-colors"
+                                    style={{ backgroundColor: secondaryColor }}
+                                  >
+                                    Acciones Rápidas
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                       
@@ -1248,74 +1478,110 @@ Requisitos obligatorios del prompt resultante:
 
                 {/* 3. MOCKUP: LETTERHEAD / DOCUMENT SHEET */}
                 {mockupCategory === 'letter' && (
-                  <div className="w-[320px] h-[420px] bg-white rounded-lg border border-slate-200 shadow-2xl p-6 text-left text-slate-800 relative flex flex-col justify-between overflow-hidden select-none">
-                    {/* Color stripe top */}
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r" style={{ backgroundImage: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }} />
-
-                    {/* Header */}
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <img src={logoSrc} alt="Doc Logo" className="max-h-[32px] max-w-[120px] object-contain" />
-                        <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{activeBrand?.name} S.L.</p>
+                  <div className="flex flex-col items-center gap-4 select-none">
+                    {savedMockups.letter && (
+                      <div className="flex bg-slate-900/60 p-0.5 rounded-lg border border-slate-800/80 mb-2 self-center">
+                        <button 
+                          onClick={() => setViewModes(prev => ({ ...prev, letter: 'interactive' }))}
+                          className={`text-[9px] font-bold px-3 py-1 rounded cursor-pointer transition-colors ${viewModes.letter === 'interactive' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                          Diseño Interactivo CSS
+                        </button>
+                        <button 
+                          onClick={() => setViewModes(prev => ({ ...prev, letter: 'ai' }))}
+                          className={`text-[9px] font-bold px-3 py-1 rounded cursor-pointer transition-colors ${viewModes.letter === 'ai' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                          Diseño Guardado IA
+                        </button>
                       </div>
-                      <div className="text-right text-[6px] text-slate-400 font-mono">
-                        <p>Factura: #ES-2026-0042</p>
-                        <p>Fecha: 11 de Junio, 2026</p>
-                        <p>Cliente: iARTESANA LABS</p>
+                    )}
+
+                    {viewModes.letter === 'ai' && savedMockups.letter ? (
+                      <div className="relative group border border-slate-200 rounded-lg overflow-hidden bg-white shadow-2xl w-[320px] h-[420px] flex flex-col justify-center items-center">
+                        <img 
+                          src={savedMockups.letter} 
+                          alt="Mockup Papel Guardado" 
+                          className="w-full h-full object-cover" 
+                        />
+                        <button
+                          onClick={() => handleDeleteMockup('letter')}
+                          className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors"
+                          title="Eliminar diseño IA"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="w-[320px] h-[420px] bg-white rounded-lg border border-slate-200 shadow-2xl p-6 text-left text-slate-800 relative flex flex-col justify-between overflow-hidden">
+                        {/* Color stripe top */}
+                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r" style={{ backgroundImage: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }} />
 
-                    {/* Divider */}
-                    <div className="border-b border-slate-100 my-4" />
+                        {/* Header */}
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <img src={logoSrc} alt="Doc Logo" className="max-h-[32px] max-w-[120px] object-contain" />
+                            <p className="text-[7px] text-slate-400 font-bold uppercase tracking-wider mt-1">{activeBrand?.name} S.L.</p>
+                          </div>
+                          <div className="text-right text-[6px] text-slate-400 font-mono">
+                            <p>Factura: #ES-2026-0042</p>
+                            <p>Fecha: 11 de Junio, 2026</p>
+                            <p>Cliente: iARTESANA LABS</p>
+                          </div>
+                        </div>
 
-                    {/* Body text */}
-                    <div className="flex-1 space-y-4">
-                      <div>
-                        <h6 className="text-[9px] font-extrabold text-slate-800 uppercase tracking-wide">Concepto de Asesoría de Marca</h6>
-                        <p className="text-[8px] text-slate-500 leading-relaxed mt-1">
-                          Servicios profesionales de conceptualización de identidad verbal, glosario nativo, análisis de arquetipos y gobierno de sistemas para agentes de IA.
-                        </p>
-                      </div>
+                        {/* Divider */}
+                        <div className="border-b border-slate-100 my-4" />
 
-                      {/* Small table */}
-                      <div className="border border-slate-100 rounded overflow-hidden">
-                        <table className="w-full text-[7px] leading-normal">
-                          <thead>
-                            <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-100">
-                              <th className="p-1 text-left">Descripción</th>
-                              <th className="p-1 text-right">Horas</th>
-                              <th className="p-1 text-right">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 text-slate-600">
-                            <tr>
-                              <td className="p-1">Definición de Rueda de Arquetipos</td>
-                              <td className="p-1 text-right">12h</td>
-                              <td className="p-1 text-right">960€</td>
-                            </tr>
-                            <tr>
-                              <td className="p-1">Auditoría Visual de Conceptualización</td>
-                              <td className="p-1 text-right">8h</td>
-                              <td className="p-1 text-right">640€</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
+                        {/* Body text */}
+                        <div className="flex-1 space-y-4">
+                          <div>
+                            <h6 className="text-[9px] font-extrabold text-slate-800 uppercase tracking-wide">Concepto de Asesoría de Marca</h6>
+                            <p className="text-[8px] text-slate-500 leading-relaxed mt-1">
+                              Servicios profesionales de conceptualización de identidad verbal, glosario nativo, análisis de arquetipos y gobierno de sistemas para agentes de IA.
+                            </p>
+                          </div>
 
-                      {/* Total */}
-                      <div className="flex justify-end pr-1 text-[8px] font-bold text-slate-700">
-                        <div className="text-right space-y-0.5">
-                          <p className="text-slate-400 text-[7px] font-normal">Base Imponible: 1.600€</p>
-                          <p style={{ color: primaryColor }}>Importe Total: 1.936€ (IVA Inc.)</p>
+                          {/* Small table */}
+                          <div className="border border-slate-100 rounded overflow-hidden">
+                            <table className="w-full text-[7px] leading-normal">
+                              <thead>
+                                <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-100">
+                                  <th className="p-1 text-left">Descripción</th>
+                                  <th className="p-1 text-right">Horas</th>
+                                  <th className="p-1 text-right">Total</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 text-slate-600">
+                                <tr>
+                                  <td className="p-1">Definición de Rueda de Arquetipos</td>
+                                  <td className="p-1 text-right">12h</td>
+                                  <td className="p-1 text-right">960€</td>
+                                </tr>
+                                <tr>
+                                  <td className="p-1">Auditoría Visual de Conceptualización</td>
+                                  <td className="p-1 text-right">8h</td>
+                                  <td className="p-1 text-right">640€</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Total */}
+                          <div className="flex justify-end pr-1 text-[8px] font-bold text-slate-700">
+                            <div className="text-right space-y-0.5">
+                              <p className="text-slate-400 text-[7px] font-normal">Base Imponible: 1.600€</p>
+                              <p style={{ color: primaryColor }}>Importe Total: 1.936€ (IVA Inc.)</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Footer decoration */}
+                        <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-[5.5px] text-slate-400 font-mono">
+                          <span>C/ Gran Vía, 45, Planta 4, Madrid</span>
+                          <span className="font-bold" style={{ color: secondaryColor }}>{activeBrand?.slug}.iartesana.es</span>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Footer decoration */}
-                    <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center text-[5.5px] text-slate-400 font-mono">
-                      <span>C/ Gran Vía, 45, Planta 4, Madrid</span>
-                      <span className="font-bold" style={{ color: secondaryColor }}>{activeBrand?.slug}.iartesana.es</span>
-                    </div>
+                    )}
                   </div>
                 )}
 
@@ -1325,41 +1591,107 @@ Requisitos obligatorios del prompt resultante:
                     
                     {/* Tote bag */}
                     <div className="flex flex-col items-center">
-                      <div className="relative bg-slate-900 border border-slate-800 rounded-xl p-4 w-[130px] h-[150px] flex items-center justify-center overflow-hidden">
-                        
-                        {/* Tote Bag SVG Graphic */}
-                        <svg viewBox="0 0 100 120" className="w-[100px] h-[120px] text-slate-200 fill-slate-200 opacity-90 relative">
-                          {/* Strap */}
-                          <path d="M30 40 C 30 10, 70 10, 70 40" stroke="currentColor" strokeWidth="6" fill="none" className="text-slate-400" />
-                          {/* Bag body */}
-                          <path d="M20 40 L80 40 L85 110 L15 110 Z" fill="currentColor" stroke="currentColor" strokeWidth="2" />
-                          {/* Shading/Depth overlay */}
-                          <path d="M20 40 L50 40 L45 110 L15 110 Z" fill="black" fillOpacity="0.05" />
-                        </svg>
-
-                        {/* Overlay Logo */}
-                        <div className="absolute top-[65px] left-1/2 -translate-x-1/2 w-[55px] h-[30px] flex items-center justify-center mix-blend-multiply opacity-80 pointer-events-none">
-                          <img src={logoSrc} alt="Merch Tote Logo" className="max-h-[22px] object-contain grayscale brightness-0 contrast-200" />
+                      {savedMockups.tote && (
+                        <div className="flex bg-slate-900/60 p-0.5 rounded-lg border border-slate-800/80 mb-2">
+                          <button 
+                            onClick={() => setViewModes(prev => ({ ...prev, tote: 'interactive' }))}
+                            className={`text-[8px] font-bold px-2 py-0.5 rounded cursor-pointer transition-colors ${viewModes.tote === 'interactive' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            Vector
+                          </button>
+                          <button 
+                            onClick={() => setViewModes(prev => ({ ...prev, tote: 'ai' }))}
+                            className={`text-[8px] font-bold px-2 py-0.5 rounded cursor-pointer transition-colors ${viewModes.tote === 'ai' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            IA
+                          </button>
                         </div>
-                      </div>
+                      )}
+
+                      {viewModes.tote === 'ai' && savedMockups.tote ? (
+                        <div className="relative group bg-slate-900 border border-slate-800 rounded-xl w-[130px] h-[150px] overflow-hidden flex items-center justify-center">
+                          <img 
+                            src={savedMockups.tote} 
+                            alt="Mockup Bolso Guardado" 
+                            className="w-full h-full object-cover" 
+                          />
+                          <button
+                            onClick={() => handleDeleteMockup('tote')}
+                            className="absolute top-1.5 right-1.5 p-1 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded border border-red-900/50 transition-colors"
+                            title="Eliminar diseño IA"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative bg-slate-900 border border-slate-800 rounded-xl p-4 w-[130px] h-[150px] flex items-center justify-center overflow-hidden">
+                          {/* Tote Bag SVG Graphic */}
+                          <svg viewBox="0 0 100 120" className="w-[100px] h-[120px] text-slate-200 fill-slate-200 opacity-90 relative">
+                            {/* Strap */}
+                            <path d="M30 40 C 30 10, 70 10, 70 40" stroke="currentColor" strokeWidth="6" fill="none" className="text-slate-400" />
+                            {/* Bag body */}
+                            <path d="M20 40 L80 40 L85 110 L15 110 Z" fill="currentColor" stroke="currentColor" strokeWidth="2" />
+                            {/* Shading/Depth overlay */}
+                            <path d="M20 40 L50 40 L45 110 L15 110 Z" fill="black" fillOpacity="0.05" />
+                          </svg>
+
+                          {/* Overlay Logo */}
+                          <div className="absolute top-[65px] left-1/2 -translate-x-1/2 w-[55px] h-[30px] flex items-center justify-center mix-blend-multiply opacity-80 pointer-events-none">
+                            <img src={logoSrc} alt="Merch Tote Logo" className="max-h-[22px] object-contain grayscale brightness-0 contrast-200" />
+                          </div>
+                        </div>
+                      )}
                       <span className="text-[9px] text-slate-500 font-semibold mt-2.5">Bolsa de Algodón</span>
                     </div>
 
                     {/* T-Shirt */}
                     <div className="flex flex-col items-center">
-                      <div className="relative bg-slate-900 border border-slate-800 rounded-xl p-4 w-[130px] h-[150px] flex items-center justify-center overflow-hidden">
-                        
-                        {/* T-Shirt SVG Graphic */}
-                        <svg viewBox="0 0 100 100" className="w-[100px] h-[100px] text-slate-200 fill-slate-200 opacity-90 relative">
-                          <path d="M20 15 L35 5 L50 15 L65 5 L80 15 L88 40 L76 45 L73 30 L73 95 L27 95 L27 30 L24 45 L12 40 Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" />
-                          <path d="M20 15 L35 5 L50 15 L50 95 L27 95 L27 30 L24 45 L12 40 Z" fill="black" fillOpacity="0.05" />
-                        </svg>
-
-                        {/* Overlay Logo */}
-                        <div className="absolute top-[48px] left-1/2 -translate-x-1/2 w-[45px] h-[25px] flex items-center justify-center mix-blend-multiply opacity-80 pointer-events-none">
-                          <img src={logoSrc} alt="Merch Shirt Logo" className="max-h-[16px] object-contain grayscale brightness-0 contrast-200" />
+                      {savedMockups.tshirt && (
+                        <div className="flex bg-slate-900/60 p-0.5 rounded-lg border border-slate-800/80 mb-2">
+                          <button 
+                            onClick={() => setViewModes(prev => ({ ...prev, tshirt: 'interactive' }))}
+                            className={`text-[8px] font-bold px-2 py-0.5 rounded cursor-pointer transition-colors ${viewModes.tshirt === 'interactive' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            Vector
+                          </button>
+                          <button 
+                            onClick={() => setViewModes(prev => ({ ...prev, tshirt: 'ai' }))}
+                            className={`text-[8px] font-bold px-2 py-0.5 rounded cursor-pointer transition-colors ${viewModes.tshirt === 'ai' ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                          >
+                            IA
+                          </button>
                         </div>
-                      </div>
+                      )}
+
+                      {viewModes.tshirt === 'ai' && savedMockups.tshirt ? (
+                        <div className="relative group bg-slate-900 border border-slate-800 rounded-xl w-[130px] h-[150px] overflow-hidden flex items-center justify-center">
+                          <img 
+                            src={savedMockups.tshirt} 
+                            alt="Mockup Camiseta Guardada" 
+                            className="w-full h-full object-cover" 
+                          />
+                          <button
+                            onClick={() => handleDeleteMockup('tshirt')}
+                            className="absolute top-1.5 right-1.5 p-1 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded border border-red-900/50 transition-colors"
+                            title="Eliminar diseño IA"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="relative bg-slate-900 border border-slate-800 rounded-xl p-4 w-[130px] h-[150px] flex items-center justify-center overflow-hidden">
+                          {/* T-Shirt SVG Graphic */}
+                          <svg viewBox="0 0 100 100" className="w-[100px] h-[100px] text-slate-200 fill-slate-200 opacity-90 relative">
+                            <path d="M20 15 L35 5 L50 15 L65 5 L80 15 L88 40 L76 45 L73 30 L73 95 L27 95 L27 30 L24 45 L12 40 Z" fill="currentColor" stroke="currentColor" strokeWidth="1.5" />
+                            <path d="M20 15 L35 5 L50 15 L50 95 L27 95 L27 30 L24 45 L12 40 Z" fill="black" fillOpacity="0.05" />
+                          </svg>
+
+                          {/* Overlay Logo */}
+                          <div className="absolute top-[48px] left-1/2 -translate-x-1/2 w-[45px] h-[25px] flex items-center justify-center mix-blend-multiply opacity-80 pointer-events-none">
+                            <img src={logoSrc} alt="Merch Shirt Logo" className="max-h-[16px] object-contain grayscale brightness-0 contrast-200" />
+                          </div>
+                        </div>
+                      )}
                       <span className="text-[9px] text-slate-500 font-semibold mt-2.5">Camiseta de Marca</span>
                     </div>
 
@@ -1594,6 +1926,33 @@ Requisitos obligatorios del prompt resultante:
                               alt="Mockup Generado por IA" 
                               className="max-h-[340px] w-full object-contain" 
                             />
+                          </div>
+
+                          {/* Save / Assign Button */}
+                          <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                            <span className="text-[10px] text-slate-400">¿Te gusta este diseño?</span>
+                            <button
+                              onClick={() => handleSaveMockup(aiPromptType, generatedImage)}
+                              disabled={isSavingMockup !== null}
+                              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] py-1.5 px-3 rounded-lg shadow transition-all cursor-pointer"
+                            >
+                              {isSavingMockup === aiPromptType ? (
+                                <>
+                                  <div className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                  <span>Guardando...</span>
+                                </>
+                              ) : savedMockups[aiPromptType] === generatedImage ? (
+                                <>
+                                  <Check className="h-3 w-3 text-emerald-200" />
+                                  <span>¡Guardado!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="h-3 w-3" />
+                                  <span>Asignar a {REVERSE_CATEGORY_MAP[aiPromptType]}</span>
+                                </>
+                              )}
+                            </button>
                           </div>
                         </div>
                       )}
