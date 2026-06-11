@@ -495,12 +495,8 @@ export default function SharePage() {
                       let customElements = null;
 
                       if (def.id === 4) {
-                        // 1. Clean markdown content of the arquetipos bullet points
-                        content = content
-                          .replace(/^### Arquetipos Seleccionados\s*\n?/gi, '')
-                          .replace(/^(?:[\*\-]\s*)?\*\*(La\s+[^*]+?)\*\*\:\s*\d+\s*%\s*\n?/gim, '')
-                          .replace(/^---\s*\n?/gi, '')
-                          .trim();
+                        // Keep the full markdown content from the editor to show before the wheel
+                        content = block.content_md;
 
                         customElements = (
                           <div className="w-full flex justify-center mt-6">
