@@ -586,21 +586,23 @@ export function Presentation() {
                     const savedList = Object.entries(saved).filter(([_, val]) => !!val);
                     if (savedList.length === 0) return null;
 
+                    const labels: Record<string, string> = {
+                      card: 'Tarjeta comercial',
+                      mobile: 'Interfaz móvil',
+                      letter: 'Papel membretado A4',
+                      tshirt: 'Camiseta de marca',
+                      tote: 'Bolso tote de algodón'
+                    };
+
                     return (
                       <div className="mt-8 border-t border-slate-100 pt-6">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-1.5 select-none">
-                          <Sparkles className="h-4 w-4 text-violet-500" />
-                          Mockups de Identidad Visual Guardados
-                        </h4>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-8">
                           {savedList.map(([key, base64]) => {
-                            const label = REVERSE_CATEGORY_MAP[key as keyof SavedMockups] || key;
+                            const label = labels[key] || key;
                             return (
-                              <div key={key} className="bg-slate-50 border border-slate-150 rounded-xl p-3 flex flex-col gap-2 shadow-sm">
-                                <div className="flex justify-between items-center px-1 select-none">
-                                  <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wide">{label}</span>
-                                </div>
-                                <div className="border border-slate-200/60 rounded-lg overflow-hidden bg-white aspect-[3/2] flex justify-center items-center shadow-inner">
+                              <div key={key} className="flex flex-col gap-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none px-0.5">{label}</span>
+                                <div className="overflow-hidden rounded-lg shadow-md aspect-[16/10] flex justify-center items-center bg-transparent">
                                   <img 
                                     src={base64} 
                                     alt={`Mockup ${label}`} 
