@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/auth-context';
 import { useBrand } from '@/lib/contexts/brand-context';
 import { BrandSelector } from '@/components/sidebar/brand-selector';
-import { BrandCard } from '@/components/sidebar/brand-card';
 import { SearchGlobal } from '@/components/sidebar/search-global';
 import { BlockNav } from '@/components/blocks/block-nav';
 import { BlockEditor } from '@/components/blocks/block-editor';

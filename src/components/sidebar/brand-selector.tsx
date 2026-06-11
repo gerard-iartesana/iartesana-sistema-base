@@ -1,10 +1,8 @@
-'use client';
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { ChevronDown, Plus, Search, X } from 'lucide-react';
+import { ChevronDown, Plus, Search, X, Clock, AlertTriangle } from 'lucide-react';
 import { useBrand } from '@/lib/contexts/brand-context';
 import type { Brand, BrandBlock, Marker } from '@/lib/db/types';
-import { BrandCard } from './brand-card';
+import { db } from '@/lib/db/local-storage';
 
 function slugify(text: string): string {
   return text
@@ -27,10 +25,32 @@ export function BrandSelector({ blocks, markers }: BrandSelectorProps) {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [localBlocks, setLocalBlocks] = useState<BrandBlock[]>([]);
+  const [localMarkers, setLocalMarkers] = useState<Marker[]>([]);
 
   useEffect(() => {
     refreshBrands();
   }, [refreshBrands]);
+
+  useEffect(() => {
+    if (blocks && markers) return;
+    if (!activeBrand) return;
+    const brandId = activeBrand.id;
+    let cancelled = false;
+    async function loadData() {
+      const [fetchedBlocks, fetchedMarkers] = await Promise.all([
+        db.getBrandBlocks(brandId),
+        db.getMarkers(brandId),
+      ]);
+      if (!cancelled) {
+        setLocalBlocks(fetchedBlocks);
+        setLocalMarkers(fetchedMarkers);
+      }
+    }
+    loadData();
+    return () => { cancelled = true; };
+  }, [activeBrand, blocks, markers]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -76,8 +96,19 @@ export function BrandSelector({ blocks, markers }: BrandSelectorProps) {
 
   const generatedSlug = newName.trim() ? slugify(newName.trim()) : '';
 
+  // Calculate progress and markers for active brand
+  const activeBlocks = blocks || localBlocks;
+  const activeMarkers = markers || localMarkers;
+  const totalBlocks = 13;
+  const validatedCount = activeBlocks.filter(b => b.status === 'validado').length;
+  const percentage = Math.round((validatedCount / totalBlocks) * 100);
+
+  const unresolvedMarkers = activeMarkers.filter(m => !m.resolved);
+  const pendienteCount = unresolvedMarkers.filter(m => m.type === 'pendiente').length;
+  const verificarCount = unresolvedMarkers.filter(m => m.type === 'verificar').length;
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       {/* Dropdown trigger */}
       <div className="relative" ref={dropdownRef}>
         <button
@@ -184,8 +215,44 @@ export function BrandSelector({ blocks, markers }: BrandSelectorProps) {
         )}
       </div>
 
-      {/* Active brand card */}
-      {activeBrand && <BrandCard blocks={blocks} markers={markers} />}
+      {/* Compact progress bar under brand name */}
+      {activeBrand && (
+        <div className="mt-1.5 px-1 flex items-center justify-between gap-2.5 text-[10px] text-slate-400 font-medium select-none">
+          {/* Progress percentage and count */}
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-slate-700 font-semibold">{percentage}%</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-slate-500">{validatedCount}/{totalBlocks}</span>
+          </div>
+
+          {/* Thin progress bar */}
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-violet-500 to-emerald-500 transition-all duration-500"
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
+
+          {/* Tiny markers indicators */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {pendienteCount > 0 && (
+              <span className="flex items-center gap-0.5 text-amber-500 font-semibold" title="Pendientes">
+                <Clock className="h-3 w-3" />
+                <span>{pendienteCount}</span>
+              </span>
+            )}
+            {verificarCount > 0 && (
+              <span className="flex items-center gap-0.5 text-red-500 font-semibold" title="A verificar">
+                <AlertTriangle className="h-3 w-3" />
+                <span>{verificarCount}</span>
+              </span>
+            )}
+            {pendienteCount === 0 && verificarCount === 0 && (
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" title="Al día" />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
