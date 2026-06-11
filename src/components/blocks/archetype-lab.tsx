@@ -96,16 +96,25 @@ export const ICON_PATHS: Record<string, React.ReactNode> = {
   ),
 };
 
+function normalizeArchetypeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/^(la|el)\s+/, '')
+    .trim();
+}
+
 export function parseArchetypes(markdown: string): Record<string, number> {
   const archetypes: Record<string, number> = {};
-  const regex = /\*\*(La\s+[^*]+?)\*\*\:\s*(\d+)\s*%/gi;
+  const regex = /\*\*([^*]+?)\*\*\s*[\:\-]?\s*(\d+)\s*%/gi;
   let match;
   const cleanMarkdown = markdown.replace(/\r\n/g, '\n');
   while ((match = regex.exec(cleanMarkdown)) !== null) {
     const name = match[1].trim();
     const value = parseInt(match[2], 10);
-    // Find matching archetype definition to normalize exact name key
-    const def = ARCHETYPES.find(a => a.name.toLowerCase() === name.toLowerCase());
+    const normalizedMatchName = normalizeArchetypeName(name);
+    const def = ARCHETYPES.find(a => normalizeArchetypeName(a.name) === normalizedMatchName);
     if (def) {
       archetypes[def.name] = value;
     }

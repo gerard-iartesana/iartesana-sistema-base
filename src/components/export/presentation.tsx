@@ -33,11 +33,11 @@ const HeadingRenderer = ({ level, children, ...props }: any) => {
   const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
   let iconSrc = '';
-  if (normalized.includes('mision')) {
+  if (/\b(mision)\b/i.test(normalized)) {
     iconSrc = '/images/icono-mision.svg';
-  } else if (normalized.includes('vision')) {
+  } else if (/\b(vision)\b/i.test(normalized)) {
     iconSrc = '/images/icono-vision.svg';
-  } else if (normalized.includes('valores')) {
+  } else if (/\b(valores)\b/i.test(normalized)) {
     iconSrc = '/images/icono-valores.svg';
   }
 
@@ -85,15 +85,15 @@ function matchSection(children: React.ReactNode): SectionMatch | null {
   ) {
     const strongText = extractText((firstChild.props as any).children).trim();
     const normalized = strongText.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (normalized.startsWith('mision')) {
+    if (/\b(mision)\b/i.test(normalized)) {
       iconSrc = '/images/icono-mision.svg';
       sectionTitle = 'Misión';
       restOfChildren = childrenArray.slice(1);
-    } else if (normalized.startsWith('vision')) {
+    } else if (/\b(vision)\b/i.test(normalized)) {
       iconSrc = '/images/icono-vision.svg';
       sectionTitle = 'Visión';
       restOfChildren = childrenArray.slice(1);
-    } else if (normalized.startsWith('valores')) {
+    } else if (/\b(valores)\b/i.test(normalized)) {
       iconSrc = '/images/icono-valores.svg';
       sectionTitle = 'Valores';
       restOfChildren = childrenArray.slice(1);
@@ -103,20 +103,20 @@ function matchSection(children: React.ReactNode): SectionMatch | null {
   else if (typeof firstChild === 'string') {
     const text = firstChild.trim();
     const normalized = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    if (normalized.startsWith('mision')) {
+    if (/\b(mision)\b/i.test(normalized)) {
       iconSrc = '/images/icono-mision.svg';
       sectionTitle = 'Misión';
-      const cleanedText = text.replace(/^[Mm]isi[oó]n[\s\.:\-]*/, '');
+      const cleanedText = text.replace(/^[Mm]isi[oó]n\b[\s\.:\-]*/, '');
       restOfChildren = [cleanedText, ...childrenArray.slice(1)];
-    } else if (normalized.startsWith('vision')) {
+    } else if (/\b(vision)\b/i.test(normalized)) {
       iconSrc = '/images/icono-vision.svg';
       sectionTitle = 'Visión';
-      const cleanedText = text.replace(/^[Vv]isi[oó]n[\s\.:\-]*/, '');
+      const cleanedText = text.replace(/^[Vv]isi[oó]n\b[\s\.:\-]*/, '');
       restOfChildren = [cleanedText, ...childrenArray.slice(1)];
-    } else if (normalized.startsWith('valores')) {
+    } else if (/\b(valores)\b/i.test(normalized)) {
       iconSrc = '/images/icono-valores.svg';
       sectionTitle = 'Valores';
-      const cleanedText = text.replace(/^[Vv]alores[\s\.:\-]*/, '');
+      const cleanedText = text.replace(/^[Vv]alores\b[\s\.:\-]*/, '');
       restOfChildren = [cleanedText, ...childrenArray.slice(1)];
     }
   }
