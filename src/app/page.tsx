@@ -8,7 +8,6 @@ import { BrandCard } from '@/components/sidebar/brand-card';
 import { SearchGlobal } from '@/components/sidebar/search-global';
 import { BlockNav } from '@/components/blocks/block-nav';
 import { BlockEditor } from '@/components/blocks/block-editor';
-import { MarkerPanel } from '@/components/blocks/marker-panel';
 import { NamingLab } from '@/components/blocks/naming-lab';
 import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
 import { RulesEditor } from '@/components/blocks/rules-editor';
@@ -105,6 +104,26 @@ export default function HomePage() {
           <BrandSelector blocks={brandBlocks} markers={markers} />
         </div>
 
+        {/* Search */}
+        {activeBrand && (
+          <div className="px-4 py-2 border-b border-slate-100">
+            <SearchGlobal />
+          </div>
+        )}
+
+        {/* Block Navigation */}
+        {activeBrand && (
+          <div className="flex-1 overflow-y-auto border-b border-slate-100">
+            <BlockNav
+              selectedStage={selectedStage}
+              selectedBlockId={selectedBlockId}
+              onSelectStage={setSelectedStage}
+              onSelectBlock={setSelectedBlockId}
+              brandBlocks={brandBlocks}
+            />
+          </div>
+        )}
+
         {/* Export Link */}
         {activeBrand && (
           <div className="px-4 py-2 border-b border-slate-100">
@@ -117,11 +136,6 @@ export default function HomePage() {
             </Link>
           </div>
         )}
-
-        {/* Search */}
-        <div className="px-4 py-3 border-b border-slate-100 flex-1 overflow-auto">
-          <SearchGlobal />
-        </div>
 
         {/* User info */}
         <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50">
@@ -143,17 +157,6 @@ export default function HomePage() {
       <main className="flex-1 flex flex-col min-w-0 h-screen">
         {activeBrand ? (
           <>
-            {/* Block Navigation */}
-            <div className="border-b border-slate-200 bg-white">
-              <BlockNav
-                selectedStage={selectedStage}
-                selectedBlockId={selectedBlockId}
-                onSelectStage={setSelectedStage}
-                onSelectBlock={setSelectedBlockId}
-                brandBlocks={brandBlocks}
-              />
-            </div>
-
             {/* Editor Area */}
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col overflow-auto">
@@ -185,15 +188,6 @@ export default function HomePage() {
                       />
                     </div>
                   )}
-
-                  {/* Marker Panel */}
-                  <div className="mt-6">
-                    <MarkerPanel
-                      brandId={activeBrand.id}
-                      blockId={selectedBlockId}
-                      onMarkersChange={loadData}
-                    />
-                  </div>
                 </div>
               </div>
 
