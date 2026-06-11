@@ -196,7 +196,7 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
 
   return (
     <div className="w-full flex flex-col items-center select-none">
-      <svg viewBox="0 0 500 500" className="w-full max-w-[460px] h-auto">
+      <svg viewBox="-100 -50 700 600" className="w-full max-w-[560px] h-auto">
         {/* Outer Category Labels */}
         <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Cambio</text>
         <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Estabilidad</text>
@@ -294,21 +294,6 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
         {/* Inner center ring */}
         <circle cx={cx} cy={cy} r="25" fill="#0f0f11" stroke="#2a2a2f" strokeWidth="1" />
       </svg>
-
-      {/* Legend below the wheel */}
-      <div className="mt-4 flex flex-wrap justify-center gap-4">
-        {Object.entries(selected).map(([name, pct]) => {
-          const arc = ARCHETYPES.find(a => a.name === name);
-          if (!arc) return null;
-          return (
-            <div key={name} className="flex items-center gap-2 bg-slate-900/60 px-3 py-1.5 rounded-lg border border-slate-800/80">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: CATEGORY_COLORS[arc.category] }} />
-              <span className="text-xs font-bold text-white">{name}</span>
-              <span className="text-xs font-mono font-bold" style={{ color: CATEGORY_COLORS[arc.category] }}>{pct}%</span>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
