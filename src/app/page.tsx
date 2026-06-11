@@ -10,15 +10,18 @@ import { NamingLab } from '@/components/blocks/naming-lab';
 import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
 import { RulesEditor } from '@/components/blocks/rules-editor';
 import { CopilotPanel } from '@/components/copilot/copilot-panel';
+import { MarkdownExport } from '@/components/export/markdown-export';
+import { PromptGlobal } from '@/components/export/prompt-global';
+import { LiveLink } from '@/components/export/live-link';
+import { Presentation } from '@/components/export/presentation';
 import { db } from '@/lib/db/local-storage';
-import { BrandBlock, Marker } from '@/lib/db/types';
-import { LogOut, Sparkles, FileOutput } from 'lucide-react';
-import Link from 'next/link';
+import { BrandBlock, Marker, Stage } from '@/lib/db/types';
+import { LogOut, Sparkles } from 'lucide-react';
 
 export default function HomePage() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const { activeBrand } = useBrand();
-  const [selectedStage, setSelectedStage] = useState<'A' | 'B' | 'C' | 'D'>('A');
+  const [selectedStage, setSelectedStage] = useState<Stage>('A');
   const [selectedBlockId, setSelectedBlockId] = useState<number>(1);
   const [brandBlocks, setBrandBlocks] = useState<BrandBlock[]>([]);
   const [markers, setMarkers] = useState<Marker[]>([]);
@@ -102,17 +105,6 @@ export default function HomePage() {
                 onSelectBlock={setSelectedBlockId}
                 brandBlocks={brandBlocks}
               />
-
-              {/* Export Link at the same level as block stage accordion headers */}
-              <div className="px-4 py-1">
-                <Link
-                  href={`/marca/${activeBrand.slug}/exportar`}
-                  className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold text-slate-500 hover:bg-slate-50/50 hover:text-slate-700 transition-colors rounded-lg"
-                >
-                  <FileOutput className="h-4 w-4 shrink-0 text-slate-400" />
-                  <span className="truncate">Panel de exportaciones</span>
-                </Link>
-              </div>
             </div>
           </div>
         )}
@@ -135,18 +127,26 @@ export default function HomePage() {
           </div>
 
           {/* Right side: User Avatar + Logout Button */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 select-none">
             {/* User Avatar */}
-            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center cursor-help shadow-sm" title={`${user.name || user.email} (${user.role})`}>
-              <span className="text-xs font-semibold text-violet-700">
+            {user.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.name || user.email}
+                className="w-8 h-8 rounded-full cursor-help shadow-sm border border-slate-200 object-cover"
+                title={`${user.name || user.email} (${user.role})`}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-violet-500 flex items-center justify-center cursor-help shadow-sm text-white font-semibold text-xs" title={`${user.name || user.email} (${user.role})`}>
                 {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-              </span>
-            </div>
+              </div>
+            )}
 
             {/* Logout Button */}
             <button
               onClick={logout}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
               title="Cerrar sesión"
             >
               <LogOut size={16} />
@@ -159,33 +159,42 @@ export default function HomePage() {
             {/* Editor Area */}
             <div className="flex-1 flex overflow-hidden">
               <div className="flex-1 flex flex-col overflow-auto">
-                {/* Block Editor */}
+                {/* Main Content Pane */}
                 <div className="flex-1 p-6">
-                  <BlockEditor
-                    key={`editor-${activeBrand.id}-${selectedBlockId}-${editorKey}`}
-                    brandId={activeBrand.id}
-                    blockId={selectedBlockId}
-                    onSave={handleBlockUpdate}
-                  />
+                  {selectedBlockId === 101 && <MarkdownExport />}
+                  {selectedBlockId === 102 && <PromptGlobal />}
+                  {selectedBlockId === 103 && <LiveLink />}
+                  {selectedBlockId === 104 && <Presentation />}
 
-                  {/* Special UIs for certain blocks */}
-                  {selectedBlockId === 3 && (
-                    <div className="mt-6">
-                      <NamingLab brandId={activeBrand.id} />
-                    </div>
-                  )}
-                  {selectedBlockId === 10 && (
-                    <div className="mt-6">
-                      <KnowledgeLibrary brandId={activeBrand.id} />
-                    </div>
-                  )}
-                  {[11, 12, 13].includes(selectedBlockId) && (
-                    <div className="mt-6">
-                      <RulesEditor
+                  {selectedBlockId < 100 && (
+                    <>
+                      <BlockEditor
+                        key={`editor-${activeBrand.id}-${selectedBlockId}-${editorKey}`}
                         brandId={activeBrand.id}
-                        kind={ruleKindMap[selectedBlockId]}
+                        blockId={selectedBlockId}
+                        onSave={handleBlockUpdate}
                       />
-                    </div>
+
+                      {/* Special UIs for certain blocks */}
+                      {selectedBlockId === 3 && (
+                        <div className="mt-6">
+                          <NamingLab brandId={activeBrand.id} />
+                        </div>
+                      )}
+                      {selectedBlockId === 10 && (
+                        <div className="mt-6">
+                          <KnowledgeLibrary brandId={activeBrand.id} />
+                        </div>
+                      )}
+                      {[11, 12, 13].includes(selectedBlockId) && (
+                        <div className="mt-6">
+                          <RulesEditor
+                            brandId={activeBrand.id}
+                            kind={ruleKindMap[selectedBlockId]}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

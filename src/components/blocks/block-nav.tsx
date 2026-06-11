@@ -1,16 +1,45 @@
 'use client';
 
 import React from 'react';
-import { STAGES, getBlocksByStage } from '@/lib/data/block-definitions';
+import { STAGES as ORIGINAL_STAGES, getBlocksByStage } from '@/lib/data/block-definitions';
 import type { Stage, BrandBlock } from '@/lib/db/types';
-import { CheckCircle2, Clock, ChevronDown, ChevronRight, Sparkles, MessageSquare, Users, Shield } from 'lucide-react';
+import {
+  CheckCircle2,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  MessageSquare,
+  Users,
+  Shield,
+  FileOutput,
+  FileText,
+  Cpu,
+  Link2,
+  MonitorPlay
+} from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
   'A': Sparkles,
   'B': MessageSquare,
   'C': Users,
   'D': Shield,
+  'E': FileOutput,
 };
+
+const exportBlockIcons: Record<number, React.ComponentType<any>> = {
+  101: FileText,
+  102: Cpu,
+  103: Link2,
+  104: MonitorPlay,
+};
+
+const EXPORT_BLOCKS = [
+  { id: 101, title: 'Documento Markdown', description: 'Exportar o descargar el núcleo de contexto en formato Markdown.' },
+  { id: 102, title: 'Prompt Global', description: 'Compilar el Prompt de Sistema completo para agentes de IA.' },
+  { id: 103, title: 'Enlace Compartido (Live)', description: 'Crear y gestionar enlaces públicos protegidos con contraseña.' },
+  { id: 104, title: 'Presentación', description: 'Modo presentación a pantalla completa.' },
+];
 
 interface BlockNavProps {
   selectedStage: Stage;
@@ -28,11 +57,17 @@ const statusConfig: Record<string, { label: string; dotColor: string; bgColor: s
 };
 
 export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSelectBlock, brandBlocks }: BlockNavProps) {
+  const stages = [
+    ...ORIGINAL_STAGES,
+    { key: 'E' as Stage, label: 'Exportar y Compartir', color: '#36a8e0', bgColor: 'bg-slate-50', borderColor: 'border-slate-300' }
+  ];
+
   return (
     <div className="flex flex-col">
-      {STAGES.map(stage => {
+      {stages.map(stage => {
         const isExpanded = stage.key === selectedStage;
-        const stageBlocks = getBlocksByStage(stage.key);
+        const isExportStage = stage.key === 'E';
+        const stageBlocks = isExportStage ? EXPORT_BLOCKS : getBlocksByStage(stage.key);
 
         // Calculate stage blocks status
         const stageBlocksData = stageBlocks.map(def => brandBlocks.find(b => b.block_id === def.id));
@@ -108,15 +143,27 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
                       }`}
                       style={isSelected ? { borderLeftColor: stage.color } : undefined}
                     >
-                      {/* Block number */}
-                      <span
-                        className={`w-4 shrink-0 text-center text-xs font-mono font-medium ${
-                          isSelected ? 'font-bold' : 'text-slate-400'
-                        }`}
-                        style={isSelected ? { color: stage.color } : undefined}
-                      >
-                        {block.id}
-                      </span>
+                      {/* Block number or Icon */}
+                      {isExportStage ? (
+                        (() => {
+                          const SubIcon = exportBlockIcons[block.id];
+                          return SubIcon ? (
+                            <SubIcon
+                              className="h-4 w-4 shrink-0"
+                              style={isSelected ? { color: stage.color } : { color: '#9ca3af' }}
+                            />
+                          ) : null;
+                        })()
+                      ) : (
+                        <span
+                          className={`w-4 shrink-0 text-center text-xs font-mono font-medium ${
+                            isSelected ? 'font-bold' : 'text-slate-400'
+                          }`}
+                          style={isSelected ? { color: stage.color } : undefined}
+                        >
+                          {block.id}
+                        </span>
+                      )}
 
                       {/* Title */}
                       <span className="text-sm truncate flex-1 leading-snug">
@@ -124,7 +171,9 @@ export function BlockNav({ selectedStage, selectedBlockId, onSelectStage, onSele
                       </span>
 
                       {/* Status dot */}
-                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${config.dotColor}`} title={config.label} />
+                      {!isExportStage && (
+                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${config.dotColor}`} title={config.label} />
+                      )}
                     </button>
                   );
                 })}

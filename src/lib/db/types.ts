@@ -9,6 +9,7 @@ export interface Member {
   name: string;
   role: MemberRole;
   created_at: string;
+  avatar_url?: string | null;
 }
 
 export type BrandStatus = 'activo' | 'pausado' | 'archivado';
@@ -25,7 +26,7 @@ export interface Brand {
   updated_at: string;
 }
 
-export type Stage = 'A' | 'B' | 'C' | 'D';
+export type Stage = 'A' | 'B' | 'C' | 'D' | 'E';
 
 export interface BlockDefinition {
   id: number;

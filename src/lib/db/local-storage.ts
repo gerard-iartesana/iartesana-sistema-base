@@ -28,7 +28,12 @@ async function getCurrentUser(): Promise<Member | null> {
     .eq('auth_user_id', session.user.id)
     .single();
 
-  if (member) return member as Member;
+  if (member) {
+    return {
+      ...member,
+      avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+    } as Member;
+  }
 
   // Auto-create member on first login
   const { data: newMember, error } = await supabase
@@ -46,7 +51,10 @@ async function getCurrentUser(): Promise<Member | null> {
     console.error('[db] Failed to create member:', error);
     return null;
   }
-  return newMember as Member;
+  return {
+    ...newMember,
+    avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+  } as Member;
 }
 
 async function loginWithGoogle(): Promise<void> {
