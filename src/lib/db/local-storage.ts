@@ -175,7 +175,39 @@ async function getBrandBlocks(brandId: string): Promise<BrandBlock[]> {
     .eq('brand_id', brandId)
     .order('block_id');
   if (error) { console.error('[db] getBrandBlocks:', error); return []; }
-  return data as BrandBlock[];
+
+  const blocks = data as BrandBlock[];
+  const existingIds = new Set(blocks.map(b => b.block_id));
+  const missingIds = [];
+  for (let i = 1; i <= 13; i++) {
+    if (!existingIds.has(i)) {
+      missingIds.push(i);
+    }
+  }
+
+  if (missingIds.length > 0) {
+    console.log(`[db] getBrandBlocks: Brand ${brandId} is missing blocks: ${missingIds.join(', ')}. Auto-creating...`);
+    const newBlocksPayload = missingIds.map(id => ({
+      brand_id: brandId,
+      block_id: id,
+      content_md: '',
+      status: 'vacio' as const,
+    }));
+    
+    const { data: insertedBlocks, error: insertError } = await supabase
+      .from('sb_brand_blocks')
+      .insert(newBlocksPayload)
+      .select();
+
+    if (insertError) {
+      console.error('[db] Failed to auto-create missing blocks:', insertError);
+    } else if (insertedBlocks) {
+      blocks.push(...(insertedBlocks as BrandBlock[]));
+      blocks.sort((a, b) => a.block_id - b.block_id);
+    }
+  }
+
+  return blocks;
 }
 
 async function updateBrandBlock(

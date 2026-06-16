@@ -515,7 +515,7 @@ export function Presentation() {
                       .trim();
                     
                     return cleanContent ? (
-                      <div className="markdown-preview max-w-none w-full text-center mb-8">
+                      <div className="markdown-preview max-w-none w-full text-left mb-8">
                         <ReactMarkdown
                           components={{
                             a: ({ href, children, ...props }) => {
