@@ -288,13 +288,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   
   // Interactive Scanning States
   const [isScanning, setIsScanning] = useState(false);
-  const [analysisReport, setAnalysisReport] = useState<{
-    geometry: string;
-    psychology: string;
-    coherence: string;
-    aspectRatio: string;
-    recommendation: string;
-  } | null>(null);
+  const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
   const [scannedImage, setScannedImage] = useState<string | null>(null);
 
   // Mockups states
@@ -357,6 +351,68 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
     tshirt: 'Camiseta',
     tote: 'Bolso Tote'
   };
+
+  interface AnalysisParameter {
+    id: number;
+    name: string;
+    score: number;
+    text: string;
+  }
+
+  interface AnalysisReport {
+    overallScore: number;
+    conclusion: string;
+    parameters: AnalysisParameter[];
+  }
+
+  function parseSavedAnalysis(md: string): AnalysisReport | null {
+    const match = md.match(/<!-- LOGO_ANALYSIS_JSON:\s*(\{[\s\S]+?\})\s*-->/);
+    if (match) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        console.error('Error parsing saved logo analysis JSON:', e);
+      }
+    }
+    return null;
+  }
+
+  function updateSavedAnalysisInMarkdown(md: string, report: AnalysisReport | null): string {
+    // Extract existing mockups from md
+    const mockupMatches = md.match(/!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g) || [];
+    const mockupsStr = mockupMatches.join('\n\n');
+    
+    // Remove mockups from md to clean it
+    let cleanMd = md.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
+    
+    // Remove existing analysis section and comment
+    const regexHtmlComment = /\s*\n*<!-- LOGO_ANALYSIS_JSON:[\s\S]+?-->/g;
+    const regexSection = /\s*\n*### Auditoría de Rendimiento del Logotipo[\s\S]+?(?=<!-- LOGO_ANALYSIS_JSON:|$)/g;
+    cleanMd = cleanMd.replace(regexHtmlComment, '').replace(regexSection, '').trim();
+    
+    // Build new analysis markdown if report is present
+    if (report) {
+      let analysisMd = `\n\n### Auditoría de Rendimiento del Logotipo (15 Parámetros)\n\n`;
+      analysisMd += `Valoración Global: **${report.overallScore}/100**\n\n`;
+      analysisMd += `| Parámetro | Valoración | Explicación |\n`;
+      analysisMd += `|---|---|---|\n`;
+      for (const p of report.parameters) {
+        analysisMd += `| ${p.id}. ${p.name} | **${p.score}/10** | ${p.text} |\n`;
+      }
+      analysisMd += `\n**Conclusión General:** ${report.conclusion}\n\n`;
+      
+      const jsonComment = `<!-- LOGO_ANALYSIS_JSON:${JSON.stringify(report)} -->`;
+      
+      cleanMd = cleanMd ? `${cleanMd}\n${analysisMd}${jsonComment}` : `${analysisMd}${jsonComment}`;
+    }
+    
+    // Append mockups back at the very end
+    if (mockupsStr) {
+      cleanMd = `${cleanMd}\n\n${mockupsStr}`;
+    }
+    
+    return cleanMd;
+  }
 
   function parseSavedMockups(md: string): SavedMockups {
     const mockups: SavedMockups = {};
@@ -471,7 +527,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
     }
   }, [activeBrand?.logo_path, activeBrand?.id]);
 
-  // Load and parse saved mockups from Block 7 content_md
+  // Load and parse saved mockups and analysis from Block 7 content_md
   useEffect(() => {
     if (!brandId) return;
     let cancelled = false;
@@ -480,14 +536,20 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
         const blocks = await db.getBrandBlocks(brandId);
         const block7 = blocks.find(b => b.block_id === 7);
         if (!cancelled && block7?.content_md) {
-          const parsed = parseSavedMockups(block7.content_md);
-          setSavedMockups(parsed);
+          const parsedMockups = parseSavedMockups(block7.content_md);
+          setSavedMockups(parsedMockups);
+          
+          const parsedAnalysis = parseSavedAnalysis(block7.content_md);
+          setAnalysisReport(parsedAnalysis);
+          if (parsedAnalysis) {
+            setScannedImage(activeBrand?.logo_path || null);
+          }
           
           // Auto-switch viewMode if mockups exist
           setViewModes(prev => {
             const updated = { ...prev };
-            Object.keys(parsed).forEach(k => {
-              if (parsed[k as keyof SavedMockups]) {
+            Object.keys(parsedMockups).forEach(k => {
+              if (parsedMockups[k as keyof SavedMockups]) {
                 updated[k] = 'ai';
               }
             });
@@ -495,9 +557,10 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
           });
         } else if (!cancelled) {
           setSavedMockups({});
+          setAnalysisReport(null);
         }
       } catch (err) {
-        console.error('[VisualLab] Failed to load mockups from block 7:', err);
+        console.error('[VisualLab] Failed to load data from block 7:', err);
       }
     }
     loadBlock7();
@@ -774,103 +837,210 @@ Requisitos obligatorios del prompt resultante:
     setTimeout(() => setCopiedColor(null), 2000);
   };
 
-  // Run the visual scanner audit simulation
+  // Run the visual scanner audit with Gemini 3.5 Flash
   const runAnalysis = async () => {
     if (!logoSrc) return;
+    if (!apiKey) {
+      setApiError('Ingresa tu clave de API de Google AI Studio en el recuadro para ejecutar el análisis.');
+      return;
+    }
+
     setIsScanning(true);
     setAnalysisReport(null);
+    setApiError(null);
 
-    // Wait 2.2s for scanning animation
-    await new Promise(resolve => setTimeout(resolve, 2200));
-
-    // Get arquetipos to contextualize
-    let archetypesStr = '';
     try {
-      const blocks = await db.getBrandBlocks(brandId);
-      const b4 = blocks.find(b => b.block_id === 4);
-      if (b4?.content_md) {
-        const selected = parseArchetypes(b4.content_md);
-        const names = Object.keys(selected);
-        if (names.length > 0) {
-          archetypesStr = names.join(' y ');
+      // 1. Fetch brand context blocks for detailed AI audit
+      let brandContext = '';
+      try {
+        const blocks = await db.getBrandBlocks(brandId);
+        
+        // Block 1: Historia
+        const b1 = blocks.find(b => b.block_id === 1);
+        if (b1?.content_md) {
+          brandContext += `### Historia y Trayectoria de la Marca:\n${b1.content_md}\n\n`;
+        }
+
+        // Block 2: Propuesta diferencial (Misión, Visión, Valores)
+        const b2 = blocks.find(b => b.block_id === 2);
+        if (b2?.content_md) {
+          brandContext += `### Propuesta Diferencial, Misión, Visión y Valores:\n${b2.content_md}\n\n`;
+        }
+
+        // Block 4: Arquetipos
+        const b4 = blocks.find(b => b.block_id === 4);
+        if (b4?.content_md) {
+          const selected = parseArchetypes(b4.content_md);
+          const names = Object.keys(selected);
+          if (names.length > 0) {
+            brandContext += `### Arquetipos de Personalidad de Marca:\n${names.join(' y ')}\n\n`;
+          }
+        }
+
+        // Block 5: Voz y Tono
+        const b5 = blocks.find(b => b.block_id === 5);
+        if (b5?.content_md) {
+          brandContext += `### Tensión y Equilibrio de Voz:\n${b5.content_md}\n\n`;
+        }
+
+        // Block 6: Identidad Verbal
+        const b6 = blocks.find(b => b.block_id === 6);
+        if (b6?.content_md) {
+          brandContext += `### Identidad Verbal y Tagline:\n${b6.content_md}\n\n`;
+        }
+      } catch (err) {
+        console.error('[VisualLab] Failed to fetch brand context for auditor:', err);
+      }
+
+      // 2. Parse base64 from logoSrc
+      let logoBase64 = '';
+      let logoMimeType = '';
+      if (logoSrc.startsWith('data:')) {
+        const match = logoSrc.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          logoMimeType = match[1];
+          logoBase64 = match[2];
         }
       }
-    } catch (err) {
-      console.error(err);
-    }
 
-    const ratio = logoDimensions.width / (logoDimensions.height || 1);
-    let geometry = '';
-    let aspectRatioText = `${logoDimensions.width}px × ${logoDimensions.height}px`;
-    if (ratio > 1.35) {
-      geometry = 'Composición apaisada / horizontal. Posee una distribución lineal excelente para cabeceras web, barras de navegación y documentos corporativos. Asegúrate de que el isotipo mantenga legibilidad si se separa del logotipo textual.';
-    } else if (ratio < 0.75) {
-      geometry = 'Composición vertical / alta. Es ideal para etiquetas de embalaje, banderolas, y merchandising. En formatos digitales horizontales puede requerir una versión adaptada para evitar ocupar excesivo espacio vertical.';
-    } else {
-      geometry = 'Composición cuadrada / simétrica. Presenta un equilibrio perfecto en sus ejes. Ofrece una versatilidad sobresaliente para adaptarlo como favicon de la web, icono de aplicación móvil y perfiles en redes sociales.';
-    }
-
-    // Color psychology
-    let psychology = 'Paleta cromática balanceada. ';
-    if (extractedColors.length > 0) {
-      const primaryHex = extractedColors[0];
-      const nameAndRole = getClosestColorName(primaryHex);
-      psychology += `Tu color dominante se clasifica como ${nameAndRole.name} (${primaryHex}). `;
-
-      if (primaryHex.match(/#(73|6|5|8|9)[0-9a-f]/i)) {
-        psychology += 'Transmite creatividad, innovación y transformación profunda, sugiriendo un enfoque visionario.';
-      } else if (primaryHex.match(/#(3|2|1|0)[0-9a-f]/i)) {
-        psychology += 'Evoca confianza, rigor profesional, comunicación transparente y espíritu de colectividad.';
-      } else if (primaryHex.match(/#(8|a|9|b)[0-9a-f]/i)) {
-        psychology += 'Representa crecimiento, estabilidad, respeto ambiental y sostenibilidad a largo plazo.';
-      } else if (primaryHex.match(/#(e|f|d)[0-9a-f]/i)) {
-        psychology += 'Proyecta pasión, energía activa, audacia y un carácter marcadamente individualista y retador.';
-      } else {
-        psychology += 'Aporta una estética neutral, elegante y minimalista que actúa como base premium para la marca.';
+      if (!logoBase64 || !logoMimeType) {
+        throw new Error('El formato del logotipo no es válido para el análisis de imagen.');
       }
-    }
 
-    // Archetype coherence
-    let coherence = 'Alineación de marca consistente.';
-    if (archetypesStr) {
-      coherence = `¡Alineación alta! Los rasgos geométricos y la paleta cromática identificada complementan la personalidad definida para tus arquetipos clave: **${archetypesStr}**. `;
-      const primaryHex = extractedColors[0] || '';
-      if (archetypesStr.toLowerCase().includes('visionaria') && primaryHex.match(/#(73|6|5)/i)) {
-        coherence += 'El tono morado dominante refuerza de manera directa la esencia creativa e inspiradora de la Visionaria.';
-      } else if (archetypesStr.toLowerCase().includes('comprom') && primaryHex.match(/#(3|2|1)/i)) {
-        coherence += 'El matiz azul principal sostiene visualmente la seriedad y el compromiso comunitario del arquetipo Comprometido.';
-      } else {
-        coherence += 'La composición genera un balance visual equilibrado que dota a la marca de versatilidad comunicativa.';
+      // 3. Build instruction prompt
+      const brandName = activeBrand?.name || 'la marca';
+      const colorsDesc = extractedColors.map(hex => {
+        const cInfo = getClosestColorName(hex);
+        return `${hex} (${cInfo.name} - ${cInfo.role})`;
+      }).join(', ');
+
+      const promptText = `Eres un auditor de marca y diseñador gráfico experto de nivel internacional, especializado en el método de evaluación de identidad corporativa de Norberto Chaves y Raúl Belluccia (los 15 parámetros de rendimiento).
+
+Tu tarea es realizar una auditoría visual exhaustiva y rigurosa del logotipo de la marca "${brandName}" (proporcionado en la imagen) utilizando los 15 parámetros de rendimiento clásicos.
+
+Aquí tienes el contexto estratégico e identidad de la marca:
+${brandContext}
+Colores extraídos del logo actualmente: ${colorsDesc || 'No se han extraído colores.'}
+Dimensiones físicas del logo: ${logoDimensions.width}px x ${logoDimensions.height}px
+
+Debes someter este logotipo al examen estricto de los siguientes 15 parámetros de rendimiento:
+1. Calidad gráfica: Excelencia formal, dibujo, composición y equilibrio visual del signo.
+2. Ajuste tipológico: Coherencia del tipo de marca (símbolo, logotipo solo, imagotipo) con la categoría de negocio.
+3. Corrección estilística: Adecuación estética al sector y público, evitando modas efímeras.
+4. Compatibilidad semántica: Alineación de significados explícitos o implícitos con los valores de la marca.
+5. Suficiencia: Uso de la cantidad justa de elementos visuales necesarios.
+6. Versatilidad: Capacidad de adaptación a múltiples formatos (redondo, cuadrado, horizontal, vertical) y soportes.
+7. Vigencia: Resistencia al paso del tiempo (que no quede obsoleto rápidamente).
+8. Reproducibilidad: Facilidad de reproducción técnica en soportes complicados (monocromo, bordados, favicon, etc.).
+9. Legibilidad: Claridad de lectura visual y distinción en diferentes tamaños y distancias.
+10. Memorabilidad: Facilidad de registro y recuerdo visual en la mente del público.
+11. Distintividad: Capacidad de destacar y diferenciarse claramente de sus competidores directos.
+12. Simplicidad: Economía de recursos visuales y facilidad de procesamiento cognitivo.
+13. Singularidad: Originalidad del signo, alejándose de clichés visuales de la industria.
+14. Declinabilidad: Facilidad del logotipo para generar un sistema gráfico o lenguaje visual expansivo.
+15. Equilibrio: Armonía interna de masas, pesos visuales y alineaciones compositivas.
+
+Para cada parámetro, debes evaluar el logotipo de forma objetiva y fundamentada basándote en la imagen y el contexto de marca, y asignar una puntuación del 1 al 10 (donde 10 es excelente y 1 es muy deficiente).
+
+Calcula una puntuación global del 0 al 100 ('overallScore') que sea un promedio o media ponderada de las puntuaciones asignadas a los parámetros.
+Proporciona una conclusión general ('conclusion') con recomendaciones clave de mejora visual o estratégica.
+
+Devuelve la respuesta en formato JSON estricto con el siguiente esquema:
+{
+  "overallScore": number, // 0 a 100
+  "conclusion": "string", // Resumen ejecutivo y sugerencias clave
+  "parameters": [
+    {
+      "id": number, // 1 a 15
+      "name": "string", // Nombre exacto del parámetro (ej. "Calidad gráfica")
+      "score": number, // 1 a 10 (entero)
+      "text": "string" // Justificación analítica detallada de por qué se asigna esta nota basándose en la imagen y contexto
+    }
+  ]
+}
+
+IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregues introducciones, explicaciones externas ni etiquetas de código Markdown.`;
+
+      // 4. Call Gemini 3.5 Flash
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: logoMimeType,
+                    data: logoBase64
+                  }
+                },
+                {
+                  text: promptText
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error?.message || `Error de API (Código ${response.status})`);
       }
-    } else {
-      coherence = 'Coherencia preliminar. Configura los arquetipos en el Bloque 4 para realizar una auditoría de alineación cruzada de identidad visual.';
-    }
 
-    // Readability checks
-    let recommendation = 'Apto para todo tipo de aplicaciones.';
-    if (extractedColors.length > 0) {
-      const c1 = extractedColors[0];
-      const darkRatio = getContrastRatio(c1, '#0F0F11');
-      const lightRatio = getContrastRatio(c1, '#FFFFFF');
-
-      if (darkRatio < 3.0) {
-        recommendation = 'Precaución: El color dominante posee un contraste bajo sobre fondos oscuros. Para soportes digitales en modo noche, se recomienda utilizar la versión en negativo a una sola tinta (blanco puro).';
-      } else if (lightRatio < 3.0) {
-        recommendation = 'Precaución: El color principal tiene bajo contraste sobre fondo blanco. Asegúrate de emplear tipografías en negro o grises de alto contraste para el cuerpo del texto en papelería impresa.';
-      } else {
-        recommendation = 'Excelente contraste tanto en interfaces de fondo claro como oscuro. El color dominante garantiza accesibilidad nivel AA.';
+      const resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!resultText) {
+        throw new Error('No se recibió respuesta del modelo Gemini 3.5 Flash.');
       }
-    }
 
-    setAnalysisReport({
-      geometry,
-      psychology,
-      coherence,
-      aspectRatio: aspectRatioText,
-      recommendation
-    });
-    setScannedImage(logoSrc);
-    setIsScanning(false);
+      // Robust JSON Parsing
+      let jsonText = resultText.trim();
+      if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/```$/, '').trim();
+      }
+
+      let report: AnalysisReport;
+      try {
+        report = JSON.parse(jsonText);
+      } catch (parseErr) {
+        console.error('Failed to parse Gemini JSON response:', resultText);
+        throw new Error('El modelo no devolvió un JSON con la estructura correcta. Reintenta la operación.');
+      }
+
+      // Validate JSON structure
+      if (!report.overallScore || !report.parameters || !Array.isArray(report.parameters)) {
+        throw new Error('La estructura del informe de auditoría devuelto no es válida.');
+      }
+
+      // 5. Update local state
+      setAnalysisReport(report);
+      setScannedImage(logoSrc);
+
+      // 6. Save persistently in Supabase block 7 content_md
+      const blocks = await db.getBrandBlocks(brandId);
+      const block7 = blocks.find(b => b.block_id === 7);
+      const currentContent = block7?.content_md || '';
+      
+      const newContent = updateSavedAnalysisInMarkdown(currentContent, report);
+      
+      await db.updateBrandBlock(brandId, 7, {
+        content_md: newContent,
+        status: block7?.status || 'borrador'
+      });
+      
+      onUpdate();
+    } catch (err: any) {
+      console.error('[VisualLab] Logo analysis error:', err);
+      setApiError(err.message || 'Ocurrió un error al conectar con el servidor de IA.');
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   // Inline styles for 3D card flipping
@@ -1061,51 +1231,138 @@ Requisitos obligatorios del prompt resultante:
 
           {/* 3. AUDITOR / ANALYSIS BUTTON */}
           {logoSrc && (
-            <div className="border border-slate-800 rounded-lg p-4 bg-slate-950/40">
-              <div className="flex items-center justify-between">
+            <div className="border border-slate-800 rounded-lg p-4 bg-slate-950/40 font-sans">
+              <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3">
                 <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Auditoría Visual del Logotipo</h4>
-                  <p className="text-[10px] text-slate-500">Ejecuta un diagnóstico estético y de alineación.</p>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Auditoría Visual de Identidad</h4>
+                  <p className="text-[9px] text-slate-500 mt-0.5">Examen de rendimiento de los 15 parámetros clásicos.</p>
                 </div>
-                {!analysisReport && !isScanning && (
+                {analysisReport && !isScanning && scannedImage === logoSrc && (
                   <button 
                     onClick={runAnalysis}
-                    className="flex items-center gap-1 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow transition-all shrink-0 cursor-pointer"
+                    className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-[9px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-700 transition-all cursor-pointer animate-fadeIn"
+                    title="Ejecutar análisis de nuevo"
                   >
-                    <Sparkles className="h-3 w-3" />
-                    Analizar
+                    <Sparkles className="h-2.5 w-2.5 text-violet-400" />
+                    Reanalizar
                   </button>
                 )}
               </div>
 
-              {/* Scanning Animation */}
-              {isScanning && (
-                <div className="mt-4 relative rounded-lg border border-slate-800 bg-slate-900/50 p-6 flex flex-col items-center justify-center min-h-[140px] overflow-hidden select-none">
-                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/20 to-transparent w-full h-10 animate-bounce top-0" style={{ animationDuration: '1.8s' }} />
-                  <img src={logoSrc} alt="Scanning logo" className="max-h-[80px] object-contain opacity-50 filter blur-[0.5px]" />
-                  <p className="text-[10px] text-violet-400 font-bold uppercase tracking-wider mt-4 animate-pulse">Escaneando geometría y píxeles...</p>
+              {/* If no API key, show inline input for convenience */}
+              {!apiKey && (
+                <div className="bg-slate-900/60 border border-slate-850 rounded-lg p-3 space-y-2.5 select-none">
+                  <div className="flex justify-between items-center text-[9px] font-semibold">
+                    <span className="text-slate-400">Google AI Studio API Key Requerida</span>
+                    <a 
+                      href="https://aistudio.google.com/" 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="text-violet-400 hover:text-violet-300 underline"
+                    >
+                      Obtener gratis ↗
+                    </a>
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="Pega tu API Key de Google aquí (AIzaSy...)"
+                    value={apiKey}
+                    onChange={(e) => handleSaveApiKey(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-[9.5px] font-mono text-white focus:outline-none focus:border-violet-500 transition-colors"
+                  />
+                  <p className="text-[8.5px] text-slate-500 leading-normal">
+                    La auditoría de marca utiliza Gemini 3.5 Flash para examinar la composición estética del logo y contrastarlo con tus arquetipos e historia.
+                  </p>
                 </div>
               )}
 
-              {/* Analysis Report Display */}
+              {/* If API key exists but no report yet */}
+              {apiKey && !analysisReport && !isScanning && (
+                <div className="flex justify-between items-center bg-slate-900/40 border border-slate-900/60 rounded-lg p-3">
+                  <span className="text-[10px] text-slate-400 font-sans">Listo para analizar el logotipo.</span>
+                  <button 
+                    onClick={runAnalysis}
+                    className="flex items-center gap-1 bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow transition-all cursor-pointer font-sans"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    Analizar
+                  </button>
+                </div>
+              )}
+
+              {/* Scanning Animation */}
+              {isScanning && (
+                <div className="relative rounded-lg border border-slate-800 bg-slate-900/50 p-6 flex flex-col items-center justify-center min-h-[150px] overflow-hidden select-none">
+                  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-violet-500/15 to-transparent w-full h-12 animate-bounce top-0" style={{ animationDuration: '2s' }} />
+                  <img src={logoSrc} alt="Scanning logo" className="max-h-[75px] object-contain opacity-55 filter blur-[0.3px]" />
+                  <p className="text-[9.5px] text-violet-400 font-bold uppercase tracking-wider mt-4 animate-pulse">Consultando con Gemini 3.5 Flash...</p>
+                  <p className="text-[8px] text-slate-500 mt-1">Evaluando 15 parámetros de rendimiento de marca</p>
+                </div>
+              )}
+
+              {/* API Error Display */}
+              {apiError && (
+                <div className="mt-3 bg-red-950/60 border border-red-900/40 rounded-lg p-3 text-[9.5px] leading-relaxed text-red-300 font-sans flex items-start gap-2 select-none">
+                  <span className="font-bold text-[11px] leading-none">⚠️</span>
+                  <p>{apiError}</p>
+                </div>
+              )}
+
+              {/* Summary Analysis Report Display */}
               {analysisReport && !isScanning && scannedImage === logoSrc && (
-                <div className="mt-4 space-y-3.5 text-xs text-slate-300 animate-fadeIn border-t border-slate-800/80 pt-4">
+                <div className="space-y-3.5 text-xs text-slate-300 animate-fadeIn">
+                  {/* Gauge & Score */}
+                  <div className="bg-slate-900/60 border border-slate-850 p-3.5 rounded-lg flex items-center gap-4">
+                    {/* Radial score gauge */}
+                    <div className="relative flex items-center justify-center w-14 h-14 shrink-0 select-none">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path
+                          className="text-slate-800"
+                          strokeWidth="3"
+                          stroke="currentColor"
+                          fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        />
+                        <path
+                          className={
+                            analysisReport.overallScore >= 80 
+                              ? 'text-emerald-500' 
+                              : analysisReport.overallScore >= 50 
+                                ? 'text-amber-500' 
+                                : 'text-red-500'
+                          }
+                          strokeWidth="3.2"
+                          strokeDasharray={`${analysisReport.overallScore}, 100`}
+                          strokeLinecap="round"
+                          stroke="currentColor"
+                          fill="none"
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          style={{ filter: `drop-shadow(0px 0px 4px currentColor)` }}
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center justify-center text-center">
+                        <span className="text-[13px] font-black text-white leading-none">{analysisReport.overallScore}</span>
+                        <span className="text-[6px] font-bold text-slate-500 tracking-wider">PTS</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-white uppercase tracking-wider">Alineación Visual de Marca</span>
+                      <p className="text-[9px] text-slate-400">El logotipo posee un rendimiento del {analysisReport.overallScore}% según la auditoría de calidad.</p>
+                    </div>
+                  </div>
+
                   <div>
-                    <span className="font-bold text-white block mb-1">1. Geometría y Aspecto ({analysisReport.aspectRatio})</span>
-                    <p className="text-slate-400 leading-relaxed text-[11px]">{analysisReport.geometry}</p>
+                    <span className="font-bold text-white block mb-1">Diagnóstico Ejecutivo:</span>
+                    <p className="text-slate-400 leading-relaxed text-[10.5px] italic">"{analysisReport.conclusion}"</p>
                   </div>
-                  <div>
-                    <span className="font-bold text-white block mb-1">2. Psicología Cromática (Color Dominante)</span>
-                    <p className="text-slate-400 leading-relaxed text-[11px]">{analysisReport.psychology}</p>
-                  </div>
-                  <div>
-                    <span className="font-bold text-white block mb-1">3. Sinfonía y Coherencia de Identidad</span>
-                    <p className="text-slate-400 leading-relaxed text-[11px]" dangerouslySetInnerHTML={{ __html: analysisReport.coherence }} />
-                  </div>
-                  <div className="flex gap-2 bg-slate-900 border border-slate-800/60 p-2.5 rounded-lg text-[10px] leading-relaxed text-amber-300">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-amber-400" />
-                    <p>{analysisReport.recommendation}</p>
-                  </div>
+                  
+                  <a
+                    href="#full-logo-analysis"
+                    className="flex items-center justify-center gap-1 w-full bg-slate-900 hover:bg-slate-850 hover:text-white text-slate-400 text-[10px] font-bold py-1.5 rounded-md border border-slate-850 hover:border-slate-800 transition-all text-center cursor-pointer select-none"
+                  >
+                    Ver reporte de 15 parámetros ↓
+                  </a>
                 </div>
               )}
             </div>
@@ -1965,6 +2222,85 @@ Requisitos obligatorios del prompt resultante:
         </div>
 
       </div>
+
+      {/* 4. FULL WIDTH ANALYSIS REPORT */}
+      {analysisReport && !isScanning && scannedImage === logoSrc && (
+        <div id="full-logo-analysis" className="mt-8 border border-slate-800 rounded-xl p-6 bg-slate-950/40 animate-fadeIn scroll-mt-6 font-sans">
+          <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-800 pb-4 mb-6 gap-3">
+            <div>
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <Sparkles className="h-4.5 w-4.5 text-violet-400" />
+                Auditoría Completa de Marca — Examen de 15 Parámetros
+              </h4>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Evaluación técnica del logotipo de {activeBrand?.name} bajo el modelo teórico de Norberto Chaves y Raúl Belluccia.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-lg text-xs font-medium self-start">
+              <span className="text-slate-400">Calificación Promedio:</span>
+              <span className={`font-black text-sm ${
+                analysisReport.overallScore >= 80 
+                  ? 'text-emerald-400' 
+                  : analysisReport.overallScore >= 50 
+                    ? 'text-amber-400' 
+                    : 'text-red-400'
+              }`}>{analysisReport.overallScore} / 100</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {analysisReport.parameters.map((p) => {
+              // Color based on score
+              const isHigh = p.score >= 8;
+              const isMid = p.score >= 5 && p.score < 8;
+              const colorClass = isHigh 
+                ? 'bg-emerald-500' 
+                : isMid 
+                  ? 'bg-amber-500' 
+                  : 'bg-red-500';
+              const textClass = isHigh 
+                ? 'text-emerald-400' 
+                : isMid 
+                  ? 'text-amber-400' 
+                  : 'text-red-400';
+
+              return (
+                <div key={p.id} className="bg-slate-900/60 border border-slate-850 rounded-lg p-4 flex flex-col justify-between hover:border-slate-800 transition-colors">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-400 font-mono tracking-wider">{String(p.id).padStart(2, '0')}. PARAM</span>
+                      <span className={`text-[11px] font-black font-mono ${textClass}`}>{p.score} / 10</span>
+                    </div>
+                    
+                    <div>
+                      <h5 className="text-[11.5px] font-extrabold text-white font-sans">{p.name}</h5>
+                      
+                      {/* Visual score bar */}
+                      <div className="h-1 w-full bg-slate-850 rounded-full overflow-hidden mt-1.5">
+                        <div className={`h-full ${colorClass}`} style={{ width: `${p.score * 10}%` }} />
+                      </div>
+                    </div>
+
+                    <p className="text-[10.5px] text-slate-400 leading-relaxed pt-1 font-sans">
+                      {p.text}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Conclusion footer panel */}
+          <div className="mt-6 border border-slate-800 bg-slate-900/30 p-4 rounded-lg flex gap-3 items-start">
+            <Info className="h-5 w-5 text-violet-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="text-xs font-bold text-white block">Dictamen y Recomendaciones Generales</span>
+              <p className="text-[11px] text-slate-400 leading-relaxed mt-1">{analysisReport.conclusion}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
