@@ -263,7 +263,13 @@ export default function HomePage() {
                       )}
                       {selectedBlockId === 3 && (
                         <div className="mt-6">
-                          <NamingLab brandId={activeBrand.id} />
+                          <NamingLab
+                            brandId={activeBrand.id}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
                         </div>
                       )}
                       {selectedBlockId === 4 && (

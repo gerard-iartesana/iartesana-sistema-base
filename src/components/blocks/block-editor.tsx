@@ -8,6 +8,7 @@ import { parseMarkers } from '@/lib/utils/markers';
 import type { BlockStatus, BrandBlock } from '@/lib/db/types';
 import { splitBlock7Content, compileBlock7Content } from '@/lib/utils/visual-content';
 import { splitBlock2Content, compileBlock2Content } from '@/lib/utils/valprop-content';
+import { splitBlock3Content, compileBlock3Content } from '@/lib/utils/naming-content';
 
 type ViewMode = 'edit' | 'preview';
 
@@ -144,6 +145,8 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         } else if (blockId === 2) {
           const parsed = splitBlock2Content(rawContent);
           rawContent = parsed.rawMarkdown;
+        } else if (blockId === 3) {
+          rawContent = splitBlock3Content(rawContent);
         }
         setContent(rawContent);
         setStatus(block.status);
@@ -185,6 +188,9 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         
         // Re-compile preserving mission, vision, values
         fullText = compileBlock2Content(parsed);
+      } else if (blockId === 3) {
+        const candidates = await db.getNamingCandidates(brandId);
+        fullText = compileBlock3Content(text, candidates);
       }
 
       const result = await db.updateBrandBlock(brandId, blockId, { content_md: fullText });

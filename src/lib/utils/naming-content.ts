@@ -38,3 +38,43 @@ export function compileNamingRationale(userRationale: string, analysis: NamingAn
   if (!analysis) return base;
   return `${base}\n\n<!-- NAMING_ANALYSIS:${JSON.stringify(analysis)} -->`.trim();
 }
+
+export function splitBlock3Content(md: string): string {
+  let cleanMd = md || '';
+  // Remove the generated candidates table section
+  cleanMd = cleanMd.replace(/\s*\n*### Tabla de Candidatos de Naming[\s\S]*$/g, '').trim();
+  return cleanMd;
+}
+
+export interface MinimalNamingCandidate {
+  name: string;
+  rationale_md: string;
+  status: 'candidato' | 'descartado' | 'elegido';
+  veto_reason: string | null;
+}
+
+export function compileBlock3Content(rawMarkdown: string, candidates: MinimalNamingCandidate[]): string {
+  let md = (rawMarkdown || '').trim();
+  if (candidates.length === 0) return md;
+
+  let tableMd = `\n\n### Tabla de Candidatos de Naming\n\n`;
+  tableMd += `| Nombre | Estado | Notas / Razón de Veto |\n`;
+  tableMd += `|---|---|---|\n`;
+
+  for (const c of candidates) {
+    const { userRationale, analysis } = splitNamingRationale(c.rationale_md);
+    
+    let notes = userRationale || '—';
+    if (c.status === 'descartado' && c.veto_reason) {
+      notes += ` (Veto: ${c.veto_reason})`;
+    }
+    if (analysis) {
+      notes += ` (IA: ${analysis.overallScore}/100)`;
+    }
+
+    const statusLabel = c.status === 'elegido' ? '⭐ Elegido' : c.status === 'descartado' ? '❌ Descartado' : 'Candidato';
+    tableMd += `| **${c.name}** | ${statusLabel} | ${notes} |\n`;
+  }
+
+  return `${md}${tableMd}`.trim();
+}

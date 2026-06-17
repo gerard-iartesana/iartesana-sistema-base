@@ -4,10 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Trophy, XCircle, Star, AlertCircle, Trash2, ChevronDown, ChevronUp, Loader2, Sparkles, Info } from 'lucide-react';
 import { db } from '@/lib/db/local-storage';
 import type { NamingCandidate, NamingStatus } from '@/lib/db/types';
-import { splitNamingRationale, compileNamingRationale, NamingAnalysis } from '@/lib/utils/naming-content';
+import { splitNamingRationale, compileNamingRationale, splitBlock3Content, compileBlock3Content, NamingAnalysis } from '@/lib/utils/naming-content';
 
 interface NamingLabProps {
   brandId: string;
+  onUpdate?: () => void;
 }
 
 const statusConfig: Record<NamingStatus, { label: string; icon: React.ReactNode; badgeClass: string; rowClass: string }> = {
@@ -31,7 +32,7 @@ const statusConfig: Record<NamingStatus, { label: string; icon: React.ReactNode;
   },
 };
 
-export function NamingLab({ brandId }: NamingLabProps) {
+export function NamingLab({ brandId, onUpdate }: NamingLabProps) {
   const [candidates, setCandidates] = useState<NamingCandidate[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
@@ -74,6 +75,25 @@ export function NamingLab({ brandId }: NamingLabProps) {
     setApiKey(trimmed);
     if (typeof window !== 'undefined') {
       localStorage.setItem('sb_gemini_api_key', trimmed);
+    }
+  };
+
+  const syncBlock3 = async (updatedList: NamingCandidate[]) => {
+    try {
+      const blocks = await db.getBrandBlocks(brandId);
+      const block3 = blocks.find(b => b.block_id === 3);
+      const currentContent = block3?.content_md || '';
+      
+      const rawMarkdown = splitBlock3Content(currentContent);
+      const updatedContent = compileBlock3Content(rawMarkdown, updatedList);
+      
+      await db.updateBrandBlock(brandId, 3, {
+        content_md: updatedContent,
+        status: block3?.status || 'borrador'
+      });
+      onUpdate?.();
+    } catch (err) {
+      console.error('Failed to sync naming candidates to Block 3:', err);
     }
   };
 
@@ -171,7 +191,10 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
 
       const compiledRationale = compileNamingRationale(userRationale, parsedAnalysis);
       await db.updateNamingCandidate(candidate.id, { rationale_md: compiledRationale });
-      await load();
+      
+      const latestCandidates = await db.getNamingCandidates(brandId);
+      setCandidates(latestCandidates);
+      await syncBlock3(latestCandidates);
     } catch (err: any) {
       console.error('Error running naming AI analysis:', err);
       setApiError(err.message || 'Error de conexión con Gemini. Revisa la consola.');
@@ -182,15 +205,22 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
-    await db.createNamingCandidate({
-      brand_id: brandId,
-      name: newName.trim(),
-      rationale_md: newRationale.trim(),
-    });
-    setNewName('');
-    setNewRationale('');
-    setShowAddForm(false);
-    await load();
+    try {
+      await db.createNamingCandidate({
+        brand_id: brandId,
+        name: newName.trim(),
+        rationale_md: newRationale.trim(),
+      });
+      setNewName('');
+      setNewRationale('');
+      setShowAddForm(false);
+      
+      const latestCandidates = await db.getNamingCandidates(brandId);
+      setCandidates(latestCandidates);
+      await syncBlock3(latestCandidates);
+    } catch (err) {
+      console.error('Failed to add candidate:', err);
+    }
   };
 
   const handleStatusChange = async (id: string, newStatus: NamingStatus) => {
@@ -199,22 +229,53 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
       setVetoReason('');
       return;
     }
-    await db.updateNamingCandidate(id, { status: newStatus, veto_reason: undefined });
-    await load();
+    
+    try {
+      if (newStatus === 'elegido') {
+        const currentElegido = candidates.find(c => c.status === 'elegido');
+        if (currentElegido && currentElegido.id !== id) {
+          await db.updateNamingCandidate(currentElegido.id, { status: 'candidato' });
+        }
+      }
+      
+      const updatePayload: any = { status: newStatus, veto_reason: null };
+      
+      await db.updateNamingCandidate(id, updatePayload);
+      
+      const latestCandidates = await db.getNamingCandidates(brandId);
+      setCandidates(latestCandidates);
+      await syncBlock3(latestCandidates);
+    } catch (err) {
+      console.error('Failed to change status:', err);
+    }
   };
 
   const handleVetoConfirm = async () => {
     if (!vetoModal || !vetoReason.trim()) return;
-    await db.updateNamingCandidate(vetoModal.id, { status: 'descartado', veto_reason: vetoReason.trim() });
-    setVetoModal(null);
-    setVetoReason('');
-    await load();
+    try {
+      await db.updateNamingCandidate(vetoModal.id, { status: 'descartado', veto_reason: vetoReason.trim() });
+      setVetoModal(null);
+      setVetoReason('');
+      
+      const latestCandidates = await db.getNamingCandidates(brandId);
+      setCandidates(latestCandidates);
+      await syncBlock3(latestCandidates);
+    } catch (err) {
+      console.error('Failed to veto candidate:', err);
+    }
   };
 
   const handleDelete = async (id: string) => {
-    await db.deleteNamingCandidate(id);
-    setDeleteConfirm(null);
-    await load();
+    try {
+      await db.deleteNamingCandidate(id);
+      setDeleteConfirm(null);
+      
+      const latestCandidates = await db.getNamingCandidates(brandId);
+      setCandidates(latestCandidates);
+      await syncBlock3(latestCandidates);
+    } catch (err) {
+      console.error('Failed to delete candidate:', err);
+    }
   };
 
   const elegido = candidates.find(c => c.status === 'elegido');
@@ -246,7 +307,7 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
         <div className="border-b border-slate-200 bg-slate-50 p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Nombre</label>
+              <label className="mb-1 block text-xs font-medium text-slate-650">Nombre</label>
               <input
                 type="text"
                 value={newName}
@@ -257,13 +318,13 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">Razonamiento inicial</label>
+              <label className="mb-1 block text-xs font-medium text-slate-655">Razonamiento inicial</label>
               <input
                 type="text"
                 value={newRationale}
                 onChange={e => setNewRationale(e.target.value)}
                 placeholder="Notas de significado, sonoridad, etc."
-                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-violet-350 focus:ring-1 focus:ring-violet-200"
               />
             </div>
           </div>
@@ -370,7 +431,7 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
                             {candidate.status !== 'descartado' && (
                               <button
                                 onClick={() => handleStatusChange(candidate.id, 'descartado')}
-                                className="rounded p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-500 cursor-pointer"
+                                className="rounded p-1 text-slate-405 transition-colors hover:bg-red-50 hover:text-red-500 cursor-pointer"
                                 title="Descartar"
                               >
                                 <XCircle className="h-3 w-3" />
