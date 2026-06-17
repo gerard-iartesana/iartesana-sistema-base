@@ -211,11 +211,12 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
     saveToDb(mission, vision, newList);
   };
 
+  // Safe timeout cleanup on unmount
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [mission, vision, valuesList]);
+  }, []);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm text-slate-200">
@@ -256,7 +257,7 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             value={mission}
             onChange={(e) => handleTextChange('mission', e.target.value)}
             placeholder="¿Cuál es el propósito o razón de ser de la marca?..."
-            className="w-full h-52 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
@@ -271,57 +272,59 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             value={vision}
             onChange={(e) => handleTextChange('vision', e.target.value)}
             placeholder="¿Hacia dónde se dirige la marca a largo plazo?..."
-            className="w-full h-52 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
 
-        {/* Valores (Numbered List with Title & Description) */}
+        {/* Valores (Numbered List with Title & Description Cards) */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-white">
             <Award className="h-4 w-4 text-emerald-400" style={{ color: '#36a8e0' }} />
             <label className="text-xs font-bold uppercase tracking-wider">Valores de la Marca</label>
           </div>
           
-          <div className="flex-1 flex flex-col justify-between bg-slate-950 border border-slate-800 rounded-lg p-3 min-h-52">
-            <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+          <div className="flex-1 flex flex-col justify-between bg-slate-950 border border-slate-800 rounded-lg p-3 h-64">
+            <div className="space-y-3 overflow-y-auto pr-1 flex-1 max-h-[190px]">
               {valuesList.map((item, idx) => (
-                <div key={idx} className="flex items-start gap-2 group pt-0.5">
-                  <span className="text-xs font-bold font-mono text-slate-500 w-4 select-none pt-1">
-                    {idx + 1}.
-                  </span>
-                  
-                  <div className="flex-1 flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text"
-                      value={item.title}
-                      onChange={(e) => handleValueChange(idx, 'title', e.target.value)}
-                      placeholder="Título (ej: Honestidad)"
-                      className="w-full sm:w-1/3 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors font-semibold"
-                    />
-                    <input
-                      type="text"
-                      value={item.text}
-                      onChange={(e) => handleValueChange(idx, 'text', e.target.value)}
-                      placeholder="Descripción del valor..."
-                      className="w-full sm:w-2/3 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
-                    />
+                <div key={idx} className="bg-slate-900/50 p-2.5 rounded-lg border border-slate-800/80 flex flex-col gap-1.5 relative group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 w-full mr-6">
+                      <span className="text-[10px] font-bold font-mono text-slate-500 select-none">
+                        {idx + 1}.
+                      </span>
+                      <input
+                        type="text"
+                        value={item.title}
+                        onChange={(e) => handleValueChange(idx, 'title', e.target.value)}
+                        placeholder="Título del Valor (ej: Honestidad)"
+                        className="bg-transparent border-none p-0 text-xs text-white font-bold placeholder-slate-700 focus:outline-none w-full"
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={() => handleRemoveValue(idx)}
+                      className="text-slate-500 hover:text-red-400 transition-colors p-1 absolute right-2 top-2"
+                      title="Eliminar valor"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-
-                  <button
-                    onClick={() => handleRemoveValue(idx)}
-                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all p-1 pt-0.5"
-                    title="Eliminar valor"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  
+                  <textarea
+                    value={item.text}
+                    onChange={(e) => handleValueChange(idx, 'text', e.target.value)}
+                    placeholder="Descripción detallada de cómo se aplica este valor..."
+                    className="w-full h-14 bg-slate-950 border border-slate-800/60 rounded p-1.5 text-xs text-slate-300 placeholder-slate-700 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+                    spellCheck={false}
+                  />
                 </div>
               ))}
             </div>
 
             <button
               onClick={handleAddValue}
-              className="mt-3 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-all font-semibold"
+              className="mt-3 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-all font-semibold shrink-0"
             >
               <Plus className="h-3.5 w-3.5" />
               Añadir Valor
