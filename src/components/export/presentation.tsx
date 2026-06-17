@@ -16,6 +16,15 @@ import type { BrandBlock } from '@/lib/db/types';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
 import { getClosestColorName } from '@/components/blocks/visual-lab';
+import {
+  parseSavedMockups,
+  parseSavedColors,
+  parseSavedAnalysis,
+  parseSavedVariants,
+  splitBlock7Content,
+  BrandVariant,
+  SavedMockups
+} from '@/lib/utils/visual-content';
 
 function extractText(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
@@ -302,104 +311,7 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
   );
 }
 
-interface SavedMockups {
-  card?: string;
-  mobile?: string;
-  letter?: string;
-  tshirt?: string;
-  tote?: string;
-}
 
-const CATEGORY_MAP: Record<string, keyof SavedMockups> = {
-  'Tarjeta': 'card',
-  'Movil': 'mobile',
-  'Papel A4': 'letter',
-  'Camiseta': 'tshirt',
-  'Bolso Tote': 'tote'
-};
-
-const REVERSE_CATEGORY_MAP: Record<keyof SavedMockups, string> = {
-  card: 'Tarjeta',
-  mobile: 'Movil',
-  letter: 'Papel A4',
-  tshirt: 'Camiseta',
-  tote: 'Bolso Tote'
-};
-
-function parseSavedMockups(md: string): SavedMockups {
-  const mockups: SavedMockups = {};
-  const regex = /!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\((data:image\/[^)]+)\)/g;
-  let match;
-  while ((match = regex.exec(md)) !== null) {
-    const label = match[1];
-    const base64 = match[2];
-    const key = CATEGORY_MAP[label];
-    if (key) {
-      mockups[key] = base64;
-    }
-  }
-  return mockups;
-}
-
-function cleanMarkdownMockups(md: string): string {
-  const regex = /\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g;
-  return md.replace(regex, '').trim();
-}
-
-function parseSavedColors(md: string): string[] {
-  const match = md.match(/<!-- LOGO_COLORS:\s*(\[[\s\S]+?\])\s*-->/);
-  if (match) {
-    try {
-      return JSON.parse(match[1]);
-    } catch (e) {
-      console.error('Error parsing saved logo colors JSON in presentation:', e);
-    }
-  }
-  return [];
-}
-
-function parseSavedAnalysis(md: string): any | null {
-  const match = md.match(/<!-- LOGO_ANALYSIS_JSON:\s*(\{[\s\S]+?\})\s*-->/);
-  if (match) {
-    try {
-      return JSON.parse(match[1]);
-    } catch (e) {
-      console.error('Error parsing saved logo analysis JSON in presentation:', e);
-    }
-  }
-  return null;
-}
-
-interface BrandVariant {
-  id: string;
-  name: string;
-  base64: string;
-}
-
-function parseSavedVariants(md: string): BrandVariant[] {
-  const match = md.match(/<!-- LOGO_VARIANTS:\s*(\[[\s\S]+?\])\s*-->/);
-  if (match) {
-    try {
-      return JSON.parse(match[1]);
-    } catch (e) {
-      console.error('Error parsing saved logo variants JSON in presentation:', e);
-    }
-  }
-  return [];
-}
-
-function cleanBlock7Markdown(md: string): string {
-  let cleanMd = md;
-  // 1. Remove mockups
-  cleanMd = cleanMd.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
-  // 2. Remove comments
-  cleanMd = cleanMd.replace(/\s*\n*<!-- LOGO_COLORS:[\s\S]+?-->/g, '').trim();
-  cleanMd = cleanMd.replace(/\s*\n*<!-- LOGO_ANALYSIS_JSON:[\s\S]+?-->/g, '').trim();
-  cleanMd = cleanMd.replace(/\s*\n*<!-- LOGO_VARIANTS:[\s\S]+?-->/g, '').trim();
-  // 3. Remove human-readable auditoría section if it exists
-  cleanMd = cleanMd.replace(/\s*\n*### Auditoría de Rendimiento del Logotipo[\s\S]*$/g, '').trim();
-  return cleanMd;
-}
 
 export function Presentation() {
   const { activeBrand } = useBrand();
@@ -616,7 +528,7 @@ export function Presentation() {
                 <div className="space-y-8 w-full">
                   {/* Clean text description */}
                   {(() => {
-                    const cleanContent = cleanBlock7Markdown(content);
+                    const cleanContent = splitBlock7Content(content).rawMarkdown;
                     return cleanContent ? (
                       <div className="markdown-preview max-w-none">
                         <ReactMarkdown

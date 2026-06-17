@@ -6,6 +6,7 @@ import { db } from '@/lib/db/local-storage';
 import { getBlockById } from '@/lib/data/block-definitions';
 import { parseMarkers } from '@/lib/utils/markers';
 import type { BlockStatus, BrandBlock } from '@/lib/db/types';
+import { splitBlock7Content, compileBlock7Content } from '@/lib/utils/visual-content';
 
 type ViewMode = 'edit' | 'preview' | 'split';
 
@@ -89,7 +90,8 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
       if (block) {
         let rawContent = block.content_md || '';
         if (blockId === 7) {
-          rawContent = rawContent.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
+          const parsed = splitBlock7Content(rawContent);
+          rawContent = parsed.rawMarkdown;
         }
         setContent(rawContent);
         setStatus(block.status);
@@ -109,16 +111,17 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
     try {
       let fullText = text;
 
-      // If editing block 7, read the latest mockups from the database to merge them and avoid overwriting
       if (blockId === 7) {
         const blocks = await db.getBrandBlocks(brandId);
         const latestBlock = blocks.find(b => b.block_id === 7);
         const latestRaw = latestBlock?.content_md || '';
-        const matches = latestRaw.match(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g) || [];
-        const latestMockupsStr = matches.join('\n');
-        if (latestMockupsStr) {
-          fullText = text.trim() ? `${text.trim()}\n\n${latestMockupsStr.trim()}` : latestMockupsStr.trim();
-        }
+        const parsed = splitBlock7Content(latestRaw);
+        
+        // Update only the raw user markdown text
+        parsed.rawMarkdown = text;
+        
+        // Re-compile preserving colors, analysis, mockups, and variants
+        fullText = compileBlock7Content(parsed);
       }
 
       const result = await db.updateBrandBlock(brandId, blockId, { content_md: fullText });
