@@ -220,33 +220,24 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm text-slate-200">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-5">
-        <div>
-          <h3 className="text-sm font-semibold flex items-center gap-1.5 text-white">
-            <Sparkles className="h-4 w-4 text-violet-400" />
-            Configurador de Propuesta Diferencial
-          </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Define la Misión, Visión y Valores de la marca. Se sincronizarán automáticamente con el editor superior.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {saveState === 'saving' && (
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-ping" />
-              Guardando...
-            </span>
-          )}
-          {saveState === 'saved' && (
-            <span className="text-xs text-emerald-400 flex items-center gap-1 font-semibold">
-              <Check className="h-3.5 w-3.5" />
-              Guardado ✓
-            </span>
-          )}
-        </div>
+      {/* Subtle save state indicator */}
+      <div className="flex justify-end mb-3 h-5">
+        {saveState === 'saving' && (
+          <span className="text-xs text-slate-400 flex items-center gap-1 select-none animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-ping" />
+            Guardando en tiempo real...
+          </span>
+        )}
+        {saveState === 'saved' && (
+          <span className="text-xs text-emerald-400 flex items-center gap-1 font-semibold select-none">
+            <Check className="h-3.5 w-3.5" />
+            Guardado en la marca ✓
+          </span>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Grid of Misión & Visión */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Misión */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-white">
@@ -257,7 +248,7 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             value={mission}
             onChange={(e) => handleTextChange('mission', e.target.value)}
             placeholder="¿Cuál es el propósito o razón de ser de la marca?..."
-            className="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
@@ -272,65 +263,66 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             value={vision}
             onChange={(e) => handleTextChange('vision', e.target.value)}
             placeholder="¿Hacia dónde se dirige la marca a largo plazo?..."
-            className="w-full h-64 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
+      </div>
 
-        {/* Valores (Numbered List with Title & Description Cards) */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-white">
-            <Award className="h-4 w-4 text-emerald-400" style={{ color: '#36a8e0' }} />
-            <label className="text-xs font-bold uppercase tracking-wider">Valores de la Marca</label>
-          </div>
-          
-          <div className="flex-1 flex flex-col justify-between bg-slate-950 border border-slate-800 rounded-lg p-3 h-64">
-            <div className="space-y-3 overflow-y-auto pr-1 flex-1 max-h-[190px]">
-              {valuesList.map((item, idx) => (
-                <div key={idx} className="bg-slate-900/50 p-2.5 rounded-lg border border-slate-800/80 flex flex-col gap-1.5 relative group">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 w-full mr-6">
-                      <span className="text-[10px] font-bold font-mono text-slate-500 select-none">
-                        {idx + 1}.
-                      </span>
-                      <input
-                        type="text"
-                        value={item.title}
-                        onChange={(e) => handleValueChange(idx, 'title', e.target.value)}
-                        placeholder="Título del Valor (ej: Honestidad)"
-                        className="bg-transparent border-none p-0 text-xs text-white font-bold placeholder-slate-700 focus:outline-none w-full"
-                      />
-                    </div>
-                    
-                    <button
-                      onClick={() => handleRemoveValue(idx)}
-                      className="text-slate-500 hover:text-red-400 transition-colors p-1 absolute right-2 top-2"
-                      title="Eliminar valor"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  
-                  <textarea
-                    value={item.text}
-                    onChange={(e) => handleValueChange(idx, 'text', e.target.value)}
-                    placeholder="Descripción detallada de cómo se aplica este valor..."
-                    className="w-full h-14 bg-slate-950 border border-slate-800/60 rounded p-1.5 text-xs text-slate-300 placeholder-slate-700 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
-                    spellCheck={false}
+      {/* Section Divider */}
+      <div className="border-t border-slate-800/80 my-6" />
+
+      {/* Valores below (Spanning full width) */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-white mb-2">
+          <Award className="h-4 w-4 text-emerald-400" style={{ color: '#36a8e0' }} />
+          <label className="text-xs font-bold uppercase tracking-wider">Valores de la Marca</label>
+        </div>
+
+        <div className="space-y-4">
+          {valuesList.map((item, idx) => (
+            <div key={idx} className="bg-slate-900/50 p-4 rounded-lg border border-slate-800/80 flex flex-col gap-2.5 relative group">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 w-full mr-12">
+                  <span className="text-xs font-bold font-mono text-slate-500 select-none">
+                    {idx + 1}.
+                  </span>
+                  <input
+                    type="text"
+                    value={item.title}
+                    onChange={(e) => handleValueChange(idx, 'title', e.target.value)}
+                    placeholder="Título del Valor (ej: Honestidad)"
+                    className="bg-transparent border-none p-0 text-sm text-white font-bold placeholder-slate-700 focus:outline-none w-full"
                   />
                 </div>
-              ))}
+                
+                <button
+                  onClick={() => handleRemoveValue(idx)}
+                  className="text-slate-500 hover:text-red-400 transition-colors p-1.5 absolute right-3 top-3"
+                  title="Eliminar valor"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              
+              <textarea
+                value={item.text}
+                onChange={(e) => handleValueChange(idx, 'text', e.target.value)}
+                placeholder="Descripción detallada de cómo se aplica este valor en la marca..."
+                className="w-full h-20 bg-slate-950 border border-slate-800/60 rounded p-2.5 text-xs text-slate-300 placeholder-slate-700 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+                spellCheck={false}
+              />
             </div>
-
-            <button
-              onClick={handleAddValue}
-              className="mt-3 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-all font-semibold shrink-0"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Añadir Valor
-            </button>
-          </div>
+          ))}
         </div>
+
+        <button
+          onClick={handleAddValue}
+          className="mt-3 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 px-4 py-2.5 text-xs text-slate-400 hover:text-white transition-all font-semibold"
+        >
+          <Plus className="h-4 w-4" />
+          Añadir Valor
+        </button>
       </div>
     </div>
   );
