@@ -11,6 +11,7 @@ import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
 import { RulesEditor } from '@/components/blocks/rules-editor';
 import { ArchetypeLab } from '@/components/blocks/archetype-lab';
 import { VisualLab } from '@/components/blocks/visual-lab';
+import { ValuePropositionLab } from '@/components/blocks/value-proposition-lab';
 import { CopilotPanel, AGENTS } from '@/components/copilot/copilot-panel';
 import { MarkdownExport } from '@/components/export/markdown-export';
 import { PromptGlobal } from '@/components/export/prompt-global';
@@ -248,6 +249,18 @@ export default function HomePage() {
                       />
 
                       {/* Special UIs for certain blocks */}
+                      {selectedBlockId === 2 && (
+                        <div className="mt-6">
+                          <ValuePropositionLab
+                            brandId={activeBrand.id}
+                            content_md={brandBlocks.find(b => b.block_id === 2)?.content_md || ''}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
+                        </div>
+                      )}
                       {selectedBlockId === 3 && (
                         <div className="mt-6">
                           <NamingLab brandId={activeBrand.id} />
