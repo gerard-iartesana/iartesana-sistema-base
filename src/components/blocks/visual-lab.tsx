@@ -27,7 +27,7 @@ interface VisualLabProps {
 }
 
 // Basic color naming dictionary and distance calculator
-interface ColorNameDef {
+export interface ColorNameDef {
   name: string;
   r: number;
   g: number;
@@ -35,7 +35,7 @@ interface ColorNameDef {
   role: string;
 }
 
-const COLOR_NAMES: ColorNameDef[] = [
+export const COLOR_NAMES: ColorNameDef[] = [
   { name: 'Negro Profundo', r: 15, g: 15, b: 17, role: 'Fondo / Contraste' },
   { name: 'Blanco Puro', r: 255, g: 255, b: 255, role: 'Luz / Base' },
   { name: 'Gris Neutro', r: 156, g: 163, b: 175, role: 'Texto Secundario' },
@@ -141,7 +141,7 @@ function getClosestPantone(r: number, g: number, b: number): string {
   return closest;
 }
 
-function getClosestColorName(hex: string): { name: string; role: string } {
+export function getClosestColorName(hex: string): { name: string; role: string } {
   let rgb = hex.replace(/^#/, '');
   if (rgb.length === 3) {
     rgb = rgb.split('').map(char => char + char).join('');
@@ -271,7 +271,7 @@ function extractColorsFromImage(imgElement: HTMLImageElement): string[] {
   const threshold = totalValidPixels * 0.03;
   const filtered = mergedList.filter(item => item.count >= threshold);
 
-  let results = filtered.map(item => item.hex).slice(0, 4);
+  let results = filtered.map(item => item.hex).slice(0, 8);
   if (results.length === 0 && mergedList.length > 0) {
     results = [mergedList[0].hex];
   }
@@ -290,6 +290,13 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [analysisReport, setAnalysisReport] = useState<AnalysisReport | null>(null);
   const [scannedImage, setScannedImage] = useState<string | null>(null);
+
+  // Variants states
+  const [variants, setVariants] = useState<BrandVariant[]>([]);
+  const [showAddVariant, setShowAddVariant] = useState(false);
+  const [newVariantName, setNewVariantName] = useState('Símbolo');
+  const [newVariantFile, setNewVariantFile] = useState<File | null>(null);
+  const variantFileInputRef = useRef<HTMLInputElement>(null);
 
   // Mockups states
   const [cardFlipped, setCardFlipped] = useState(false);
@@ -365,6 +372,32 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
     parameters: AnalysisParameter[];
   }
 
+  interface BrandVariant {
+    id: string;
+    name: string;
+    base64: string;
+  }
+
+  interface Block7Content {
+    rawMarkdown: string;
+    colors: string[];
+    analysis: AnalysisReport | null;
+    mockups: SavedMockups;
+    variants: BrandVariant[];
+  }
+
+  function parseSavedColors(md: string): string[] {
+    const match = md.match(/<!-- LOGO_COLORS:\s*(\[[\s\S]+?\])\s*-->/);
+    if (match) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        console.error('Error parsing saved logo colors JSON:', e);
+      }
+    }
+    return [];
+  }
+
   function parseSavedAnalysis(md: string): AnalysisReport | null {
     const match = md.match(/<!-- LOGO_ANALYSIS_JSON:\s*(\{[\s\S]+?\})\s*-->/);
     if (match) {
@@ -375,43 +408,6 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
       }
     }
     return null;
-  }
-
-  function updateSavedAnalysisInMarkdown(md: string, report: AnalysisReport | null): string {
-    // Extract existing mockups from md
-    const mockupMatches = md.match(/!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g) || [];
-    const mockupsStr = mockupMatches.join('\n\n');
-    
-    // Remove mockups from md to clean it
-    let cleanMd = md.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
-    
-    // Remove existing analysis section and comment
-    const regexHtmlComment = /\s*\n*<!-- LOGO_ANALYSIS_JSON:[\s\S]+?-->/g;
-    const regexSection = /\s*\n*### Auditoría de Rendimiento del Logotipo[\s\S]+?(?=<!-- LOGO_ANALYSIS_JSON:|$)/g;
-    cleanMd = cleanMd.replace(regexHtmlComment, '').replace(regexSection, '').trim();
-    
-    // Build new analysis markdown if report is present
-    if (report) {
-      let analysisMd = `\n\n### Auditoría de Rendimiento del Logotipo (15 Parámetros)\n\n`;
-      analysisMd += `Valoración Global: **${report.overallScore}/100**\n\n`;
-      analysisMd += `| Parámetro | Valoración | Explicación |\n`;
-      analysisMd += `|---|---|---|\n`;
-      for (const p of report.parameters) {
-        analysisMd += `| ${p.id}. ${p.name} | **${p.score}/10** | ${p.text} |\n`;
-      }
-      analysisMd += `\n**Conclusión General:** ${report.conclusion}\n\n`;
-      
-      const jsonComment = `<!-- LOGO_ANALYSIS_JSON:${JSON.stringify(report)} -->`;
-      
-      cleanMd = cleanMd ? `${cleanMd}\n${analysisMd}${jsonComment}` : `${analysisMd}${jsonComment}`;
-    }
-    
-    // Append mockups back at the very end
-    if (mockupsStr) {
-      cleanMd = `${cleanMd}\n\n${mockupsStr}`;
-    }
-    
-    return cleanMd;
   }
 
   function parseSavedMockups(md: string): SavedMockups {
@@ -429,15 +425,215 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
     return mockups;
   }
 
-  function updateSavedMockupInMarkdown(md: string, key: keyof SavedMockups, base64: string | null): string {
-    const label = REVERSE_CATEGORY_MAP[key];
-    const regex = new RegExp(`\\s*\\n*!\\[Mockup ${label}\\]\\(data:image\\/[^)]+\\)`, 'g');
-    let cleanMd = md.replace(regex, '').trim();
-    if (base64) {
-      cleanMd = cleanMd ? `${cleanMd}\n\n![Mockup ${label}](${base64})` : `![Mockup ${label}](${base64})`;
+  function parseSavedVariants(md: string): BrandVariant[] {
+    const match = md.match(/<!-- LOGO_VARIANTS:\s*(\[[\s\S]+?\])\s*-->/);
+    if (match) {
+      try {
+        return JSON.parse(match[1]);
+      } catch (e) {
+        console.error('Error parsing saved logo variants JSON:', e);
+      }
     }
-    return cleanMd;
+    return [];
   }
+
+  function splitBlock7Content(md: string): Block7Content {
+    const colors = parseSavedColors(md);
+    const analysis = parseSavedAnalysis(md);
+    const mockups = parseSavedMockups(md);
+    const variants = parseSavedVariants(md);
+
+    let rawMarkdown = md;
+    // 1. Remove mockups
+    rawMarkdown = rawMarkdown.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
+
+    // 2. Remove comments
+    rawMarkdown = rawMarkdown.replace(/\s*\n*<!-- LOGO_COLORS:[\s\S]+?-->/g, '').trim();
+    rawMarkdown = rawMarkdown.replace(/\s*\n*<!-- LOGO_ANALYSIS_JSON:[\s\S]+?-->/g, '').trim();
+    rawMarkdown = rawMarkdown.replace(/\s*\n*<!-- LOGO_VARIANTS:[\s\S]+?-->/g, '').trim();
+
+    // 3. Remove human-readable auditoría section if it exists
+    rawMarkdown = rawMarkdown.replace(/\s*\n*### Auditoría de Rendimiento del Logotipo[\s\S]*$/g, '').trim();
+
+    return {
+      rawMarkdown,
+      colors,
+      analysis,
+      mockups,
+      variants
+    };
+  }
+
+  function compileBlock7Content(data: Block7Content): string {
+    let md = data.rawMarkdown.trim();
+
+    // 1. Append analysis
+    if (data.analysis) {
+      let analysisMd = `\n\n### Auditoría de Rendimiento del Logotipo (15 Parámetros)\n\n`;
+      analysisMd += `Valoración Global: **${data.analysis.overallScore}/100**\n\n`;
+      analysisMd += `| Parámetro | Valoración | Explicación |\n`;
+      analysisMd += `|---|---|---|\n`;
+      for (const p of data.analysis.parameters) {
+        analysisMd += `| ${p.id}. ${p.name} | **${p.score}/10** | ${p.text} |\n`;
+      }
+      analysisMd += `\n**Conclusión General:** ${data.analysis.conclusion}\n\n`;
+      
+      const jsonComment = `<!-- LOGO_ANALYSIS_JSON:${JSON.stringify(data.analysis)} -->`;
+      md = `${md}\n${analysisMd}${jsonComment}`.trim();
+    }
+
+    // 2. Append colors
+    if (data.colors && data.colors.length > 0) {
+      const colorsComment = `<!-- LOGO_COLORS:${JSON.stringify(data.colors)} -->`;
+      md = `${md}\n\n${colorsComment}`.trim();
+    }
+
+    // 3. Append variants
+    if (data.variants && data.variants.length > 0) {
+      const variantsComment = `<!-- LOGO_VARIANTS:${JSON.stringify(data.variants)} -->`;
+      md = `${md}\n\n${variantsComment}`.trim();
+    }
+
+    // 4. Append mockups
+    const mockupLines: string[] = [];
+    Object.entries(data.mockups).forEach(([key, base64]) => {
+      if (base64) {
+        const label = REVERSE_CATEGORY_MAP[key as keyof SavedMockups];
+        mockupLines.push(`![Mockup ${label}](${base64})`);
+      }
+    });
+
+    if (mockupLines.length > 0) {
+      md = `${md}\n\n${mockupLines.join('\n\n')}`.trim();
+    }
+
+    return md;
+  }
+
+  // Save current extractedColors state to Block 7 content_md
+  const saveColorsToDb = async (colorsToSave: string[]) => {
+    try {
+      const blocks = await db.getBrandBlocks(brandId);
+      const block7 = blocks.find(b => b.block_id === 7);
+      const content = block7?.content_md || '';
+      const parsed = splitBlock7Content(content);
+      
+      parsed.colors = colorsToSave;
+      const updatedContent = compileBlock7Content(parsed);
+      
+      await db.updateBrandBlock(brandId, 7, {
+        content_md: updatedContent,
+        status: block7?.status || 'borrador'
+      });
+      onUpdate();
+    } catch (err) {
+      console.error('[VisualLab] Failed to save colors to database:', err);
+    }
+  };
+
+  const handleColorChange = (index: number, newHex: string) => {
+    const updated = [...extractedColors];
+    updated[index] = newHex;
+    setExtractedColors(updated);
+  };
+
+  const handleColorBlur = async (index: number, val: string) => {
+    let normalized = val.trim();
+    if (!normalized.startsWith('#')) {
+      normalized = '#' + normalized;
+    }
+    const isHex = /^#[0-9A-F]{6}$/i.test(normalized) || /^#[0-9A-F]{3}$/i.test(normalized);
+    const updated = [...extractedColors];
+    if (isHex) {
+      updated[index] = normalized;
+    }
+    setExtractedColors(updated);
+    await saveColorsToDb(updated);
+  };
+
+  const handleRemoveColor = async (index: number) => {
+    const updated = extractedColors.filter((_, idx) => idx !== index);
+    setExtractedColors(updated);
+    await saveColorsToDb(updated);
+  };
+
+  const handleAddColor = async () => {
+    const updated = [...extractedColors, '#ffffff'];
+    setExtractedColors(updated);
+    await saveColorsToDb(updated);
+  };
+
+  const handleResetColors = async () => {
+    if (!logoSrc) return;
+    const img = new Image();
+    img.onload = async () => {
+      const autoColors = extractColorsFromImage(img);
+      setExtractedColors(autoColors);
+      await saveColorsToDb(autoColors);
+    };
+    img.src = logoSrc;
+  };
+
+  const handleAddVariantSubmit = async () => {
+    if (!newVariantName.trim() || !newVariantFile) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      const newVar: BrandVariant = {
+        id: crypto.randomUUID(),
+        name: newVariantName.trim(),
+        base64: base64
+      };
+
+      const updated = [...variants, newVar];
+      setVariants(updated);
+      
+      try {
+        const blocks = await db.getBrandBlocks(brandId);
+        const block7 = blocks.find(b => b.block_id === 7);
+        const content = block7?.content_md || '';
+        const parsed = splitBlock7Content(content);
+        parsed.variants = updated;
+        const updatedContent = compileBlock7Content(parsed);
+        
+        await db.updateBrandBlock(brandId, 7, {
+          content_md: updatedContent,
+          status: block7?.status || 'borrador'
+        });
+        onUpdate();
+      } catch (err) {
+        console.error('[VisualLab] Failed to save variants:', err);
+      }
+
+      setShowAddVariant(false);
+      setNewVariantName('Símbolo');
+      setNewVariantFile(null);
+    };
+    reader.readAsDataURL(newVariantFile);
+  };
+
+  const handleRemoveVariant = async (id: string) => {
+    const updated = variants.filter(v => v.id !== id);
+    setVariants(updated);
+
+    try {
+      const blocks = await db.getBrandBlocks(brandId);
+      const block7 = blocks.find(b => b.block_id === 7);
+      const content = block7?.content_md || '';
+      const parsed = splitBlock7Content(content);
+      parsed.variants = updated;
+      const updatedContent = compileBlock7Content(parsed);
+      
+      await db.updateBrandBlock(brandId, 7, {
+        content_md: updatedContent,
+        status: block7?.status || 'borrador'
+      });
+      onUpdate();
+    } catch (err) {
+      console.error('[VisualLab] Failed to delete variant:', err);
+    }
+  };
 
   const handleSaveMockup = async (key: keyof SavedMockups, base64: string) => {
     setIsSavingMockup(key);
@@ -446,19 +642,16 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
       const block7 = blocks.find(b => b.block_id === 7);
       const currentContent = block7?.content_md || '';
       
-      const newContent = updateSavedMockupInMarkdown(currentContent, key, base64);
+      const parsed = splitBlock7Content(currentContent);
+      parsed.mockups[key] = base64;
+      const newContent = compileBlock7Content(parsed);
       
-      // Update block 7
       await db.updateBrandBlock(brandId, 7, {
         content_md: newContent,
         status: block7?.status || 'borrador'
       });
       
-      // Update local state
-      setSavedMockups(prev => ({
-        ...prev,
-        [key]: base64
-      }));
+      setSavedMockups(parsed.mockups);
       setViewModes(prev => ({
         ...prev,
         [key]: 'ai'
@@ -478,20 +671,16 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
       const block7 = blocks.find(b => b.block_id === 7);
       const currentContent = block7?.content_md || '';
       
-      const newContent = updateSavedMockupInMarkdown(currentContent, key, null);
+      const parsed = splitBlock7Content(currentContent);
+      delete parsed.mockups[key];
+      const newContent = compileBlock7Content(parsed);
       
-      // Update block 7
       await db.updateBrandBlock(brandId, 7, {
         content_md: newContent,
         status: block7?.status || 'borrador'
       });
       
-      // Update local state
-      setSavedMockups(prev => {
-        const updated = { ...prev };
-        delete updated[key];
-        return updated;
-      });
+      setSavedMockups(parsed.mockups);
       setViewModes(prev => ({
         ...prev,
         [key]: 'interactive'
@@ -503,69 +692,85 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
     }
   };
 
-
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
-  // Set initial logo from database
-  useEffect(() => {
-    if (activeBrand?.logo_path) {
-      setLogoSrc(activeBrand.logo_path);
-      // Analyze colors on load
-      const img = new Image();
-      img.onload = () => {
-        setLogoDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-        const colors = extractColorsFromImage(img);
-        setExtractedColors(colors);
-      };
-      img.src = activeBrand.logo_path;
-    } else {
-      setLogoSrc(null);
-      setExtractedColors([]);
-      setAnalysisReport(null);
-    }
-  }, [activeBrand?.logo_path, activeBrand?.id]);
-
-  // Load and parse saved mockups and analysis from Block 7 content_md
+  // Single consolidated effect to load logo and Block 7 content
   useEffect(() => {
     if (!brandId) return;
     let cancelled = false;
-    async function loadBlock7() {
+
+    async function initVisualLab() {
       try {
+        if (activeBrand?.logo_path) {
+          setLogoSrc(activeBrand.logo_path);
+        } else {
+          setLogoSrc(null);
+          setExtractedColors([]);
+          setAnalysisReport(null);
+          setSavedMockups({});
+          return;
+        }
+
         const blocks = await db.getBrandBlocks(brandId);
         const block7 = blocks.find(b => b.block_id === 7);
-        if (!cancelled && block7?.content_md) {
-          const parsedMockups = parseSavedMockups(block7.content_md);
-          setSavedMockups(parsedMockups);
-          
-          const parsedAnalysis = parseSavedAnalysis(block7.content_md);
-          setAnalysisReport(parsedAnalysis);
-          if (parsedAnalysis) {
-            setScannedImage(activeBrand?.logo_path || null);
-          }
-          
-          // Auto-switch viewMode if mockups exist
-          setViewModes(prev => {
-            const updated = { ...prev };
-            Object.keys(parsedMockups).forEach(k => {
-              if (parsedMockups[k as keyof SavedMockups]) {
-                updated[k] = 'ai';
-              }
-            });
-            return updated;
-          });
-        } else if (!cancelled) {
-          setSavedMockups({});
-          setAnalysisReport(null);
+        const content = block7?.content_md || '';
+        const parsed = splitBlock7Content(content);
+
+        if (cancelled) return;
+
+        setSavedMockups(parsed.mockups);
+        setAnalysisReport(parsed.analysis);
+        setVariants(parsed.variants || []);
+        if (parsed.analysis) {
+          setScannedImage(activeBrand?.logo_path || null);
         }
+
+        // Auto-switch viewMode if mockups exist
+        setViewModes(prev => {
+          const updated = { ...prev };
+          Object.keys(parsed.mockups).forEach(k => {
+            if (parsed.mockups[k as keyof SavedMockups]) {
+              updated[k] = 'ai';
+            }
+          });
+          return updated;
+        });
+
+        // Handle colors extraction or loading
+        const img = new Image();
+        img.onload = async () => {
+          if (cancelled) return;
+          setLogoDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+          
+          if (parsed.colors && parsed.colors.length > 0) {
+            setExtractedColors(parsed.colors);
+          } else {
+            const autoColors = extractColorsFromImage(img);
+            setExtractedColors(autoColors);
+            
+            parsed.colors = autoColors;
+            const updatedContent = compileBlock7Content(parsed);
+            await db.updateBrandBlock(brandId, 7, {
+              content_md: updatedContent,
+              status: block7?.status || 'borrador'
+            });
+            onUpdate();
+          }
+        };
+        img.src = activeBrand.logo_path;
+
       } catch (err) {
-        console.error('[VisualLab] Failed to load data from block 7:', err);
+        console.error('[VisualLab] Error loading Visual Lab data:', err);
       }
     }
-    loadBlock7();
-    return () => { cancelled = true; };
-  }, [brandId, activeBrand]);
+
+    initVisualLab();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [brandId, activeBrand?.logo_path, activeBrand?.id]);
 
   // Load API Key from localStorage
   useEffect(() => {
@@ -796,10 +1001,23 @@ Requisitos obligatorios del prompt resultante:
     reader.onload = async (event) => {
       const base64 = event.target?.result as string;
       setLogoSrc(base64);
-      setAnalysisReport(null); // Reset report
+      setAnalysisReport(null);
+      setExtractedColors([]);
 
-      // Save to database
       try {
+        const blocks = await db.getBrandBlocks(brandId);
+        const block7 = blocks.find(b => b.block_id === 7);
+        const currentContent = block7?.content_md || '';
+        const parsed = splitBlock7Content(currentContent);
+        parsed.colors = [];
+        parsed.analysis = null;
+        const updatedContent = compileBlock7Content(parsed);
+        
+        await db.updateBrandBlock(brandId, 7, {
+          content_md: updatedContent,
+          status: block7?.status || 'borrador'
+        });
+
         const updated = await db.updateBrand(brandId, { logo_path: base64 });
         if (updated) {
           await refreshBrands();
@@ -820,6 +1038,19 @@ Requisitos obligatorios del prompt resultante:
     setLogoDimensions({ width: 0, height: 0 });
 
     try {
+      const blocks = await db.getBrandBlocks(brandId);
+      const block7 = blocks.find(b => b.block_id === 7);
+      const currentContent = block7?.content_md || '';
+      const parsed = splitBlock7Content(currentContent);
+      parsed.colors = [];
+      parsed.analysis = null;
+      const updatedContent = compileBlock7Content(parsed);
+      
+      await db.updateBrandBlock(brandId, 7, {
+        content_md: updatedContent,
+        status: block7?.status || 'borrador'
+      });
+
       const updated = await db.updateBrand(brandId, { logo_path: null });
       if (updated) {
         await refreshBrands();
@@ -914,16 +1145,43 @@ Requisitos obligatorios del prompt resultante:
         return `${hex} (${cInfo.name} - ${cInfo.role})`;
       }).join(', ');
 
-      const promptText = `Eres un auditor de marca y diseñador gráfico experto de nivel internacional, especializado en el método de evaluación de identidad corporativa de Norberto Chaves y Raúl Belluccia (los 15 parámetros de rendimiento).
+      let promptText = `Eres un auditor de marca y diseñador gráfico experto de nivel internacional, especializado en el método de evaluación de identidad corporativa de Norberto Chaves y Raúl Belluccia (los 15 parámetros de rendimiento).
 
-Tu tarea es realizar una auditoría visual exhaustiva y rigurosa del logotipo de la marca "${brandName}" (proporcionado en la imagen) utilizando los 15 parámetros de rendimiento clásicos.
+Tu tarea es realizar una auditoría visual exhaustiva y rigurosa del logotipo y su sistema de variantes visuales para la marca "${brandName}" (proporcionados en las imágenes) utilizando los 15 parámetros de rendimiento clásicos.
 
 Aquí tienes el contexto estratégico e identidad de la marca:
 ${brandContext}
 Colores extraídos del logo actualmente: ${colorsDesc || 'No se han extraído colores.'}
-Dimensiones físicas del logo: ${logoDimensions.width}px x ${logoDimensions.height}px
+Dimensiones físicas del logotipo principal: ${logoDimensions.width}px x ${logoDimensions.height}px
 
-Debes someter este logotipo al examen estricto de los siguientes 15 parámetros de rendimiento:
+Hemos cargado las siguientes imágenes para tu análisis:
+- Imagen 1 (obligatoria): Logotipo Principal de la marca.
+`;
+
+      // Process variants
+      const variantParts = variants.map(v => {
+        let vBase64 = '';
+        let vMime = '';
+        if (v.base64.startsWith('data:')) {
+          const match = v.base64.match(/^data:([^;]+);base64,(.+)$/);
+          if (match) {
+            vMime = match[1];
+            vBase64 = match[2];
+          }
+        }
+        return { name: v.name, mimeType: vMime, data: vBase64 };
+      }).filter(vp => !!vp.data && !!vp.mimeType);
+
+      if (variantParts.length > 0) {
+        promptText += `\nTambién se proporcionan las siguientes variantes alternativas para evaluar la consistencia, versatilidad y declinabilidad del sistema visual:\n`;
+        variantParts.forEach((vp, idx) => {
+          promptText += `- Imagen ${idx + 2}: Variante de marca denominada "${vp.name}"\n`;
+        });
+        promptText += `\nEvalúa la marca no solo como un signo único aislado, sino como un sistema de signos visuales coordinado, analizando cómo interactúa el logotipo principal con estas variantes en parámetros como "Versatilidad", "Reproducibilidad", "Declinabilidad", "Suficiencia" y "Legibilidad".\n`;
+      }
+
+      promptText += `
+Debes someter la marca y sus variantes al examen estricto de los siguientes 15 parámetros de rendimiento:
 1. Calidad gráfica: Excelencia formal, dibujo, composición y equilibrio visual del signo.
 2. Ajuste tipológico: Coherencia del tipo de marca (símbolo, logotipo solo, imagotipo) con la categoría de negocio.
 3. Corrección estilística: Adecuación estética al sector y público, evitando modas efímeras.
@@ -940,7 +1198,7 @@ Debes someter este logotipo al examen estricto de los siguientes 15 parámetros 
 14. Declinabilidad: Facilidad del logotipo para generar un sistema gráfico o lenguaje visual expansivo.
 15. Equilibrio: Armonía interna de masas, pesos visuales y alineaciones compositivas.
 
-Para cada parámetro, debes evaluar el logotipo de forma objetiva y fundamentada basándote en la imagen y el contexto de marca, y asignar una puntuación del 1 al 10 (donde 10 es excelente y 1 es muy deficiente).
+Para cada parámetro, debes evaluar el logotipo y sus variantes de forma objetiva y fundamentada basándote en las imágenes y el contexto de marca, y asignar una puntuación del 1 al 10 (donde 10 es excelente y 1 es muy deficiente).
 
 Calcula una puntuación global del 0 al 100 ('overallScore') que sea un promedio o media ponderada de las puntuaciones asignadas a los parámetros.
 Proporciona una conclusión general ('conclusion') con recomendaciones clave de mejora visual o estratégica.
@@ -954,14 +1212,37 @@ Devuelve la respuesta en formato JSON estricto con el siguiente esquema:
       "id": number, // 1 a 15
       "name": "string", // Nombre exacto del parámetro (ej. "Calidad gráfica")
       "score": number, // 1 a 10 (entero)
-      "text": "string" // Justificación analítica detallada de por qué se asigna esta nota basándose en la imagen y contexto
+      "text": "string" // Justificación analítica detallada de por qué se asigna esta nota basándose en las imágenes y contexto, mencionando las variantes específicas cuando sea relevante (ej. versatilidad o declinabilidad)
     }
   ]
 }
 
 IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregues introducciones, explicaciones externas ni etiquetas de código Markdown.`;
 
-      // 4. Call Gemini 3.5 Flash
+      // 4. Construct multi-part contents payload
+      const requestParts: any[] = [];
+
+      // Main logo
+      requestParts.push({
+        inlineData: {
+          mimeType: logoMimeType,
+          data: logoBase64
+        }
+      });
+
+      // Variants
+      variantParts.forEach(vp => {
+        requestParts.push({
+          inlineData: {
+            mimeType: vp.mimeType,
+            data: vp.data
+          }
+        });
+      });
+
+      // Text prompt
+      requestParts.push({ text: promptText });
+
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
@@ -970,17 +1251,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
         body: JSON.stringify({
           contents: [
             {
-              parts: [
-                {
-                  inlineData: {
-                    mimeType: logoMimeType,
-                    data: logoBase64
-                  }
-                },
-                {
-                  text: promptText
-                }
-              ]
+              parts: requestParts
             }
           ],
           generationConfig: {
@@ -1022,12 +1293,14 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
       setAnalysisReport(report);
       setScannedImage(logoSrc);
 
-      // 6. Save persistently in Supabase block 7 content_md
+      // 6. Save persistently in Block 7 content_md
       const blocks = await db.getBrandBlocks(brandId);
       const block7 = blocks.find(b => b.block_id === 7);
       const currentContent = block7?.content_md || '';
       
-      const newContent = updateSavedAnalysisInMarkdown(currentContent, report);
+      const parsed = splitBlock7Content(currentContent);
+      parsed.analysis = report;
+      const newContent = compileBlock7Content(parsed);
       
       await db.updateBrandBlock(brandId, 7, {
         content_md: newContent,
@@ -1110,8 +1383,6 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                     onLoad={(e) => {
                       const img = e.currentTarget;
                       setLogoDimensions({ width: img.naturalWidth, height: img.naturalHeight });
-                      const colors = extractColorsFromImage(img);
-                      setExtractedColors(colors);
                     }}
                   />
                   <div className="absolute top-2 right-2 flex gap-1">
@@ -1151,81 +1422,257 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
             )}
           </div>
 
+          {/* 1.5 ALTERNATIVE VARIANTS PANEL */}
+          {logoSrc && (
+            <div className="border border-slate-800 rounded-lg p-4 bg-slate-950/40 font-sans">
+              <div className="flex items-center justify-between border-b border-slate-850 pb-2 mb-3 select-none">
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Variantes de la Marca</h4>
+                  <p className="text-[9px] text-slate-500 mt-0.5">Sube símbolos o versiones reducidas para el análisis.</p>
+                </div>
+                {!showAddVariant && (
+                  <button
+                    onClick={() => setShowAddVariant(true)}
+                    className="bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white font-bold text-[10px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-750 transition-all cursor-pointer font-sans"
+                  >
+                    + Añadir variante
+                  </button>
+                )}
+              </div>
+
+              {/* Add Variant Form */}
+              {showAddVariant && (
+                <div className="bg-slate-900/60 border border-slate-850 rounded-lg p-3 space-y-3 mb-4 animate-fadeIn">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Nombre de la variante</span>
+                    <input
+                      type="text"
+                      placeholder="Ej. Símbolo, Logotipo reducido, Versión vertical"
+                      value={newVariantName}
+                      onChange={(e) => setNewVariantName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-[10px] text-white focus:outline-none focus:border-violet-500 transition-colors font-sans"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Imagen (PNG/JPG/SVG)</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => variantFileInputRef.current?.click()}
+                        className="bg-slate-800 hover:bg-slate-700 text-white font-semibold text-[10px] py-1 px-2.5 rounded border border-slate-750 cursor-pointer font-sans"
+                      >
+                        Seleccionar archivo
+                      </button>
+                      <span className="text-[9px] text-slate-500 truncate max-w-[150px]">
+                        {newVariantFile ? newVariantFile.name : 'Ningún archivo'}
+                      </span>
+                      <input
+                        type="file"
+                        ref={variantFileInputRef}
+                        accept="image/*"
+                        onChange={(e) => setNewVariantFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-1.5 pt-1 border-t border-slate-850">
+                    <button
+                      onClick={() => {
+                        setShowAddVariant(false);
+                        setNewVariantName('Símbolo');
+                        setNewVariantFile(null);
+                      }}
+                      className="text-slate-400 hover:text-slate-200 text-[10px] font-bold py-1 px-2.5 cursor-pointer font-sans"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleAddVariantSubmit}
+                      disabled={!newVariantName.trim() || !newVariantFile}
+                      className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-bold py-1 px-3 rounded shadow transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer font-sans"
+                    >
+                      Guardar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Variants List */}
+              {variants.length === 0 ? (
+                <div className="text-center py-4 text-slate-600 text-[10px] italic select-none">
+                  No se han añadido variantes de la marca.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {variants.map((v) => (
+                    <div key={v.id} className="relative group/var bg-slate-900 border border-slate-850 hover:border-slate-800 rounded-lg p-2 flex items-center gap-2.5 overflow-hidden">
+                      <div className="h-10 w-10 shrink-0 border border-slate-950 rounded bg-slate-950 flex items-center justify-center overflow-hidden">
+                        <img src={v.base64} alt={v.name} className="max-h-full max-w-full object-contain" />
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[10px] font-bold text-white truncate leading-tight">{v.name}</span>
+                        <span className="text-[8px] text-slate-500 font-mono mt-0.5 leading-none">Variante</span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveVariant(v.id)}
+                        className="absolute right-1 top-1 p-1 bg-red-950/80 text-red-400 hover:bg-red-900 hover:text-red-200 rounded border border-red-900/50 opacity-0 group-hover/var:opacity-100 transition-opacity cursor-pointer"
+                        title="Eliminar variante"
+                      >
+                        <Trash2 className="h-2.5 w-2.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 2. COLOR EXTRACTOR */}
-          {logoSrc && extractedColors.length > 0 && (
+          {logoSrc && (
             <div className="border border-slate-800 rounded-lg p-4 bg-slate-950/40">
               <div className="flex items-center justify-between mb-3.5">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                   <Activity className="h-3.5 w-3.5 text-violet-400" />
-                  Extracción de Colores
+                  Extracción y Paleta de Colores
                 </h4>
                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-900/30 font-semibold uppercase tracking-wider animate-pulse">Canvas Activo</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {extractedColors.map((hex, idx) => {
-                  const nameRole = getClosestColorName(hex);
-                  const darkRatio = getContrastRatio(hex, '#0F0F11');
-                  const lightRatio = getContrastRatio(hex, '#FFFFFF');
-
-                  const passesDark = darkRatio >= 4.5 ? 'Pasa' : darkRatio >= 3.0 ? 'Pasa G' : 'Falla';
-                  const passesLight = lightRatio >= 4.5 ? 'Pasa' : lightRatio >= 3.0 ? 'Pasa G' : 'Falla';
-
-                  const rgb = hexToRgb(hex);
-                  const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
-                  const pantone = getClosestPantone(rgb.r, rgb.g, rgb.b);
-
-                  return (
-                    <div key={idx} className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 flex flex-col justify-between">
-                      <div>
-                        {/* Swatch */}
-                        <div 
-                          className="h-7 w-full rounded-md shadow-inner border border-slate-950 mb-2 relative group cursor-pointer"
-                          style={{ backgroundColor: hex }}
-                          onClick={() => copyToClipboard(hex)}
-                          title="Copiar código HEX"
-                        >
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-md">
-                            {copiedColor === hex ? (
-                              <Check className="h-3.5 w-3.5 text-emerald-400" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5 text-white" />
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Title info */}
-                        <p className="text-[10px] font-bold text-white truncate">{nameRole.name}</p>
-                        <p className="text-[9px] font-mono text-slate-500 font-semibold">{hex.toUpperCase()}</p>
-
-                        {/* CMYK & Pantone codes */}
-                        <div className="mt-1.5 space-y-0.5 text-[8px] font-medium text-slate-400 border-t border-slate-800/40 pt-1">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500 font-semibold">CMYK:</span>
-                            <span className="font-mono text-slate-300">{cmyk.c}% {cmyk.m}% {cmyk.y}% {cmyk.k}%</span>
-                          </div>
-                          <div className="flex justify-between truncate" title={pantone}>
-                            <span className="text-slate-500 font-semibold">Pantone:</span>
-                            <span className="font-bold text-violet-400 truncate">{pantone.replace(/ \([^)]+\)/g, '')}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Readability WCAG Badges */}
-                      <div className="mt-3 pt-2 border-t border-slate-800 flex justify-between gap-1 text-[8px] select-none font-mono">
-                        <div className="flex flex-col">
-                          <span className="text-slate-500">Cont. Osc:</span>
-                          <span className={`font-bold ${passesDark === 'Pasa' ? 'text-emerald-400' : passesDark === 'Pasa G' ? 'text-amber-400' : 'text-red-400'}`}>{passesDark} ({darkRatio.toFixed(1)})</span>
-                        </div>
-                        <div className="flex flex-col text-right">
-                          <span className="text-slate-500">Cont. Clar:</span>
-                          <span className={`font-bold ${passesLight === 'Pasa' ? 'text-emerald-400' : passesLight === 'Pasa G' ? 'text-amber-400' : 'text-red-400'}`}>{passesLight} ({lightRatio.toFixed(1)})</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+              {/* Toolbar */}
+              <div className="flex items-center justify-between gap-2 mb-3 bg-slate-900/50 p-1.5 rounded-lg border border-slate-850 select-none">
+                <span className="text-[10px] text-slate-400 font-medium pl-1">Gestionar paleta</span>
+                <div className="flex gap-1.5">
+                  <button 
+                    onClick={handleAddColor}
+                    className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] py-1 px-2.5 rounded border border-slate-700 hover:border-slate-600 transition-all cursor-pointer font-bold font-sans"
+                    title="Añadir un color personalizado"
+                  >
+                    <span>+ Añadir</span>
+                  </button>
+                  <button 
+                    onClick={handleResetColors}
+                    className="flex items-center gap-1 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-slate-300 text-[10px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-700 transition-all cursor-pointer font-bold font-sans"
+                    title="Restablecer a la extracción automática"
+                  >
+                    <span>↺ Restablecer</span>
+                  </button>
+                </div>
               </div>
+
+              {extractedColors.length === 0 ? (
+                <div className="text-center py-6 text-slate-500 text-xs italic">
+                  No hay colores en la paleta. Añade uno para comenzar.
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {extractedColors.map((hex, idx) => {
+                    const nameRole = getClosestColorName(hex);
+                    const darkRatio = getContrastRatio(hex, '#0F0F11');
+                    const lightRatio = getContrastRatio(hex, '#FFFFFF');
+
+                    const passesDark = darkRatio >= 4.5 ? 'Pasa' : darkRatio >= 3.0 ? 'Pasa G' : 'Falla';
+                    const passesLight = lightRatio >= 4.5 ? 'Pasa' : lightRatio >= 3.0 ? 'Pasa G' : 'Falla';
+
+                    let rgb = { r: 255, g: 255, b: 255 };
+                    try {
+                      rgb = hexToRgb(hex);
+                    } catch (e) {}
+                    const cmyk = rgbToCmyk(rgb.r, rgb.g, rgb.b);
+                    const pantone = getClosestPantone(rgb.r, rgb.g, rgb.b);
+
+                    return (
+                      <div key={idx} className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 flex flex-col justify-between relative group/card">
+                        {/* Absolute delete button */}
+                        <button 
+                          onClick={() => handleRemoveColor(idx)}
+                          className="absolute -top-1.5 -right-1.5 p-1 bg-red-950 text-red-400 hover:bg-red-900 hover:text-red-200 rounded-full border border-red-900/50 opacity-0 group-hover/card:opacity-100 transition-opacity shadow-sm z-10 cursor-pointer"
+                          title="Eliminar color"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+
+                        <div>
+                          {/* Swatch & Color Picker */}
+                          <div className="relative mb-2">
+                            <div 
+                              className="h-8 w-full rounded-md shadow-inner border border-slate-950 cursor-pointer relative group/swatch"
+                              style={{ backgroundColor: hex }}
+                              title="Haz clic para seleccionar un color"
+                              onClick={() => {
+                                document.getElementById(`color-picker-${idx}`)?.click();
+                              }}
+                            >
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/swatch:opacity-100 flex items-center justify-center transition-opacity rounded-md">
+                                <Sparkles className="h-3.5 w-3.5 text-white" />
+                              </div>
+                            </div>
+                            <input 
+                              id={`color-picker-${idx}`}
+                              type="color" 
+                              value={hex.startsWith('#') && (hex.length === 4 || hex.length === 7) ? hex : '#ffffff'} 
+                              onChange={(e) => handleColorChange(idx, e.target.value)}
+                              onBlur={(e) => handleColorBlur(idx, e.target.value)}
+                              className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                            />
+                          </div>
+
+                          {/* Direct Hex Input */}
+                          <div className="flex items-center gap-1 mb-1.5 bg-slate-950 rounded px-1.5 py-0.5 border border-slate-850">
+                            <span className="text-[9px] text-slate-500 font-bold font-mono">HEX</span>
+                            <input
+                              type="text"
+                              value={hex}
+                              onChange={(e) => handleColorChange(idx, e.target.value)}
+                              onBlur={(e) => handleColorBlur(idx, e.target.value)}
+                              className="w-full bg-transparent text-[10px] font-mono font-bold text-white focus:outline-none uppercase border-none p-0 select-all"
+                            />
+                            <button
+                              onClick={() => copyToClipboard(hex)}
+                              className="text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer"
+                              title="Copiar HEX"
+                            >
+                              {copiedColor === hex ? (
+                                <Check className="h-2.5 w-2.5 text-emerald-400" />
+                              ) : (
+                                <Copy className="h-2.5 w-2.5" />
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Title info */}
+                          <p className="text-[10px] font-bold text-white truncate">{nameRole.name}</p>
+                          
+                          {/* CMYK & Pantone codes */}
+                          <div className="mt-1.5 space-y-0.5 text-[8px] font-medium text-slate-400 border-t border-slate-800/40 pt-1">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500 font-semibold">CMYK:</span>
+                              <span className="font-mono text-slate-300">{cmyk.c}% {cmyk.m}% {cmyk.y}% {cmyk.k}%</span>
+                            </div>
+                            <div className="flex justify-between truncate" title={pantone}>
+                              <span className="text-slate-500 font-semibold">Pantone:</span>
+                              <span className="font-bold text-violet-400 truncate">{pantone.replace(/ \([^)]+\)/g, '')}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* WCAG Contrast */}
+                        <div className="mt-3 pt-2 border-t border-slate-800 flex justify-between gap-1 text-[8px] select-none font-mono">
+                          <div className="flex flex-col">
+                            <span className="text-slate-500">Cont. Osc:</span>
+                            <span className={`font-bold ${passesDark === 'Pasa' ? 'text-emerald-400' : passesDark === 'Pasa G' ? 'text-amber-400' : 'text-red-400'}`}>{passesDark} ({darkRatio.toFixed(1)})</span>
+                          </div>
+                          <div className="flex flex-col text-right">
+                            <span className="text-slate-500">Cont. Clar:</span>
+                            <span className={`font-bold ${passesLight === 'Pasa' ? 'text-emerald-400' : passesLight === 'Pasa G' ? 'text-amber-400' : 'text-red-400'}`}>{passesLight} ({lightRatio.toFixed(1)})</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

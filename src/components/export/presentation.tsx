@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info } from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
   'A': Sparkles,
@@ -15,6 +15,7 @@ import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
 import type { BrandBlock } from '@/lib/db/types';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
+import { getClosestColorName } from '@/components/blocks/visual-lab';
 
 function extractText(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
@@ -345,6 +346,61 @@ function cleanMarkdownMockups(md: string): string {
   return md.replace(regex, '').trim();
 }
 
+function parseSavedColors(md: string): string[] {
+  const match = md.match(/<!-- LOGO_COLORS:\s*(\[[\s\S]+?\])\s*-->/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]);
+    } catch (e) {
+      console.error('Error parsing saved logo colors JSON in presentation:', e);
+    }
+  }
+  return [];
+}
+
+function parseSavedAnalysis(md: string): any | null {
+  const match = md.match(/<!-- LOGO_ANALYSIS_JSON:\s*(\{[\s\S]+?\})\s*-->/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]);
+    } catch (e) {
+      console.error('Error parsing saved logo analysis JSON in presentation:', e);
+    }
+  }
+  return null;
+}
+
+interface BrandVariant {
+  id: string;
+  name: string;
+  base64: string;
+}
+
+function parseSavedVariants(md: string): BrandVariant[] {
+  const match = md.match(/<!-- LOGO_VARIANTS:\s*(\[[\s\S]+?\])\s*-->/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]);
+    } catch (e) {
+      console.error('Error parsing saved logo variants JSON in presentation:', e);
+    }
+  }
+  return [];
+}
+
+function cleanBlock7Markdown(md: string): string {
+  let cleanMd = md;
+  // 1. Remove mockups
+  cleanMd = cleanMd.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
+  // 2. Remove comments
+  cleanMd = cleanMd.replace(/\s*\n*<!-- LOGO_COLORS:[\s\S]+?-->/g, '').trim();
+  cleanMd = cleanMd.replace(/\s*\n*<!-- LOGO_ANALYSIS_JSON:[\s\S]+?-->/g, '').trim();
+  cleanMd = cleanMd.replace(/\s*\n*<!-- LOGO_VARIANTS:[\s\S]+?-->/g, '').trim();
+  // 3. Remove human-readable auditoría section if it exists
+  cleanMd = cleanMd.replace(/\s*\n*### Auditoría de Rendimiento del Logotipo[\s\S]*$/g, '').trim();
+  return cleanMd;
+}
+
 export function Presentation() {
   const { activeBrand } = useBrand();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -560,7 +616,7 @@ export function Presentation() {
                 <div className="space-y-8 w-full">
                   {/* Clean text description */}
                   {(() => {
-                    const cleanContent = cleanMarkdownMockups(content);
+                    const cleanContent = cleanBlock7Markdown(content);
                     return cleanContent ? (
                       <div className="markdown-preview max-w-none">
                         <ReactMarkdown
@@ -597,9 +653,128 @@ export function Presentation() {
                             .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
                         </ReactMarkdown>
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-4 text-center">
-                        <p className="text-sm text-slate-400 italic">Conceptualización visual de marca</p>
+                    ) : null;
+                  })()}
+
+                  {/* Logo and colors block */}
+                  {activeBrand?.logo_path && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center border-t border-slate-100 pt-6">
+                      <div className="flex flex-col items-center justify-center p-6 border border-slate-100 rounded-xl bg-slate-50 shadow-sm aspect-video max-h-[180px]">
+                        <img src={activeBrand.logo_path} alt="Logo" className="max-h-[130px] object-contain" />
+                      </div>
+                      
+                      <div className="flex flex-col gap-3">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">Paleta de Colores Corporativos</span>
+                        {(() => {
+                          const colors = parseSavedColors(content);
+                          if (colors.length === 0) {
+                            return <span className="text-xs text-slate-400 italic">No hay colores guardados en la paleta.</span>;
+                          }
+                          return (
+                            <div className="flex flex-wrap gap-2.5">
+                              {colors.map((hex, idx) => {
+                                const nameRole = getClosestColorName(hex);
+                                return (
+                                  <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-150 rounded-full py-1 pl-1.5 pr-3.5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="h-6.5 w-6.5 rounded-full border border-slate-200 shadow-inner shrink-0" style={{ backgroundColor: hex }} />
+                                    <div className="flex flex-col">
+                                      <span className="text-[11px] font-bold text-slate-800 leading-none uppercase font-mono">{hex}</span>
+                                      <span className="text-[8.5px] text-slate-450 font-semibold leading-none mt-0.5 truncate max-w-[100px]" title={nameRole.name}>{nameRole.name}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alternative logo variants block */}
+                  {(() => {
+                    const variantsList = parseSavedVariants(content);
+                    if (variantsList.length === 0) return null;
+
+                    return (
+                      <div className="mt-6 border-t border-slate-100 pt-6">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none block mb-3">Variantes Alternativas de la Marca</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {variantsList.map(v => (
+                            <div key={v.id} className="flex flex-col items-center gap-2 p-3.5 border border-slate-100 rounded-xl bg-slate-50 shadow-sm">
+                              <div className="h-16 w-full flex items-center justify-center overflow-hidden shrink-0">
+                                <img src={v.base64} alt={v.name} className="max-h-full object-contain" />
+                              </div>
+                              <span className="text-[9.5px] font-bold text-slate-700 text-center truncate w-full" title={v.name}>{v.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 15 Parameters Audit Section */}
+                  {(() => {
+                    const analysis = parseSavedAnalysis(content);
+                    if (!analysis) return null;
+
+                    return (
+                      <div className="mt-8 border-t border-slate-100 pt-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-5 gap-3">
+                          <div>
+                            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 font-sans">
+                              <Sparkles className="h-4.5 w-4.5 text-blue-500" />
+                              Auditoría de Rendimiento (15 Parámetros)
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              Examen técnico del logotipo bajo el modelo clásico de evaluación de rendimiento corporativo.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 bg-slate-50 border border-slate-150 px-3 py-1 rounded-lg text-xs font-semibold self-start shadow-sm select-none">
+                            <span className="text-slate-500 text-[10px] uppercase tracking-wider font-sans">Valoración Global:</span>
+                            <span className={`font-black text-sm ${
+                              analysis.overallScore >= 80 
+                                ? 'text-emerald-600' 
+                                : analysis.overallScore >= 50 
+                                  ? 'text-amber-600' 
+                                  : 'text-red-600'
+                            }`}>{analysis.overallScore} / 100</span>
+                          </div>
+                        </div>
+
+                        {/* Parameters grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {analysis.parameters.map((p: any) => {
+                            const isHigh = p.score >= 8;
+                            const isMid = p.score >= 5 && p.score < 8;
+                            const barColor = isHigh ? 'bg-emerald-500' : isMid ? 'bg-amber-500' : 'bg-red-500';
+                            const textColor = isHigh ? 'text-emerald-600' : isMid ? 'text-amber-600' : 'text-red-600';
+
+                            return (
+                              <div key={p.id} className="bg-slate-50/50 border border-slate-100 rounded-lg p-3 flex flex-col justify-between hover:border-slate-200 transition-colors">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[8.5px] font-bold text-slate-400 font-mono tracking-wider">{String(p.id).padStart(2, '0')}. {p.name.toUpperCase()}</span>
+                                    <span className={`text-xs font-black font-mono ${textColor}`}>{p.score}/10</span>
+                                  </div>
+                                  <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+                                    <div className={`h-full ${barColor}`} style={{ width: `${p.score * 10}%` }} />
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 leading-normal pt-1 font-sans">{p.text}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Conclusion footer */}
+                        <div className="mt-4 border border-slate-100 bg-slate-50 p-4 rounded-lg flex gap-3 items-start">
+                          <Info className="h-4.5 w-4.5 text-blue-500 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">Dictamen del Auditor</span>
+                            <p className="text-[11px] text-slate-600 leading-relaxed mt-1 font-sans">{analysis.conclusion}</p>
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}
@@ -620,17 +795,22 @@ export function Presentation() {
 
                     return (
                       <div className="mt-8 border-t border-slate-100 pt-6">
+                        <div className="flex flex-col gap-1.5 mb-4 select-none">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Visualización en Formatos</span>
+                          <p className="text-[10.5px] text-slate-455 leading-none">Formatos publicitarios y papelería corporativa generados para la marca.</p>
+                        </div>
                         <div className="grid grid-cols-2 gap-8">
                           {savedList.map(([key, base64]) => {
                             const label = labels[key] || key;
                             return (
                               <div key={key} className="flex flex-col gap-2">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none px-0.5">{label}</span>
-                                <div className="overflow-hidden rounded-lg shadow-md aspect-[16/10] flex justify-center items-center bg-transparent">
+                                <div className="overflow-hidden rounded-lg shadow-md aspect-[16/10] flex justify-center items-center bg-transparent border border-slate-100">
                                   <img 
                                     src={base64} 
                                     alt={`Mockup ${label}`} 
                                     className="w-full h-full object-cover" 
+                                    loading="lazy"
                                   />
                                 </div>
                               </div>
