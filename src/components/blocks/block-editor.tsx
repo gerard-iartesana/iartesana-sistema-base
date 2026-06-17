@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Save, Eye, SplitSquareHorizontal, Edit3, ChevronDown, Check } from 'lucide-react';
+import { Save, Eye, Edit3, ChevronDown, Check, Bold, Italic, List, Link, Heading2, Heading3 } from 'lucide-react';
 import { db } from '@/lib/db/local-storage';
 import { getBlockById } from '@/lib/data/block-definitions';
 import { parseMarkers } from '@/lib/utils/markers';
 import type { BlockStatus, BrandBlock } from '@/lib/db/types';
 import { splitBlock7Content, compileBlock7Content } from '@/lib/utils/visual-content';
+import { splitBlock2Content, compileBlock2Content } from '@/lib/utils/valprop-content';
 
-type ViewMode = 'edit' | 'preview' | 'split';
+type ViewMode = 'edit' | 'preview';
 
 interface BlockEditorProps {
   brandId: string;
@@ -72,13 +73,61 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
   const blockDef = getBlockById(blockId);
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<BlockStatus>('vacio');
-  const [viewMode, setViewMode] = useState<ViewMode>('split');
+  const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [confirmValidado, setConfirmValidado] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
+
+  const insertFormatting = (format: 'bold' | 'italic' | 'h2' | 'h3' | 'list' | 'link') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    let replacement = '';
+    let cursorOffset = 0;
+
+    switch (format) {
+      case 'bold':
+        replacement = `**${selectedText || 'texto'}**`;
+        cursorOffset = selectedText ? replacement.length : 2;
+        break;
+      case 'italic':
+        replacement = `*${selectedText || 'texto'}*`;
+        cursorOffset = selectedText ? replacement.length : 1;
+        break;
+      case 'h2':
+        replacement = `\n## ${selectedText || 'Título'}\n`;
+        cursorOffset = replacement.length;
+        break;
+      case 'h3':
+        replacement = `\n### ${selectedText || 'Subtítulo'}\n`;
+        cursorOffset = replacement.length;
+        break;
+      case 'list':
+        replacement = `\n- ${selectedText || 'elemento'}`;
+        cursorOffset = replacement.length;
+        break;
+      case 'link':
+        replacement = `[${selectedText || 'enlace'}](url)`;
+        cursorOffset = selectedText ? replacement.length : 1;
+        break;
+    }
+
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    handleContentChange(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + cursorOffset, start + cursorOffset);
+    }, 0);
+  };
 
   // Load block data
   useEffect(() => {
@@ -91,6 +140,9 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         let rawContent = block.content_md || '';
         if (blockId === 7) {
           const parsed = splitBlock7Content(rawContent);
+          rawContent = parsed.rawMarkdown;
+        } else if (blockId === 2) {
+          const parsed = splitBlock2Content(rawContent);
           rawContent = parsed.rawMarkdown;
         }
         setContent(rawContent);
@@ -122,6 +174,17 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         
         // Re-compile preserving colors, analysis, mockups, and variants
         fullText = compileBlock7Content(parsed);
+      } else if (blockId === 2) {
+        const blocks = await db.getBrandBlocks(brandId);
+        const latestBlock = blocks.find(b => b.block_id === 2);
+        const latestRaw = latestBlock?.content_md || '';
+        const parsed = splitBlock2Content(latestRaw);
+        
+        // Update only the raw user markdown text
+        parsed.rawMarkdown = text;
+        
+        // Re-compile preserving mission, vision, values
+        fullText = compileBlock2Content(parsed);
       }
 
       const result = await db.updateBrandBlock(brandId, blockId, { content_md: fullText });
@@ -286,24 +349,19 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
           <div className="flex rounded-lg border border-slate-200 bg-slate-50">
             <button
               onClick={() => setViewMode('edit')}
-              className={`rounded-l-lg px-2 py-1.5 transition-all ${viewMode === 'edit' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Editor"
+              className={`rounded-l-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'edit' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Editor de texto"
             >
               <Edit3 className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode('split')}
-              className={`px-2 py-1.5 transition-all ${viewMode === 'split' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Split"
-            >
-              <SplitSquareHorizontal className="h-3.5 w-3.5" />
+              <span>Editor</span>
             </button>
             <button
               onClick={() => setViewMode('preview')}
-              className={`rounded-r-lg px-2 py-1.5 transition-all ${viewMode === 'preview' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Preview"
+              className={`rounded-r-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'preview' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Vista previa"
             >
               <Eye className="h-3.5 w-3.5" />
+              <span>Vista Previa</span>
             </button>
           </div>
         </div>
@@ -337,10 +395,65 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
       {/* Editor / Preview */}
       <div className="flex flex-1 overflow-hidden" style={{ minHeight: '400px' }}>
         {/* Editor pane */}
-        {(viewMode === 'edit' || viewMode === 'split') && (
-          <div className={`flex flex-col ${viewMode === 'split' ? 'w-1/2 border-r border-slate-200' : 'w-full'}`}>
-            <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Markdown</span>
+        {viewMode === 'edit' && (
+          <div className="flex flex-col w-full">
+            {/* Toolbar */}
+            <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => insertFormatting('bold')}
+                  className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                  title="Negrita"
+                >
+                  <Bold className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertFormatting('italic')}
+                  className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                  title="Cursiva"
+                >
+                  <Italic className="h-4 w-4" />
+                </button>
+                <div className="h-4 w-px bg-slate-300 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => insertFormatting('h2')}
+                  className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                  title="Título H2"
+                >
+                  <Heading2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertFormatting('h3')}
+                  className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                  title="Título H3"
+                >
+                  <Heading3 className="h-4 w-4" />
+                </button>
+                <div className="h-4 w-px bg-slate-300 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => insertFormatting('list')}
+                  className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                  title="Lista"
+                >
+                  <List className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertFormatting('link')}
+                  className="p-1 rounded text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-colors"
+                  title="Enlace"
+                >
+                  <Link className="h-4 w-4" />
+                </button>
+              </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 select-none">
+                Editor
+              </span>
             </div>
             <textarea
               ref={textareaRef}
@@ -348,17 +461,17 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
               onChange={e => handleContentChange(e.target.value)}
               onPaste={handlePaste}
               placeholder={`Escribe el contenido de "${blockDef.title}" en Markdown…\n\nUsa [pendiente: texto] para marcar huecos y [verificar: texto] para datos a confirmar.`}
-              className="editor-textarea flex-1 w-full bg-white px-5 py-4 text-slate-700 placeholder-slate-300 outline-none border-none"
+              className="editor-textarea flex-1 w-full bg-white px-5 py-4 text-slate-700 placeholder-slate-300 outline-none border-none resize-none"
               spellCheck={false}
             />
           </div>
         )}
 
         {/* Preview pane */}
-        {(viewMode === 'preview' || viewMode === 'split') && (
-          <div className={`flex flex-col ${viewMode === 'split' ? 'w-1/2' : 'w-full'}`}>
-            <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-1.5">
-              <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Vista previa</span>
+        {viewMode === 'preview' && (
+          <div className="flex flex-col w-full">
+            <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-2.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Vista previa</span>
             </div>
             <div
               className="flex-1 overflow-y-auto px-5 py-4"
