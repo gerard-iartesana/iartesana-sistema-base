@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star } from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
   'A': Sparkles,
@@ -12,7 +12,8 @@ const stageIcons: Record<string, React.ComponentType<any>> = {
 import { useBrand } from '@/lib/contexts/brand-context';
 import { db } from '@/lib/db/local-storage';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
-import type { BrandBlock } from '@/lib/db/types';
+import type { BrandBlock, NamingCandidate } from '@/lib/db/types';
+import { splitNamingRationale, splitBlock3Content } from '@/lib/utils/naming-content';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
 import { getClosestColorName } from '@/components/blocks/visual-lab';
@@ -313,22 +314,216 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
 
 
 
+
+function PresentationNamingLab({ content, candidates }: { content: string; candidates: NamingCandidate[] }) {
+  const cleanContent = splitBlock3Content(content);
+
+  return (
+    <div className="space-y-8 w-full">
+      {/* Intro Description */}
+      {cleanContent && (
+        <div className="markdown-preview max-w-none text-slate-700">
+          <ReactMarkdown
+            components={{
+              a: ({ href, children, ...props }) => {
+                if (href === '#marker-pendiente') {
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                      {children}
+                    </span>
+                  );
+                }
+                if (href === '#marker-verificar') {
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                      {children}
+                    </span>
+                  );
+                }
+                return <a href={href} {...props}>{children}</a>;
+              },
+              h1: (props) => <HeadingRenderer level={1} {...props} />,
+              h2: (props) => <HeadingRenderer level={2} {...props} />,
+              h3: (props) => <HeadingRenderer level={3} {...props} />,
+              h4: (props) => <HeadingRenderer level={4} {...props} />,
+              h5: (props) => <HeadingRenderer level={5} {...props} />,
+              h6: (props) => <HeadingRenderer level={6} {...props} />,
+              p: (props) => <ParagraphRenderer {...props} />,
+              li: (props) => <LiRenderer {...props} />,
+            }}
+          >
+            {cleanContent
+              .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+              .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+          </ReactMarkdown>
+        </div>
+      )}
+
+      {/* Candidates Cards Grid */}
+      <div className="border-t border-slate-100 pt-6">
+        <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 font-sans mb-4 select-none">
+          <Star className="h-4.5 w-4.5 text-violet-500 fill-violet-500 animate-pulse" />
+          Candidatos Analizados
+        </h3>
+
+        {candidates.length === 0 ? (
+          <p className="text-sm text-slate-400 italic">No hay candidatos en el Laboratorio de Naming.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {candidates.map((candidate) => {
+              const { userRationale, analysis } = splitNamingRationale(candidate.rationale_md);
+
+              // Status configuration
+              let cardStyle = 'border-slate-200 bg-white';
+              let badgeStyle = 'bg-blue-50 text-blue-600 border-blue-200';
+              let statusText = 'Candidato';
+              let statusIcon = <Star className="h-3 w-3 fill-blue-500 text-blue-500" />;
+
+              if (candidate.status === 'elegido') {
+                cardStyle = 'border-emerald-400 bg-emerald-50/10 shadow-[0_0_12px_rgba(16,185,129,0.08)] ring-1 ring-emerald-400/30';
+                badgeStyle = 'bg-emerald-50 text-emerald-750 border-emerald-200 font-bold';
+                statusText = 'Elegido';
+                statusIcon = <Trophy className="h-3 w-3 fill-amber-500 text-amber-500" />;
+              } else if (candidate.status === 'descartado') {
+                cardStyle = 'border-slate-200 bg-slate-50 opacity-60';
+                badgeStyle = 'bg-slate-100 text-slate-500 border-slate-200';
+                statusText = 'Descartado';
+                statusIcon = <X className="h-3 w-3 text-slate-400" />;
+              }
+
+              return (
+                <div key={candidate.id} className={`flex flex-col border rounded-xl p-5 transition-all hover:shadow-md ${cardStyle}`}>
+                  {/* Name and Status Header */}
+                  <div className="flex items-center justify-between mb-3.5 select-none">
+                    <span className={`text-lg font-bold tracking-tight ${candidate.status === 'elegido' ? 'text-emerald-800' : candidate.status === 'descartado' ? 'text-slate-500' : 'text-slate-800'}`}>
+                      {candidate.name}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${badgeStyle}`}>
+                      {statusIcon}
+                      {statusText}
+                    </span>
+                  </div>
+
+                  {/* Veto Reason if discarded */}
+                  {candidate.status === 'descartado' && candidate.veto_reason && (
+                    <div className="mb-3 rounded-lg bg-red-50/50 border border-red-100 px-3 py-2 text-xs text-red-700 font-sans italic">
+                      <strong>Motivo de veto:</strong> {candidate.veto_reason}
+                    </div>
+                  )}
+
+                  {/* Rationale/Notes */}
+                  {userRationale && (
+                    <div className="mb-4">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1 select-none">Notas del Equipo</span>
+                      <p className="text-xs text-slate-600 leading-relaxed font-sans">{userRationale}</p>
+                    </div>
+                  )}
+
+                  {/* AI Analysis */}
+                  {analysis && (
+                    <div className="mt-auto border-t border-slate-100 pt-3.5 space-y-4">
+                      {/* Score Badge */}
+                      <div className="flex items-center justify-between select-none">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="h-3 w-3 text-blue-500" />
+                          Auditoría de Naming
+                        </span>
+                        <div className="flex items-center gap-1 text-[10px] font-bold bg-blue-50 border border-blue-100 text-blue-600 px-2 py-0.5 rounded-md">
+                          <span>{analysis.overallScore}/100</span>
+                        </div>
+                      </div>
+
+                      {/* 7 parameters ratings */}
+                      <div className="grid grid-cols-2 gap-2 text-[10px]">
+                        {analysis.parameters.map((p, idx) => {
+                          const isHigh = p.score >= 8;
+                          const isMid = p.score >= 5 && p.score < 8;
+                          const barColor = isHigh ? 'bg-emerald-500' : isMid ? 'bg-amber-500' : 'bg-red-500';
+                          return (
+                            <div key={idx} className="space-y-0.5">
+                              <div className="flex items-center justify-between text-slate-500 font-medium select-none">
+                                <span className="truncate max-w-[95px]">{p.name}</span>
+                                <span className="font-mono font-bold">{p.score}/10</span>
+                              </div>
+                              <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div className={`h-full ${barColor}`} style={{ width: `${p.score * 10}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Pros & Cons */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-[10px]">
+                        {analysis.pros?.length > 0 && (
+                          <div className="bg-emerald-50/20 border border-emerald-100/50 rounded-lg p-2.5">
+                            <span className="font-bold text-emerald-800 block mb-1 select-none">Pros</span>
+                            <ul className="list-disc pl-3.5 text-slate-600 space-y-0.5 leading-snug">
+                              {analysis.pros.slice(0, 2).map((p, i) => <li key={i}>{p}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                        {analysis.contras?.length > 0 && (
+                          <div className="bg-red-50/10 border border-red-100/40 rounded-lg p-2.5">
+                            <span className="font-bold text-red-800 block mb-1 select-none">Contras</span>
+                            <ul className="list-disc pl-3.5 text-slate-600 space-y-0.5 leading-snug">
+                              {analysis.contras.slice(0, 2).map((c, i) => <li key={i}>{c}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Claims */}
+                      {analysis.claims?.length > 0 && (
+                        <div className="bg-blue-50/20 border border-blue-100/50 rounded-lg p-2.5 text-[10px]">
+                          <span className="font-bold text-blue-800 block mb-1 select-none font-sans">Propuesta de Taglines</span>
+                          <div className="flex flex-wrap gap-1">
+                            {analysis.claims.slice(0, 2).map((c, i) => (
+                              <span key={i} className="inline-block bg-white px-2 py-0.5 rounded border border-blue-50 text-blue-750 font-medium italic">
+                                "{c}"
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function Presentation() {
   const { activeBrand } = useBrand();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [blocks, setBlocks] = useState<BrandBlock[]>([]);
+  const [candidates, setCandidates] = useState<NamingCandidate[]>([]);
 
   useEffect(() => {
     if (!activeBrand) {
       setBlocks([]);
+      setCandidates([]);
       return;
     }
     let cancelled = false;
     async function loadData() {
-      const data = await db.getBrandBlocks(activeBrand!.id);
-      if (!cancelled) {
-        setBlocks(data);
+      try {
+        const [blocksData, candidatesData] = await Promise.all([
+          db.getBrandBlocks(activeBrand!.id),
+          db.getNamingCandidates(activeBrand!.id),
+        ]);
+        if (!cancelled) {
+          setBlocks(blocksData);
+          setCandidates(candidatesData);
+        }
+      } catch (err) {
+        console.error('[Presentation] Failed to load brand data:', err);
       }
     }
     loadData();
@@ -473,7 +668,9 @@ export function Presentation() {
 
             {/* Content */}
             <div className="pr-2">
-              {blockDef.id === 4 ? (
+              {blockDef.id === 3 ? (
+                <PresentationNamingLab content={content} candidates={candidates} />
+              ) : blockDef.id === 4 ? (
                 <div className="flex flex-col items-center mt-4 w-full">
                   {(() => {
                     const cleanContent = content
