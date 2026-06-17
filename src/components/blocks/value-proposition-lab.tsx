@@ -4,6 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/db/local-storage';
 import { Target, Eye, Award, Sparkles, Check, Plus, Trash2 } from 'lucide-react';
 
+interface ValueItem {
+  title: string;
+  text: string;
+}
+
 export function parseValueProposition(markdown: string): { mission: string; vision: string; values: string } {
   let mission = '';
   let vision = '';
@@ -30,33 +35,55 @@ export function parseValueProposition(markdown: string): { mission: string; visi
   return { mission, vision, values };
 }
 
-export function parseValuesList(valuesMarkdown: string): string[] {
+export function parseValuesList(valuesMarkdown: string): ValueItem[] {
   if (!valuesMarkdown || !valuesMarkdown.trim()) return [];
   
   const lines = valuesMarkdown.split('\n');
-  const items: string[] = [];
+  const items: ValueItem[] = [];
   
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
     
-    // Matches: 1. Value, - Value, * Value, + Value
-    const match = trimmed.match(/^(?:\d+\.|\-|\*|\+)\s+(.+)$/);
-    if (match) {
-      items.push(match[1].trim());
+    // Matches: 1. **Title**: Text
+    const matchBold = trimmed.match(/^(?:\d+\.|\-|\*|\+)\s+\*\*([^*]+?)\*\*\s*[\:\-]?\s*(.*)$/);
+    if (matchBold) {
+      items.push({
+        title: matchBold[1].trim(),
+        text: matchBold[2].trim()
+      });
     } else {
-      // If it doesn't match list format, just push the whole line as is
-      items.push(trimmed);
+      // Matches standard list: 1. Title
+      const matchPlain = trimmed.match(/^(?:\d+\.|\-|\*|\+)\s+(.+)$/);
+      if (matchPlain) {
+        items.push({
+          title: matchPlain[1].trim(),
+          text: ''
+        });
+      } else {
+        items.push({
+          title: trimmed,
+          text: ''
+        });
+      }
     }
   }
   
   return items;
 }
 
-export function serializeValuesList(items: string[]): string {
+export function serializeValuesList(items: ValueItem[]): string {
   return items
-    .filter(item => item && item.trim() !== '')
-    .map((item, idx) => `${idx + 1}. ${item.trim()}`)
+    .filter(item => item.title && item.title.trim() !== '')
+    .map((item, idx) => {
+      const title = item.title.trim();
+      const text = item.text.trim();
+      if (text) {
+        return `${idx + 1}. **${title}**: ${text}`;
+      } else {
+        return `${idx + 1}. **${title}**`;
+      }
+    })
     .join('\n');
 }
 
@@ -102,7 +129,7 @@ interface ValuePropositionLabProps {
 export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValuePropositionLabProps) {
   const [mission, setMission] = useState('');
   const [vision, setVision] = useState('');
-  const [valuesList, setValuesList] = useState<string[]>(['']);
+  const [valuesList, setValuesList] = useState<ValueItem[]>([{ title: '', text: '' }]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -112,12 +139,12 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
     setMission(parsed.mission);
     setVision(parsed.vision);
     
-    // Parse list of values
+    // Parse list of values with titles and descriptions
     const list = parseValuesList(parsed.values);
-    setValuesList(list.length > 0 ? list : ['']);
+    setValuesList(list.length > 0 ? list : [{ title: '', text: '' }]);
   }, [content_md]);
 
-  const saveToDb = async (m: string, v: string, valList: string[]) => {
+  const saveToDb = async (m: string, v: string, valList: ValueItem[]) => {
     setSaveState('saving');
     try {
       const valuesMd = serializeValuesList(valList);
@@ -152,10 +179,13 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
     }, 1500);
   };
 
-  // Handlers for dynamic list of values
-  const handleValueChange = (index: number, value: string) => {
+  // Handlers for dynamic list of values with title and description
+  const handleValueChange = (index: number, field: keyof ValueItem, value: string) => {
     const newList = [...valuesList];
-    newList[index] = value;
+    newList[index] = {
+      ...newList[index],
+      [field]: value
+    };
     setValuesList(newList);
 
     setSaveState('idle');
@@ -166,14 +196,14 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
   };
 
   const handleAddValue = () => {
-    const newList = [...valuesList, ''];
+    const newList = [...valuesList, { title: '', text: '' }];
     setValuesList(newList);
   };
 
   const handleRemoveValue = (index: number) => {
     let newList = valuesList.filter((_, idx) => idx !== index);
     if (newList.length === 0) {
-      newList = [''];
+      newList = [{ title: '', text: '' }];
     }
     setValuesList(newList);
     
@@ -226,7 +256,7 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             value={mission}
             onChange={(e) => handleTextChange('mission', e.target.value)}
             placeholder="¿Cuál es el propósito o razón de ser de la marca?..."
-            className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-52 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
@@ -241,35 +271,46 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             value={vision}
             onChange={(e) => handleTextChange('vision', e.target.value)}
             placeholder="¿Hacia dónde se dirige la marca a largo plazo?..."
-            className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-52 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
 
-        {/* Valores (Numbered List) */}
+        {/* Valores (Numbered List with Title & Description) */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-white">
             <Award className="h-4 w-4 text-emerald-400" style={{ color: '#36a8e0' }} />
             <label className="text-xs font-bold uppercase tracking-wider">Valores de la Marca</label>
           </div>
           
-          <div className="flex-1 flex flex-col justify-between bg-slate-950 border border-slate-800 rounded-lg p-3 min-h-48">
-            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+          <div className="flex-1 flex flex-col justify-between bg-slate-950 border border-slate-800 rounded-lg p-3 min-h-52">
+            <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
               {valuesList.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 group">
-                  <span className="text-xs font-bold font-mono text-slate-500 w-4 select-none">
+                <div key={idx} className="flex items-start gap-2 group pt-0.5">
+                  <span className="text-xs font-bold font-mono text-slate-500 w-4 select-none pt-1">
                     {idx + 1}.
                   </span>
-                  <input
-                    type="text"
-                    value={item}
-                    onChange={(e) => handleValueChange(idx, e.target.value)}
-                    placeholder={`Valor ${idx + 1}...`}
-                    className="flex-1 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
-                  />
+                  
+                  <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={item.title}
+                      onChange={(e) => handleValueChange(idx, 'title', e.target.value)}
+                      placeholder="Título (ej: Honestidad)"
+                      className="w-full sm:w-1/3 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors font-semibold"
+                    />
+                    <input
+                      type="text"
+                      value={item.text}
+                      onChange={(e) => handleValueChange(idx, 'text', e.target.value)}
+                      placeholder="Descripción del valor..."
+                      className="w-full sm:w-2/3 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
+                    />
+                  </div>
+
                   <button
                     onClick={() => handleRemoveValue(idx)}
-                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all p-1"
+                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all p-1 pt-0.5"
                     title="Eliminar valor"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
