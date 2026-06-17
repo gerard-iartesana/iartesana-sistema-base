@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '@/lib/db/local-storage';
-import { Target, Eye, Award, Sparkles, Check } from 'lucide-react';
+import { Target, Eye, Award, Sparkles, Check, Plus, Trash2 } from 'lucide-react';
 
 export function parseValueProposition(markdown: string): { mission: string; vision: string; values: string } {
   let mission = '';
@@ -28,6 +28,36 @@ export function parseValueProposition(markdown: string): { mission: string; visi
   }
 
   return { mission, vision, values };
+}
+
+export function parseValuesList(valuesMarkdown: string): string[] {
+  if (!valuesMarkdown || !valuesMarkdown.trim()) return [];
+  
+  const lines = valuesMarkdown.split('\n');
+  const items: string[] = [];
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    
+    // Matches: 1. Value, - Value, * Value, + Value
+    const match = trimmed.match(/^(?:\d+\.|\-|\*|\+)\s+(.+)$/);
+    if (match) {
+      items.push(match[1].trim());
+    } else {
+      // If it doesn't match list format, just push the whole line as is
+      items.push(trimmed);
+    }
+  }
+  
+  return items;
+}
+
+export function serializeValuesList(items: string[]): string {
+  return items
+    .filter(item => item && item.trim() !== '')
+    .map((item, idx) => `${idx + 1}. ${item.trim()}`)
+    .join('\n');
 }
 
 export function updateMarkdownValueProposition(
@@ -72,7 +102,7 @@ interface ValuePropositionLabProps {
 export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValuePropositionLabProps) {
   const [mission, setMission] = useState('');
   const [vision, setVision] = useState('');
-  const [values, setValues] = useState('');
+  const [valuesList, setValuesList] = useState<string[]>(['']);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -81,13 +111,17 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
     const parsed = parseValueProposition(content_md);
     setMission(parsed.mission);
     setVision(parsed.vision);
-    setValues(parsed.values);
+    
+    // Parse list of values
+    const list = parseValuesList(parsed.values);
+    setValuesList(list.length > 0 ? list : ['']);
   }, [content_md]);
 
-  const saveToDb = async (m: string, v: string, val: string) => {
+  const saveToDb = async (m: string, v: string, valList: string[]) => {
     setSaveState('saving');
     try {
-      const updatedMarkdown = updateMarkdownValueProposition(content_md, m, v, val);
+      const valuesMd = serializeValuesList(valList);
+      const updatedMarkdown = updateMarkdownValueProposition(content_md, m, v, valuesMd);
       await db.updateBrandBlock(brandId, 2, { content_md: updatedMarkdown });
       onUpdate();
       setSaveState('saved');
@@ -98,11 +132,10 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
     }
   };
 
-  // Debounced autosave
-  const handleChange = (type: 'mission' | 'vision' | 'values', value: string) => {
+  // Handler for text area changes (mission, vision)
+  const handleTextChange = (type: 'mission' | 'vision', value: string) => {
     let nextMission = mission;
     let nextVision = vision;
-    let nextValues = values;
 
     if (type === 'mission') {
       setMission(value);
@@ -110,23 +143,49 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
     } else if (type === 'vision') {
       setVision(value);
       nextVision = value;
-    } else if (type === 'values') {
-      setValues(value);
-      nextValues = value;
     }
 
     setSaveState('idle');
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      saveToDb(nextMission, nextVision, nextValues);
+      saveToDb(nextMission, nextVision, valuesList);
     }, 1500);
+  };
+
+  // Handlers for dynamic list of values
+  const handleValueChange = (index: number, value: string) => {
+    const newList = [...valuesList];
+    newList[index] = value;
+    setValuesList(newList);
+
+    setSaveState('idle');
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveToDb(mission, vision, newList);
+    }, 1500);
+  };
+
+  const handleAddValue = () => {
+    const newList = [...valuesList, ''];
+    setValuesList(newList);
+  };
+
+  const handleRemoveValue = (index: number) => {
+    let newList = valuesList.filter((_, idx) => idx !== index);
+    if (newList.length === 0) {
+      newList = [''];
+    }
+    setValuesList(newList);
+    
+    // Save updated list immediately
+    saveToDb(mission, vision, newList);
   };
 
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, []);
+  }, [mission, vision, valuesList]);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-sm text-slate-200">
@@ -165,9 +224,9 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
           </div>
           <textarea
             value={mission}
-            onChange={(e) => handleChange('mission', e.target.value)}
+            onChange={(e) => handleTextChange('mission', e.target.value)}
             placeholder="¿Cuál es el propósito o razón de ser de la marca?..."
-            className="w-full h-32 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
@@ -180,26 +239,53 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
           </div>
           <textarea
             value={vision}
-            onChange={(e) => handleChange('vision', e.target.value)}
+            onChange={(e) => handleTextChange('vision', e.target.value)}
             placeholder="¿Hacia dónde se dirige la marca a largo plazo?..."
-            className="w-full h-32 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
+            className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
           />
         </div>
 
-        {/* Valores */}
+        {/* Valores (Numbered List) */}
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-white">
             <Award className="h-4 w-4 text-emerald-400" style={{ color: '#36a8e0' }} />
-            <label className="text-xs font-bold uppercase tracking-wider">Valores</label>
+            <label className="text-xs font-bold uppercase tracking-wider">Valores de la Marca</label>
           </div>
-          <textarea
-            value={values}
-            onChange={(e) => handleChange('values', e.target.value)}
-            placeholder="¿Qué principios guían el comportamiento de la marca?..."
-            className="w-full h-32 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
-            spellCheck={false}
-          />
+          
+          <div className="flex-1 flex flex-col justify-between bg-slate-950 border border-slate-800 rounded-lg p-3 min-h-48">
+            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+              {valuesList.map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2 group">
+                  <span className="text-xs font-bold font-mono text-slate-500 w-4 select-none">
+                    {idx + 1}.
+                  </span>
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => handleValueChange(idx, e.target.value)}
+                    placeholder={`Valor ${idx + 1}...`}
+                    className="flex-1 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors"
+                  />
+                  <button
+                    onClick={() => handleRemoveValue(idx)}
+                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all p-1"
+                    title="Eliminar valor"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleAddValue}
+              className="mt-3 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-all font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Añadir Valor
+            </button>
+          </div>
         </div>
       </div>
     </div>
