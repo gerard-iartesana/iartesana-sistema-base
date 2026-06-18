@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { db } from '@/lib/db/local-storage';
 import { Brand, BrandBlock, Marker, NamingCandidate, Rule, KnowledgeItem } from '@/lib/db/types';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
-import { Lock, Eye, AlertTriangle, Star, Trophy, X, Sparkles, Info, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban } from 'lucide-react';
+import { Lock, Eye, AlertTriangle, Star, Trophy, X, Sparkles, Info, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, ChevronLeft, ChevronRight, MessageSquare, Users, Shield } from 'lucide-react';
 import { splitNamingRationale, splitBlock3Content } from '@/lib/utils/naming-content';
 import { getClosestColorName } from '@/components/blocks/visual-lab';
 import {
@@ -17,6 +17,13 @@ import {
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
+
+const stageIcons: Record<string, React.ComponentType<any>> = {
+  'A': Sparkles,
+  'B': MessageSquare,
+  'C': Users,
+  'D': Shield,
+};
 
 function preprocessMarkdown(markdown: string): string {
   if (!markdown) return '';
@@ -691,6 +698,37 @@ export default function SharePage() {
   const [candidates, setCandidates] = useState<NamingCandidate[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
+  const [linkMode, setLinkMode] = useState<'lectura' | 'presentacion'>('lectura');
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const goNext = () => {
+    setCurrentSlide(prev => Math.min(prev + 1, BLOCK_DEFINITIONS.length - 1));
+  };
+
+  const goPrev = () => {
+    setCurrentSlide(prev => Math.max(prev - 1, 0));
+  };
+
+  useEffect(() => {
+    if (linkMode !== 'presentacion' || !authenticated) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+        case ' ':
+          e.preventDefault();
+          goNext();
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          e.preventDefault();
+          goPrev();
+          break;
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [linkMode, authenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -725,6 +763,7 @@ export default function SharePage() {
     }
 
     setBrand(foundBrand);
+    setLinkMode(foundLink.mode || 'lectura');
     const [b, m, c, r, k] = await Promise.all([
       db.getBrandBlocks(foundBrand.id),
       db.getMarkers(foundBrand.id),
@@ -787,6 +826,456 @@ export default function SharePage() {
   if (!brand) return null;
 
   const openMarkers = markers.filter(m => !m.resolved);
+
+  if (linkMode === 'presentacion') {
+    const blockDef = BLOCK_DEFINITIONS[currentSlide];
+    const brandBlock = blocks.find(b => b.block_id === blockDef.id);
+    const stage = STAGES.find(s => s.key === blockDef.stage);
+    const content = brandBlock?.content_md || '';
+    const totalSlides = BLOCK_DEFINITIONS.length;
+
+    return (
+      <div className="fixed inset-0 z-[100] flex flex-col bg-white">
+        {/* Top Progress Line (13 segments representing block validation progress) */}
+        <div className="flex h-2.5 w-full bg-slate-950 shrink-0 border-b border-slate-900">
+          {BLOCK_DEFINITIONS.map((def, idx) => {
+            const block = blocks.find(b => b.block_id === def.id);
+            const status = block?.status || 'vacio';
+            const stage = STAGES.find(s => s.key === def.stage);
+            
+            let statusColor = '#1f2937'; // Default dark grey for 'vacio'
+            let statusLabel = 'Vacío';
+
+            if (status === 'validado') {
+              statusColor = stage?.color || '#8B5CF6';
+              statusLabel = 'Validado';
+            } else if (status === 'en_revision') {
+              statusColor = '#94a3b8'; // Grey
+              statusLabel = 'En revisión';
+            } else if (status === 'borrador') {
+              statusColor = '#4b5563'; // Slightly darker grey
+              statusLabel = 'Borrador';
+            }
+
+            const isCurrent = idx === currentSlide;
+
+            return (
+              <button 
+                key={def.id}
+                onClick={() => setCurrentSlide(idx)}
+                className={`flex-1 h-full transition-all duration-200 cursor-pointer hover:brightness-125 hover:opacity-100 ${
+                  isCurrent ? 'ring-1 ring-white/30 brightness-110 z-10' : 'opacity-90'
+                }`}
+                style={{
+                  backgroundColor: statusColor,
+                  borderRight: idx < 12 ? '1px solid rgba(0, 0, 0, 0.4)' : 'none'
+                }}
+                title={`${def.id}. ${def.title} (${statusLabel})`}
+              />
+            );
+          })}
+        </div>
+
+        {/* Top bar */}
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
+          <div className="flex items-center gap-3">
+            {(() => {
+              const Icon = stageIcons[blockDef.stage];
+              return Icon ? (
+                <Icon className="h-4.5 w-4.5 shrink-0" style={{ color: stage?.color || '#8B5CF6' }} />
+              ) : (
+                <span className="font-bold text-xs shrink-0" style={{ color: stage?.color || '#8B5CF6' }}>{blockDef.stage}</span>
+              );
+            })()}
+            <span className="text-sm md:text-base font-bold uppercase tracking-wider" style={{ color: stage?.color || '#8B5CF6' }}>
+              {stage?.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-semibold text-slate-500">{brand.name}</span>
+            <span className="font-mono text-sm font-medium text-slate-400">
+              {currentSlide + 1} / {totalSlides}
+            </span>
+          </div>
+        </div>
+
+        {/* Slide content */}
+        <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
+          <div className="w-full max-w-3xl my-auto">
+            {/* Title with Number */}
+            <h1 className="mb-3 text-2xl md:text-3xl font-bold tracking-tight text-slate-900 flex items-baseline gap-3">
+              <span
+                className="font-mono select-none shrink-0"
+                style={{ color: stage?.color || '#8B5CF6' }}
+              >
+                {blockDef.id < 10 ? `0${blockDef.id}` : blockDef.id}
+              </span>
+              <span className="font-bold">
+                {blockDef.title}
+              </span>
+            </h1>
+
+            {/* Description */}
+            <p className="mb-8 text-base text-slate-400 leading-relaxed font-medium">{blockDef.description}</p>
+
+            {/* Content */}
+            <div className="pr-2">
+              {blockDef.id === 2 ? (
+                <SharePageValueProp content={content} />
+              ) : blockDef.id === 3 ? (
+                <SharePageNamingLab content={content} candidates={candidates} />
+              ) : blockDef.id === 4 ? (
+                <div className="flex flex-col items-center mt-4 w-full">
+                  {(() => {
+                    const cleanContent = content
+                      .replace(/^### Arquetipos Seleccionados\s*\n?/gi, '')
+                      .replace(/^(?:[\*\-]\s*)?\*\*(La\s+[^*]+?)\*\*\:\s*\d+\s*%\s*\n?/gim, '')
+                      .replace(/^---\s*\n?/gi, '')
+                      .trim();
+                    
+                    return cleanContent ? (
+                      <div className="markdown-preview max-w-none w-full text-left mb-8">
+                        <ReactMarkdown
+                          components={{
+                            a: ({ href, children, ...props }) => {
+                              if (href === '#marker-pendiente') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              if (href === '#marker-verificar') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              return <a href={href} {...props}>{children}</a>;
+                            },
+                            h1: (props) => <HeadingRenderer level={1} {...props} />,
+                            h2: (props) => <HeadingRenderer level={2} {...props} />,
+                            h3: (props) => <HeadingRenderer level={3} {...props} />,
+                            h4: (props) => <HeadingRenderer level={4} {...props} />,
+                            h5: (props) => <HeadingRenderer level={5} {...props} />,
+                            h6: (props) => <HeadingRenderer level={6} {...props} />,
+                            p: (props) => <ParagraphRenderer {...props} />,
+                            li: (props) => <LiRenderer {...props} />,
+                          }}
+                        >
+                          {preprocessMarkdown(cleanContent)
+                            .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                            .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                        </ReactMarkdown>
+                      </div>
+                    ) : null;
+                  })()}
+                  <div className="w-full flex justify-center mt-2">
+                    <SharePageArchetypeWheel content={content} />
+                  </div>
+                </div>
+              ) : blockDef.id === 7 ? (
+                <div className="space-y-8 w-full">
+                  {/* Clean text description */}
+                  {(() => {
+                    const cleanContent = splitBlock7Content(content).rawMarkdown;
+                    return cleanContent ? (
+                      <div className="markdown-preview max-w-none">
+                        <ReactMarkdown
+                          components={{
+                            a: ({ href, children, ...props }) => {
+                              if (href === '#marker-pendiente') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              if (href === '#marker-verificar') {
+                                return (
+                                  <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                                    {children}
+                                  </span>
+                                );
+                              }
+                              return <a href={href} {...props}>{children}</a>;
+                            },
+                            h1: (props) => <HeadingRenderer level={1} {...props} />,
+                            h2: (props) => <HeadingRenderer level={2} {...props} />,
+                            h3: (props) => <HeadingRenderer level={3} {...props} />,
+                            h4: (props) => <HeadingRenderer level={4} {...props} />,
+                            h5: (props) => <HeadingRenderer level={5} {...props} />,
+                            h6: (props) => <HeadingRenderer level={6} {...props} />,
+                            p: (props) => <ParagraphRenderer {...props} />,
+                            li: (props) => <LiRenderer {...props} />,
+                          }}
+                        >
+                          {preprocessMarkdown(cleanContent)
+                            .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                            .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                        </ReactMarkdown>
+                      </div>
+                    ) : null;
+                  })()}
+
+                  {/* Logo and colors block */}
+                  {brand.logo_path && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center border-t border-slate-100 pt-6">
+                      <div className="flex flex-col items-center justify-center p-6 border border-slate-200 rounded-xl bg-slate-50 shadow-sm aspect-video max-h-[180px]">
+                        <img src={brand.logo_path} alt="Logo" className="max-h-[130px] object-contain" />
+                      </div>
+                      
+                      <div className="flex flex-col gap-3">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none">Paleta de Colores Corporativos</span>
+                        {(() => {
+                          const colors = parseSavedColors(content);
+                          if (colors.length === 0) {
+                            return <span className="text-xs text-slate-400 italic">No hay colores guardados en la paleta.</span>;
+                          }
+                          return (
+                            <div className="flex flex-wrap gap-2.5">
+                              {colors.map((hex, idx) => {
+                                const nameRole = getClosestColorName(hex);
+                                return (
+                                  <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-full py-1 pl-1.5 pr-3.5 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="h-6.5 w-6.5 rounded-full border border-slate-350 shadow-inner shrink-0" style={{ backgroundColor: hex }} />
+                                    <div className="flex flex-col">
+                                      <span className="text-[11px] font-bold text-slate-800 leading-none uppercase font-mono">{hex}</span>
+                                      <span className="text-[8.5px] text-slate-500 font-semibold leading-none mt-0.5 truncate max-w-[100px]" title={nameRole.name}>{nameRole.name}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alternative logo variants block */}
+                  {(() => {
+                    const variantsList = parseSavedVariants(content);
+                    if (variantsList.length === 0) return null;
+
+                    return (
+                      <div className="mt-6 border-t border-slate-150 pt-6">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none block mb-3">Variantes Alternativas de la Marca</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {variantsList.map(v => (
+                            <div key={v.id} className="flex flex-col items-center gap-2 p-3.5 border border-slate-200 rounded-xl bg-slate-50 shadow-sm">
+                              <div className="h-16 w-full flex items-center justify-center overflow-hidden shrink-0">
+                                <img src={v.base64} alt={v.name} className="max-h-full object-contain" />
+                              </div>
+                              <span className="text-[9.5px] font-bold text-slate-700 text-center truncate w-full" title={v.name}>{v.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 15 Parameters Audit Section */}
+                  {(() => {
+                    const analysis = parseSavedAnalysis(content);
+                    if (!analysis) return null;
+
+                    return (
+                      <div className="mt-8 border-t border-slate-150 pt-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-5 gap-3">
+                          <div>
+                            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2 font-sans">
+                              <Sparkles className="h-4.5 w-4.5 text-blue-500" />
+                              Auditoría de Rendimiento (15 Parámetros)
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              Examen técnico del logotipo bajo el modelo clásico de evaluación de rendimiento corporativo.
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg text-xs font-semibold self-start shadow-sm select-none">
+                            <span className="text-slate-500 text-[10px] uppercase tracking-wider font-sans">Valoración Global:</span>
+                            <span className={`font-black text-sm ${
+                              analysis.overallScore >= 80 
+                                ? 'text-emerald-600' 
+                                : analysis.overallScore >= 50 
+                                  ? 'text-amber-600' 
+                                  : 'text-red-600'
+                            }`}>{analysis.overallScore} / 100</span>
+                          </div>
+                        </div>
+
+                        {/* Parameters grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {analysis.parameters.map((p: any) => {
+                            const isHigh = p.score >= 8;
+                            const isMid = p.score >= 5 && p.score < 8;
+                            const barColor = isHigh ? 'bg-emerald-500' : isMid ? 'bg-amber-500' : 'bg-red-500';
+                            const textColor = isHigh ? 'text-emerald-600' : isMid ? 'text-amber-600' : 'text-red-600';
+
+                            return (
+                              <div key={p.id} className="bg-slate-50/50 border border-slate-200 rounded-lg p-3 flex flex-col justify-between hover:border-slate-350 transition-colors">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[8.5px] font-bold text-slate-400 font-mono tracking-wider">{String(p.id).padStart(2, '0')}. {p.name.toUpperCase()}</span>
+                                    <span className={`text-xs font-black font-mono ${textColor}`}>{p.score}/10</span>
+                                  </div>
+                                  <div className="h-1 w-full bg-slate-200 rounded-full overflow-hidden">
+                                    <div className={`h-full ${barColor}`} style={{ width: `${p.score * 10}%` }} />
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 leading-normal pt-1 font-sans">{p.text}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Conclusion footer */}
+                        <div className="mt-4 border border-slate-200 bg-slate-50 p-4 rounded-lg flex gap-3 items-start">
+                          <Info className="h-4.5 w-4.5 text-blue-500 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="text-xs font-bold text-slate-800 block">Dictamen del Auditor</span>
+                            <p className="text-[11px] text-slate-655 leading-relaxed mt-1 font-sans">{analysis.conclusion}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Grid gallery of saved mockups */}
+                  {(() => {
+                    const savedList = Object.entries(parseSavedMockups(content)).filter(([_, val]) => !!val);
+                    if (savedList.length === 0) return null;
+
+                    const labels: Record<string, string> = {
+                      card: 'Tarjeta comercial',
+                      mobile: 'Interfaz móvil',
+                      letter: 'Papel membretado A4',
+                      tshirt: 'Camiseta de marca',
+                      tote: 'Bolso tote de algodón'
+                    };
+
+                    return (
+                      <div className="mt-8 border-t border-slate-150 pt-6">
+                        <div className="flex flex-col gap-1.5 mb-4 select-none">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Visualización en Formatos</span>
+                          <p className="text-[10.5px] text-slate-500 leading-none">Formatos publicitarios y papelería corporativa generados para la marca.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                          {savedList.map(([key, base64]) => {
+                            const label = labels[key] || key;
+                            return (
+                              <div key={key} className="flex flex-col gap-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider select-none px-0.5">{label}</span>
+                                <div className="overflow-hidden rounded-lg shadow-md aspect-[16/10] flex justify-center items-center bg-transparent border border-slate-200">
+                                  <img 
+                                    src={base64} 
+                                    alt={`Mockup ${label}`} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              ) : blockDef.id === 10 ? (
+                <SharePageKnowledgeLibrary items={knowledgeItems} />
+              ) : blockDef.id === 11 ? (
+                <SharePageRules rules={rules} kind="linea_roja" />
+              ) : blockDef.id === 12 ? (
+                <SharePageRules rules={rules} kind="protocolo_incidencia" />
+              ) : blockDef.id === 13 ? (
+                <SharePageRules rules={rules} kind="instruccion_ia" />
+              ) : content.trim() ? (
+                <div className="markdown-preview max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      a: ({ href, children, ...props }) => {
+                        if (href === '#marker-pendiente') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        if (href === '#marker-verificar') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        return <a href={href} {...props}>{children}</a>;
+                      },
+                      h1: (props) => <HeadingRenderer level={1} {...props} />,
+                      h2: (props) => <HeadingRenderer level={2} {...props} />,
+                      h3: (props) => <HeadingRenderer level={3} {...props} />,
+                      h4: (props) => <HeadingRenderer level={4} {...props} />,
+                      h5: (props) => <HeadingRenderer level={5} {...props} />,
+                      h6: (props) => <HeadingRenderer level={6} {...props} />,
+                      p: (props) => <ParagraphRenderer {...props} />,
+                      li: (props) => <LiRenderer {...props} />,
+                    }}
+                  >
+                    {preprocessMarkdown(content)
+                      .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                      .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <p className="text-lg text-slate-300 italic">Sin contenido</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between border-t border-slate-100 px-6 py-3">
+          <button
+            onClick={goPrev}
+            disabled={currentSlide === 0}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-30"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Anterior
+          </button>
+
+          {/* Slide dots */}
+          <div className="flex items-center gap-1">
+            {BLOCK_DEFINITIONS.map((def, i) => {
+              const slideStage = STAGES.find(s => s.key === def.stage);
+              const isActive = i === currentSlide;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setCurrentSlide(i)}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    isActive ? 'w-4' : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                  }`}
+                  style={isActive ? { backgroundColor: slideStage?.color || '#8B5CF6' } : undefined}
+                />
+              );
+            })}
+          </div>
+
+          <button
+            onClick={goNext}
+            disabled={currentSlide === totalSlides - 1}
+            className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-30"
+          >
+            Siguiente
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white">

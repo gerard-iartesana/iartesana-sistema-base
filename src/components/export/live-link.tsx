@@ -11,6 +11,7 @@ export function LiveLink() {
   const [links, setLinks] = useState<ShareLink[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'lectura' | 'presentacion'>('presentacion');
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
@@ -36,9 +37,10 @@ export function LiveLink() {
     await db.createShareLink({
       brand_id: activeBrand.id,
       password_hash: password.trim(),
-      mode: 'lectura',
+      mode: mode,
     });
     setPassword('');
+    setMode('presentacion');
     setShowCreateForm(false);
     await load();
   };
@@ -114,10 +116,21 @@ export function LiveLink() {
               </div>
             </div>
             <p className="mt-1 text-[10px] text-slate-400">
-              Los visitantes necesitarán esta contraseña para ver el documento.
+              Los visitantes necesitarán esta contraseña para acceder.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">Tipo de Enlace (Modo)</label>
+            <select
+              value={mode}
+              onChange={e => setMode(e.target.value as any)}
+              className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+            >
+              <option value="presentacion">Presentación de diapositivas</option>
+              <option value="lectura">Lectura del documento</option>
+            </select>
+          </div>
+          <div className="flex gap-2 pt-1">
             <button
               onClick={handleCreate}
               disabled={!password.trim()}
@@ -126,7 +139,7 @@ export function LiveLink() {
               Crear enlace
             </button>
             <button
-              onClick={() => { setShowCreateForm(false); setPassword(''); }}
+              onClick={() => { setShowCreateForm(false); setPassword(''); setMode('presentacion'); }}
               className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
             >
               Cancelar
