@@ -641,7 +641,9 @@ export function Presentation() {
                 <span className="font-bold text-xs shrink-0" style={{ color: stage?.color || '#8B5CF6' }}>{blockDef.stage}</span>
               );
             })()}
-            <span className="text-sm font-medium text-slate-500">{activeBrand.name}</span>
+            <span className="text-sm font-medium text-slate-500">
+              {blockDef.id < 10 ? `0${blockDef.id}` : blockDef.id} — {blockDef.title}
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <span className="font-mono text-sm font-medium text-slate-400">
