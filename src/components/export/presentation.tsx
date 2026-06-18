@@ -591,21 +591,40 @@ export function Presentation() {
     return (
       <div className="fixed inset-0 z-[100] flex flex-col bg-white">
         {/* Top Progress Line (13 segments representing block validation progress) */}
-        <div className="flex h-1 w-full bg-slate-100 shrink-0">
+        <div className="flex h-2.5 w-full bg-slate-950 shrink-0 border-b border-slate-900">
           {BLOCK_DEFINITIONS.map((def, idx) => {
             const block = blocks.find(b => b.block_id === def.id);
-            const isValidated = block?.status === 'validado';
+            const status = block?.status || 'vacio';
             const stage = STAGES.find(s => s.key === def.stage);
             
+            let statusColor = '#1f2937'; // Default dark grey (zinc-800 / gray-800) for 'vacio'
+            let statusLabel = 'Vacío';
+
+            if (status === 'validado') {
+              statusColor = stage?.color || '#8B5CF6';
+              statusLabel = 'Validado';
+            } else if (status === 'en_revision') {
+              statusColor = '#94a3b8'; // Grey (slate-400)
+              statusLabel = 'En revisión';
+            } else if (status === 'borrador') {
+              statusColor = '#4b5563'; // Slightly darker grey (gray-600)
+              statusLabel = 'Borrador';
+            }
+
+            const isCurrent = idx === currentSlide;
+
             return (
-              <div 
+              <button 
                 key={def.id}
-                className="flex-1 h-full transition-all duration-300"
+                onClick={() => setCurrentSlide(idx)}
+                className={`flex-1 h-full transition-all duration-200 cursor-pointer hover:brightness-125 hover:opacity-100 ${
+                  isCurrent ? 'ring-1 ring-white/30 brightness-110 z-10' : 'opacity-90'
+                }`}
                 style={{
-                  backgroundColor: isValidated ? (stage?.color || '#8B5CF6') : '#e2e8f0',
-                  borderRight: idx < 12 ? '1px solid #ffffff' : 'none'
+                  backgroundColor: statusColor,
+                  borderRight: idx < 12 ? '1px solid rgba(0, 0, 0, 0.4)' : 'none'
                 }}
-                title={`${def.id}. ${def.title} (${isValidated ? 'Validado' : 'Pendiente'})`}
+                title={`${def.id}. ${def.title} (${statusLabel})`}
               />
             );
           })}
@@ -643,14 +662,14 @@ export function Presentation() {
         <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
           <div className="w-full max-w-3xl my-auto">
             {/* Title with Number */}
-            <h1 className="mb-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 flex items-start gap-4">
+            <h1 className="mb-3 text-2xl md:text-3xl font-bold tracking-tight text-slate-900 flex items-baseline gap-3">
               <span
                 className="font-mono select-none shrink-0"
                 style={{ color: stage?.color || '#8B5CF6' }}
               >
                 {blockDef.id < 10 ? `0${blockDef.id}` : blockDef.id}
               </span>
-              <span className="font-extrabold">
+              <span className="font-bold">
                 {blockDef.title}
               </span>
             </h1>
