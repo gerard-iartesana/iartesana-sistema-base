@@ -642,31 +642,21 @@ export function Presentation() {
         {/* Slide content */}
         <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
           <div className="w-full max-w-3xl my-auto">
-            {/* Block number and stage */}
-            <div className="mb-4 flex items-center gap-3">
+            {/* Title with Number */}
+            <h1 className="mb-3 text-4xl md:text-5xl font-black tracking-tight text-slate-900 flex items-start gap-4">
               <span
-                className="text-3xl font-black font-mono tracking-tight shrink-0 select-none"
+                className="font-mono select-none shrink-0"
                 style={{ color: stage?.color || '#8B5CF6' }}
               >
                 {blockDef.id < 10 ? `0${blockDef.id}` : blockDef.id}
               </span>
-              <div>
-                <p
-                  className="text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: stage?.color || '#8B5CF6' }}
-                >
-                  Etapa {blockDef.stage} — {stage?.label}
-                </p>
-              </div>
-            </div>
-
-            {/* Title */}
-            <h1 className="mb-3 text-3xl font-bold tracking-tight text-slate-900">
-              {blockDef.title}
+              <span className="font-extrabold">
+                {blockDef.title}
+              </span>
             </h1>
 
             {/* Description */}
-            <p className="mb-6 text-base text-slate-400">{blockDef.description}</p>
+            <p className="mb-8 text-base text-slate-400 leading-relaxed font-medium">{blockDef.description}</p>
 
             {/* Content */}
             <div className="pr-2">
