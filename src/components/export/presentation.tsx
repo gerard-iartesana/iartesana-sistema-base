@@ -385,16 +385,18 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
                 statusText = 'Elegido';
                 statusIcon = <Trophy className="h-3 w-3 fill-amber-500 text-amber-500" />;
               } else if (candidate.status === 'descartado') {
-                cardStyle = 'border-slate-200 bg-slate-50 opacity-60';
+                cardStyle = 'border-slate-200 bg-slate-50'; // Removed opacity-60 from card level
                 badgeStyle = 'bg-slate-100 text-slate-500 border-slate-200';
                 statusText = 'Descartado';
                 statusIcon = <X className="h-3 w-3 text-slate-400" />;
               }
 
+              const isDiscarded = candidate.status === 'descartado';
+
               return (
                 <div key={candidate.id} className={`flex flex-col border rounded-xl p-5 transition-all hover:shadow-md ${cardStyle}`}>
                   {/* Name and Status Header */}
-                  <div className="flex items-center justify-between mb-3.5 select-none">
+                  <div className={`flex items-center justify-between mb-3.5 select-none ${isDiscarded ? 'opacity-50' : ''}`}>
                     <span className={`text-lg font-bold tracking-tight ${candidate.status === 'elegido' ? 'text-emerald-800' : candidate.status === 'descartado' ? 'text-slate-500' : 'text-slate-800'}`}>
                       {candidate.name}
                     </span>
@@ -404,16 +406,16 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
                     </span>
                   </div>
 
-                  {/* Veto Reason if discarded */}
-                  {candidate.status === 'descartado' && candidate.veto_reason && (
-                    <div className="mb-3 rounded-lg bg-red-50/50 border border-red-100 px-3 py-2 text-xs text-red-700 font-sans italic">
-                      <strong>Motivo de veto:</strong> {candidate.veto_reason}
+                  {/* Veto Reason if discarded - kept at 100% opacity for high contrast/readability */}
+                  {isDiscarded && candidate.veto_reason && (
+                    <div className="mb-3 rounded-lg bg-red-500/10 border border-red-500/35 px-3 py-2.5 text-xs text-red-300 font-sans italic shadow-sm">
+                      <strong className="text-red-400 not-italic mr-1">Motivo de veto:</strong> {candidate.veto_reason}
                     </div>
                   )}
 
                   {/* Rationale/Notes */}
                   {userRationale && (
-                    <div className="mb-4">
+                    <div className={`mb-4 ${isDiscarded ? 'opacity-60' : ''}`}>
                       <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1 select-none">Notas del Equipo</span>
                       <p className="text-xs text-slate-600 leading-relaxed font-sans">{userRationale}</p>
                     </div>
@@ -421,7 +423,7 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
 
                   {/* AI Analysis */}
                   {analysis && (
-                    <div className="mt-auto border-t border-slate-100 pt-3.5 space-y-4">
+                    <div className={`mt-auto border-t border-slate-100 pt-3.5 space-y-4 ${isDiscarded ? 'opacity-60' : ''}`}>
                       {/* Score Badge */}
                       <div className="flex items-center justify-between select-none">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
