@@ -27,6 +27,11 @@ import {
   SavedMockups
 } from '@/lib/utils/visual-content';
 
+function preprocessMarkdown(markdown: string): string {
+  if (!markdown) return '';
+  return markdown.replace(/([^\n]+)\n([=-]{3,})\s*(?:\n|$)/g, '$1\n\n$2\n');
+}
+
 function extractText(children: React.ReactNode): string {
   if (typeof children === 'string') return children;
   if (typeof children === 'number') return children.toString();
@@ -352,7 +357,7 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
               li: (props) => <LiRenderer {...props} />,
             }}
           >
-            {cleanContent
+            {preprocessMarkdown(cleanContent)
               .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
               .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
           </ReactMarkdown>
@@ -723,7 +728,7 @@ export function Presentation() {
                             li: (props) => <LiRenderer {...props} />,
                           }}
                         >
-                          {cleanContent
+                          {preprocessMarkdown(cleanContent)
                             .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
                             .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
                         </ReactMarkdown>
@@ -770,7 +775,7 @@ export function Presentation() {
                             li: (props) => <LiRenderer {...props} />,
                           }}
                         >
-                          {cleanContent
+                          {preprocessMarkdown(cleanContent)
                             .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
                             .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
                         </ReactMarkdown>
@@ -974,7 +979,7 @@ export function Presentation() {
                       li: (props) => <LiRenderer {...props} />,
                     }}
                   >
-                    {content
+                    {preprocessMarkdown(content)
                       .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
                       .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
                   </ReactMarkdown>
