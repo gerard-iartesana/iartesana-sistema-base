@@ -641,7 +641,7 @@ export function Presentation() {
                 <span className="font-bold text-xs shrink-0" style={{ color: stage?.color || '#8B5CF6' }}>{blockDef.stage}</span>
               );
             })()}
-            <span className="text-sm font-bold tracking-wide" style={{ color: stage?.color || '#8B5CF6' }}>
+            <span className="text-sm md:text-base font-bold uppercase tracking-wider" style={{ color: stage?.color || '#8B5CF6' }}>
               {stage?.label}
             </span>
           </div>
