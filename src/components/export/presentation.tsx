@@ -1001,15 +1001,20 @@ export function Presentation() {
 
           {/* Slide dots */}
           <div className="flex items-center gap-1">
-            {BLOCK_DEFINITIONS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentSlide(i)}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === currentSlide ? 'w-4 bg-violet-500' : 'w-1.5 bg-slate-200 hover:bg-slate-300'
-                }`}
-              />
-            ))}
+            {BLOCK_DEFINITIONS.map((def, i) => {
+              const slideStage = STAGES.find(s => s.key === def.stage);
+              const isActive = i === currentSlide;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setCurrentSlide(i)}
+                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                    isActive ? 'w-4' : 'w-1.5 bg-slate-200 hover:bg-slate-300'
+                  }`}
+                  style={isActive ? { backgroundColor: slideStage?.color || '#8B5CF6' } : undefined}
+                />
+              );
+            })}
           </div>
 
           <button
