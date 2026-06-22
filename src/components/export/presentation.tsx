@@ -28,6 +28,7 @@ import {
   SavedMockups
 } from '@/lib/utils/visual-content';
 import { parseVoiceTensions, splitBlock5Content } from '@/lib/utils/voice-content';
+import { parseVerbalIdentity } from '@/lib/utils/verbal-content';
 
 function preprocessMarkdown(markdown: string): string {
   if (!markdown) return '';
@@ -763,6 +764,178 @@ function PresentationRules({ rules, kind }: { rules: Rule[]; kind: 'linea_roja' 
   );
 }
 
+
+const imageMap: Record<string, string> = {
+  voz_escrita: '/images/verbal_voz_escrita.png',
+  tuteo: '/images/verbal_idiomas.png',
+  usamos: '/images/verbal_glosario_usamos.png',
+  evitar: '/images/verbal_glosario_evitar.png',
+};
+
+function PresentationVerbalIdentity({ content }: { content: string }) {
+  const sections = parseVerbalIdentity(content);
+
+  if (sections.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-lg text-slate-400 italic">Sin contenido</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-16 w-full mt-4">
+      {sections.map((section, idx) => {
+        const imageSrc = imageMap[section.type];
+        const isEven = idx % 2 === 0;
+
+        if (imageSrc) {
+          const textBlock = (
+            <div className="flex-1 space-y-4">
+              <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                {section.type === 'voz_escrita' && <Sparkles className="h-5 w-5 text-violet-400" />}
+                {section.type === 'tuteo' && <MessageSquare className="h-5 w-5 text-blue-400" />}
+                {section.type === 'usamos' && <CheckCircle2 className="h-5 w-5 text-emerald-400" />}
+                {section.type === 'evitar' && <ShieldAlert className="h-5 w-5 text-red-400" />}
+                {section.title}
+              </h2>
+              
+              {section.items.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {section.items.map((item, i) => (
+                    <div 
+                      key={i} 
+                      className={`p-4 rounded-xl border transition-all duration-300 ${
+                        section.type === 'usamos' 
+                          ? 'border-emerald-500/20 bg-emerald-500/5 hover:border-emerald-500/40 hover:bg-emerald-500/10'
+                          : 'border-red-500/20 bg-red-500/5 hover:border-red-500/40 hover:bg-red-500/10'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        {section.type === 'usamos' ? (
+                          <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400 shrink-0 mt-0.5" />
+                        ) : (
+                          <ShieldAlert className="h-4.5 w-4.5 text-red-400 shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          {item.term && <span className="text-sm font-bold text-white block">{item.term}</span>}
+                          <span className="text-xs text-slate-300 leading-relaxed block mt-1 font-sans">{item.definition}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-slate-300 leading-relaxed text-sm font-sans space-y-3">
+                  <ReactMarkdown
+                    components={{
+                      a: ({ href, children, ...props }) => {
+                        if (href === '#marker-pendiente') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs font-semibold text-amber-400 border border-amber-500/30 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        if (href === '#marker-verificar') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs font-semibold text-red-400 border border-red-500/30 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        return <a href={href} {...props}>{children}</a>;
+                      },
+                    }}
+                  >
+                    {preprocessMarkdown(section.content)
+                      .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                      .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+          );
+
+          const imageBlock = (
+            <div className="w-full md:w-[320px] shrink-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 flex items-center justify-center p-2 shadow-lg">
+              <img 
+                src={imageSrc} 
+                alt={section.title} 
+                className="w-full h-auto object-cover rounded-xl aspect-square"
+                loading="lazy"
+              />
+            </div>
+          );
+
+          return (
+            <div 
+              key={idx} 
+              className={`flex flex-col md:flex-row gap-8 items-center border-t border-slate-800/60 pt-10 first:border-t-0 first:pt-0 ${
+                isEven ? '' : 'md:flex-row-reverse'
+              }`}
+            >
+              {textBlock}
+              {imageBlock}
+            </div>
+          );
+        } else {
+          return (
+            <div key={idx} className="border-t border-slate-800/60 pt-10 space-y-6">
+              <h2 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <BookOpen className="h-5 w-5 text-violet-400" />
+                {section.title}
+              </h2>
+              
+              {section.items.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {section.items.map((item, i) => (
+                    <div 
+                      key={i} 
+                      className="p-5 rounded-xl border border-slate-800 bg-slate-900/30 hover:border-slate-700 hover:bg-slate-900/50 transition-all duration-300 shadow-sm"
+                    >
+                      {item.term && <span className="text-sm font-bold text-violet-300 block mb-2">{item.term}</span>}
+                      <span className="text-xs text-slate-350 leading-relaxed font-sans block">{item.definition}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-slate-300 leading-relaxed text-sm font-sans">
+                  <ReactMarkdown
+                    components={{
+                      a: ({ href, children, ...props }) => {
+                        if (href === '#marker-pendiente') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-xs font-semibold text-amber-400 border border-amber-500/30 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        if (href === '#marker-verificar') {
+                          return (
+                            <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 text-xs font-semibold text-red-400 border border-red-500/30 select-none">
+                              {children}
+                            </span>
+                          );
+                        }
+                        return <a href={href} {...props}>{children}</a>;
+                      },
+                    }}
+                  >
+                    {preprocessMarkdown(section.content)
+                      .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                      .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+          );
+        }
+      })}
+    </div>
+  );
+}
+
 export function Presentation() {
   const { activeBrand } = useBrand();
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1009,6 +1182,8 @@ export function Presentation() {
                 </div>
               ) : blockDef.id === 5 ? (
                 <PresentationVoiceTensions content={content} />
+              ) : blockDef.id === 6 ? (
+                <PresentationVerbalIdentity content={content} />
               ) : blockDef.id === 7 ? (
                 <div className="space-y-8 w-full">
                   {/* Clean text description */}
