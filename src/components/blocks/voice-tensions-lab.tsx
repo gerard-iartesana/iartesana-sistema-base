@@ -86,13 +86,13 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
       {/* Header save state */}
       <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
-          <Scale className="h-4.5 w-4.5 text-blue-400 animate-pulse" />
+          <Scale className="h-4.5 w-4.5 text-[#e3599c] animate-pulse" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-white">Laboratorio de Tensiones de Voz</h3>
         </div>
         <div className="h-5">
           {saveState === 'saving' && (
             <span className="text-xs text-slate-400 flex items-center gap-1 select-none animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#e3599c] animate-ping" />
               Guardando cambios...
             </span>
           )}
@@ -115,10 +115,10 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
 
           if (leftPercent > 55) {
             tiltLabel = `Inclinado hacia ${tension.left} (${leftPercent}%)`;
-            tiltColor = 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+            tiltColor = 'text-[#e3599c] bg-[#e3599c]/10 border-[#e3599c]/20';
           } else if (rightPercent > 55) {
             tiltLabel = `Inclinado hacia ${tension.right} (${rightPercent}%)`;
-            tiltColor = 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20';
+            tiltColor = 'text-[#e3599c] bg-[#e3599c]/10 border-[#e3599c]/20';
           }
 
           return (
@@ -171,14 +171,14 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
                     max="100"
                     value={tension.value}
                     onChange={(e) => handleTensionChange(idx, 'value', parseInt(e.target.value, 10))}
-                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 focus:outline-none"
+                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#e3599c] focus:outline-none"
                   />
                 </div>
 
                 {/* CSS styled bar mockup below the slider just for higher visual accuracy */}
-                <div className="relative w-full h-1 bg-slate-800 rounded-full mt-1.5 overflow-hidden">
+                <div className="relative w-full h-[3px] bg-slate-800 rounded-full mt-1.5">
                   <div 
-                    className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                    className="absolute top-0 bottom-0 bg-[#e3599c] rounded-full"
                     style={{
                       left: tension.value < 50 ? `${tension.value}%` : '50%',
                       right: tension.value >= 50 ? `${100 - tension.value}%` : '50%',

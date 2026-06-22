@@ -565,10 +565,10 @@ function SharePageVoiceTensions({ content }: { content: string }) {
                 </div>
 
                 {/* Sleek slider bar */}
-                <div className="relative w-full h-2 bg-slate-200 rounded-full my-2.5 overflow-hidden shadow-inner border border-slate-300/40">
+                <div className="relative w-full h-[3px] bg-slate-200 dark:bg-zinc-800 rounded-full my-4">
                   {/* Colored track from center (50%) to the active value */}
                   <div 
-                    className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-300"
+                    className="absolute top-0 bottom-0 bg-[#e3599c] rounded-full transition-all duration-300"
                     style={{
                       left: t.value < 50 ? `${t.value}%` : '50%',
                       right: t.value >= 50 ? `${100 - t.value}%` : '50%',
@@ -576,7 +576,7 @@ function SharePageVoiceTensions({ content }: { content: string }) {
                   />
                   {/* The dot indicator */}
                   <div 
-                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-indigo-650 shadow transition-all duration-300 transform -translate-x-1/2 cursor-default"
+                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[#e3599c] shadow-[0_0_8px_rgba(227,89,156,0.6)] transition-all duration-300 transform -translate-x-1/2 cursor-default"
                     style={{
                       left: `${t.value}%`,
                     }}
