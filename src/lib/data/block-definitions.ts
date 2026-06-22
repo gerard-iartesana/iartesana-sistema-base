@@ -14,7 +14,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   { id: 4, stage: 'B', title: 'Matriz de Arquetipos', description: 'Mapeo interactivo sobre la rueda de arquetipos, identificando los perfiles primario y secundario con sus roles reales y descripción aplicada.', sort: 4 },
   { id: 5, stage: 'B', title: 'Tensión y Equilibrio de Voz', description: 'El balance que define la voz (ej. "cercanía CON profesionalidad"), registros falsos a evitar.', sort: 5 },
   { id: 6, stage: 'B', title: 'Identidad Verbal y Glosario', description: 'Reglas de tuteo por mercado, palabras prohibidas del sector, vocabulario nativo, tagline.', sort: 6 },
-  { id: 7, stage: 'B', title: 'Conceptualización Visual', description: 'Tipografía, paleta (con hex/Pantone), formas y líneas, versatilidad a una tinta.', sort: 7 },
+  { id: 7, stage: 'B', title: 'Identidad Visual', description: 'Tipografía, paleta (con hex/Pantone), formas y líneas, versatilidad a una tinta.', sort: 7 },
   { id: 8, stage: 'C', title: 'Segmentación No-Demográfica', description: 'Fichas de cliente ideal por comportamiento/valores + perfiles excluidos explícitos.', sort: 8 },
   { id: 9, stage: 'C', title: 'Relación B2B / Aliados y Propietarios', description: 'Promesa central a socios/propietarios, barreras infranqueables de gestión.', sort: 9 },
   { id: 10, stage: 'C', title: 'Biblioteca de Conocimiento Operativo', description: 'Recomendaciones no incentivadas, FAQs críticas, normativas, políticas diferenciales.', sort: 10 },

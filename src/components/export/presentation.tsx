@@ -1237,8 +1237,8 @@ export function Presentation() {
                   {/* Logo and colors block */}
                   {activeBrand?.logo_path && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center border-t border-slate-100 pt-6">
-                      <div className="flex flex-col items-center justify-center p-6 border border-slate-100 rounded-xl bg-slate-50 shadow-sm aspect-video max-h-[180px]">
-                        <img src={activeBrand.logo_path} alt="Logo" className="max-h-[130px] object-contain" />
+                      <div className="flex flex-col items-center justify-center p-4 border border-slate-100 rounded-xl shadow-sm aspect-square h-[180px] w-[180px] shrink-0" style={{ backgroundColor: '#ffffff' }}>
+                        <img src={activeBrand.logo_path} alt="Logo" className="max-h-full max-w-full object-contain" />
                       </div>
                       
                       <div className="flex flex-col gap-3">

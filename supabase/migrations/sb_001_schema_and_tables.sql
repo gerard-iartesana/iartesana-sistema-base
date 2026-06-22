@@ -126,7 +126,7 @@ INSERT INTO sb_block_definitions (id, stage, title, description, sort) VALUES
   (4, 'B', 'Matriz de Arquetipos', 'Arquetipo primario y secundario con descripción aplicada.', 4),
   (5, 'B', 'Tensión y Equilibrio de Voz', 'El balance que define la voz. Registros falsos a evitar.', 5),
   (6, 'B', 'Identidad Verbal y Glosario', 'Reglas de tuteo por mercado, palabras prohibidas, vocabulario nativo, tagline.', 6),
-  (7, 'B', 'Conceptualización Visual', 'Tipografía, paleta, formas y líneas, versatilidad a una tinta.', 7),
+  (7, 'B', 'Identidad Visual', 'Tipografía, paleta, formas y líneas, versatilidad a una tinta.', 7),
   (8, 'C', 'Segmentación No-Demográfica', 'Fichas de cliente ideal por comportamiento/valores. Perfiles excluidos.', 8),
   (9, 'C', 'Relación B2B / Aliados y Propietarios', 'Promesa central a socios/propietarios. Barreras infranqueables.', 9),
   (10, 'C', 'Biblioteca de Conocimiento Operativo', 'Recomendaciones, FAQs, normativas, políticas diferenciales.', 10),
