@@ -868,7 +868,7 @@ function PresentationVerbalIdentity({ content }: { content: string }) {
               <img 
                 src={imageSrc} 
                 alt={section.title} 
-                className="w-full h-auto object-contain aspect-square mix-blend-multiply opacity-80"
+                className="w-full h-auto object-contain aspect-square invert mix-blend-difference opacity-50"
                 loading="lazy"
               />
             </div>

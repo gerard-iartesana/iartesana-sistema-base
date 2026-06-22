@@ -160,12 +160,12 @@ export function VerbalIdentityLab({ brandId, content_md, onUpdate }: VerbalIdent
               className="flex flex-col md:flex-row gap-5 p-5 rounded-xl border border-[#2a2a2f] bg-[#1d1d21]/30 hover:border-slate-800 transition-colors"
             >
               {/* Image Preview Area */}
-              <div className="w-full md:w-[130px] aspect-square rounded-lg border border-[#2a2a2f] bg-[#0f0f11] flex items-center justify-center p-2 relative group overflow-hidden shrink-0">
+              <div className="w-full md:w-[130px] aspect-square rounded-lg border border-[#2a2a2f] flex items-center justify-center p-2 relative group overflow-hidden shrink-0" style={{ backgroundColor: '#ffffff' }}>
                 {activeImage ? (
                   <img 
                     src={activeImage} 
                     alt={section.title} 
-                    className="max-h-full max-w-full object-contain mix-blend-multiply opacity-80" 
+                    className="max-h-full max-w-full object-contain" 
                   />
                 ) : (
                   <span className="text-[10px] text-slate-500 italic">Sin imagen</span>
