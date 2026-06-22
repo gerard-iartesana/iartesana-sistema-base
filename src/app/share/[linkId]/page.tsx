@@ -14,6 +14,7 @@ import {
   parseSavedVariants,
   splitBlock7Content
 } from '@/lib/utils/visual-content';
+import { parseVoiceTensions, splitBlock5Content } from '@/lib/utils/voice-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
@@ -500,6 +501,101 @@ function SharePageRules({ rules, kind }: { rules: Rule[]; kind: 'linea_roja' | '
   );
 }
 
+function SharePageVoiceTensions({ content }: { content: string }) {
+  const { rawMarkdown, tensions } = splitBlock5Content(content);
+
+  return (
+    <div className="space-y-6 w-full mt-4 animate-fade-in">
+      {/* Intro Description */}
+      {rawMarkdown && (
+        <div className="markdown-preview max-w-none text-slate-655 text-sm leading-relaxed">
+          <ReactMarkdown
+            components={{
+              a: ({ href, children, ...props }) => {
+                if (href === '#marker-pendiente') {
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                      {children}
+                    </span>
+                  );
+                }
+                if (href === '#marker-verificar') {
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                      {children}
+                    </span>
+                  );
+                }
+                return <a href={href} {...props}>{children}</a>;
+              },
+              h1: (props) => <HeadingRenderer level={1} {...props} />,
+              h2: (props) => <HeadingRenderer level={2} {...props} />,
+              h3: (props) => <HeadingRenderer level={3} {...props} />,
+              h4: (props) => <HeadingRenderer level={4} {...props} />,
+              h5: (props) => <HeadingRenderer level={5} {...props} />,
+              h6: (props) => <HeadingRenderer level={6} {...props} />,
+              p: (props) => <ParagraphRenderer {...props} />,
+              li: (props) => <LiRenderer {...props} />,
+            }}
+          >
+            {preprocessMarkdown(rawMarkdown)
+              .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+              .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+          </ReactMarkdown>
+        </div>
+      )}
+
+      {/* Visual Tensions List */}
+      {tensions.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-slate-100 pt-6">
+          {tensions.map((t, idx) => {
+            const leftPercent = 100 - t.value;
+            const rightPercent = t.value;
+            
+            return (
+              <div key={idx} className="flex flex-col bg-slate-50/50 border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                {/* Labels and calculated percent */}
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className={`text-sm font-bold transition-all ${leftPercent > 50 ? 'text-slate-800 font-extrabold' : 'text-slate-400 font-medium'}`}>
+                    {t.left} {leftPercent > 50 && `(${leftPercent}%)`}
+                  </span>
+                  <span className={`text-sm font-bold transition-all ${rightPercent > 50 ? 'text-slate-800 font-extrabold' : 'text-slate-400 font-medium'}`}>
+                    {rightPercent > 50 && `(${rightPercent}%)`} {t.right}
+                  </span>
+                </div>
+
+                {/* Sleek slider bar */}
+                <div className="relative w-full h-2 bg-slate-200 rounded-full my-2.5 overflow-hidden shadow-inner border border-slate-300/40">
+                  {/* Colored track from center (50%) to the active value */}
+                  <div 
+                    className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-300"
+                    style={{
+                      left: t.value < 50 ? `${t.value}%` : '50%',
+                      right: t.value >= 50 ? `${100 - t.value}%` : '50%',
+                    }}
+                  />
+                  {/* The dot indicator */}
+                  <div 
+                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-indigo-650 shadow transition-all duration-300 transform -translate-x-1/2 cursor-default"
+                    style={{
+                      left: `${t.value}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Description */}
+                <p className="text-xs text-slate-550 leading-relaxed font-sans mt-1.5 whitespace-pre-line">
+                  {t.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SharePageNamingLab({ content, candidates }: { content: string; candidates: NamingCandidate[] }) {
   const cleanContent = splitBlock3Content(content);
 
@@ -975,6 +1071,8 @@ export default function SharePage() {
                     <SharePageArchetypeWheel content={content} />
                   </div>
                 </div>
+              ) : blockDef.id === 5 ? (
+                <SharePageVoiceTensions content={content} />
               ) : blockDef.id === 7 ? (
                 <div className="space-y-8 w-full">
                   {/* Clean text description */}
@@ -1378,6 +1476,9 @@ export default function SharePage() {
                             </div>
                           </div>
                         );
+                      }
+                      if (def.id === 5) {
+                        return <SharePageVoiceTensions content={block?.content_md || ''} />;
                       }
                       if (def.id === 7) {
                         const visualContent = block?.content_md ? splitBlock7Content(block.content_md) : { rawMarkdown: '' };

@@ -12,6 +12,7 @@ import { RulesEditor } from '@/components/blocks/rules-editor';
 import { ArchetypeLab } from '@/components/blocks/archetype-lab';
 import { VisualLab } from '@/components/blocks/visual-lab';
 import { ValuePropositionLab } from '@/components/blocks/value-proposition-lab';
+import { VoiceTensionsLab } from '@/components/blocks/voice-tensions-lab';
 import { CopilotPanel, AGENTS } from '@/components/copilot/copilot-panel';
 import { MarkdownExport } from '@/components/export/markdown-export';
 import { PromptGlobal } from '@/components/export/prompt-global';
@@ -277,6 +278,18 @@ export default function HomePage() {
                           <ArchetypeLab
                             brandId={activeBrand.id}
                             content_md={brandBlocks.find(b => b.block_id === 4)?.content_md || ''}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
+                        </div>
+                      )}
+                      {selectedBlockId === 5 && (
+                        <div className="mt-6">
+                          <VoiceTensionsLab
+                            brandId={activeBrand.id}
+                            content_md={brandBlocks.find(b => b.block_id === 5)?.content_md || ''}
                             onUpdate={() => {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();

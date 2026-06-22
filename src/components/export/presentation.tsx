@@ -27,6 +27,7 @@ import {
   BrandVariant,
   SavedMockups
 } from '@/lib/utils/visual-content';
+import { parseVoiceTensions, splitBlock5Content } from '@/lib/utils/voice-content';
 
 function preprocessMarkdown(markdown: string): string {
   if (!markdown) return '';
@@ -506,6 +507,101 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
   );
 }
 
+function PresentationVoiceTensions({ content }: { content: string }) {
+  const { rawMarkdown, tensions } = splitBlock5Content(content);
+
+  return (
+    <div className="space-y-8 w-full mt-4">
+      {/* Intro Description */}
+      {rawMarkdown && (
+        <div className="markdown-preview max-w-none text-slate-700">
+          <ReactMarkdown
+            components={{
+              a: ({ href, children, ...props }) => {
+                if (href === '#marker-pendiente') {
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                      {children}
+                    </span>
+                  );
+                }
+                if (href === '#marker-verificar') {
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                      {children}
+                    </span>
+                  );
+                }
+                return <a href={href} {...props}>{children}</a>;
+              },
+              h1: (props) => <HeadingRenderer level={1} {...props} />,
+              h2: (props) => <HeadingRenderer level={2} {...props} />,
+              h3: (props) => <HeadingRenderer level={3} {...props} />,
+              h4: (props) => <HeadingRenderer level={4} {...props} />,
+              h5: (props) => <HeadingRenderer level={5} {...props} />,
+              h6: (props) => <HeadingRenderer level={6} {...props} />,
+              p: (props) => <ParagraphRenderer {...props} />,
+              li: (props) => <LiRenderer {...props} />,
+            }}
+          >
+            {preprocessMarkdown(rawMarkdown)
+              .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+              .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+          </ReactMarkdown>
+        </div>
+      )}
+
+      {/* Visual Tensions List */}
+      {tensions.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+          {tensions.map((t, idx) => {
+            const leftPercent = 100 - t.value;
+            const rightPercent = t.value;
+            
+            return (
+              <div key={idx} className="flex flex-col bg-slate-50/50 border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
+                {/* Labels and calculated percent */}
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className={`text-base font-bold transition-all ${leftPercent > 50 ? 'text-slate-900 font-extrabold' : 'text-slate-400 font-medium'}`}>
+                    {t.left} {leftPercent > 50 && `(${leftPercent}%)`}
+                  </span>
+                  <span className={`text-base font-bold transition-all ${rightPercent > 50 ? 'text-slate-900 font-extrabold' : 'text-slate-400 font-medium'}`}>
+                    {rightPercent > 50 && `(${rightPercent}%)`} {t.right}
+                  </span>
+                </div>
+
+                {/* Sleek slider bar */}
+                <div className="relative w-full h-2.5 bg-slate-200 rounded-full my-3 overflow-hidden shadow-inner border border-slate-300/40">
+                  {/* Colored track from center (50%) to the active value */}
+                  <div 
+                    className="absolute top-0 bottom-0 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-300"
+                    style={{
+                      left: t.value < 50 ? `${t.value}%` : '50%',
+                      right: t.value >= 50 ? `${100 - t.value}%` : '50%',
+                    }}
+                  />
+                  {/* The dot indicator */}
+                  <div 
+                    className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-2 border-indigo-650 shadow-md transition-all duration-300 transform -translate-x-1/2 cursor-default"
+                    style={{
+                      left: `${t.value}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Description */}
+                <p className="text-sm text-slate-650 leading-relaxed font-sans mt-2 whitespace-pre-line">
+                  {t.description}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PresentationValueProp({ content }: { content: string }) {
   const { mission, vision, values } = parseValueProposition(content);
   const valuesList = parseValuesList(values);
@@ -911,6 +1007,8 @@ export function Presentation() {
                     <PresentationArchetypeWheel content={content} />
                   </div>
                 </div>
+              ) : blockDef.id === 5 ? (
+                <PresentationVoiceTensions content={content} />
               ) : blockDef.id === 7 ? (
                 <div className="space-y-8 w-full">
                   {/* Clean text description */}
