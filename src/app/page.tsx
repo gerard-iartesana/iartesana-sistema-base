@@ -34,16 +34,6 @@ export default function HomePage() {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [copilotAgent, setCopilotAgent] = useState<AgentName | null>(null);
 
-  // Load brand blocks and markers when active brand changes
-  useEffect(() => {
-    if (activeBrand) {
-      loadData();
-    } else {
-      setBrandBlocks([]);
-      setMarkers([]);
-    }
-  }, [activeBrand?.id]);
-
   const loadData = async () => {
     if (!activeBrand) return;
     try {
@@ -57,6 +47,16 @@ export default function HomePage() {
       console.error('[HomePage] Failed to load brand data:', err);
     }
   };
+
+  // Load brand blocks and markers when active brand changes
+  useEffect(() => {
+    if (activeBrand) {
+      loadData();
+    } else {
+      setBrandBlocks([]);
+      setMarkers([]);
+    }
+  }, [activeBrand?.id]);
 
   const handleBlockUpdate = () => {
     loadData();
