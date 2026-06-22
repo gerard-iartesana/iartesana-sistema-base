@@ -394,11 +394,11 @@ function SharePageValueProp({ content }: { content: string }) {
             <Award className="h-5 w-5 text-emerald-500" />
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Valores de Marca</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {valuesList.map((val, idx) => (
-              <div key={idx} className="bg-white border border-slate-150 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                <span className="text-xs font-bold text-slate-800 block mb-1">{val.title}</span>
-                {val.text && <p className="text-xs text-slate-600 leading-relaxed font-sans">{val.text}</p>}
+              <div key={idx} className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow border-0">
+                <span className="text-lg font-bold text-slate-800 block mb-1.5">{val.title}</span>
+                {val.text && <p className="text-sm text-slate-600 leading-relaxed font-sans">{val.text}</p>}
               </div>
             ))}
           </div>
@@ -421,7 +421,7 @@ function SharePageKnowledgeLibrary({ items }: { items: KnowledgeItem[] }) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
       {items.map((item) => {
         const config = kindConfig[item.kind] || { label: item.kind, badgeClass: 'bg-slate-500/10 text-slate-400 border-slate-500/30' };
         return (
@@ -901,7 +901,7 @@ export default function SharePage() {
 
         {/* Slide content */}
         <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
-          <div className="w-full max-w-3xl my-auto">
+          <div className="w-full max-w-6xl my-auto">
             {/* Title with Number */}
             <h1 className="mb-3 text-2xl md:text-3xl font-bold tracking-tight text-slate-900 flex items-baseline gap-3">
               <span
@@ -1191,7 +1191,7 @@ export default function SharePage() {
               ) : blockDef.id === 13 ? (
                 <SharePageRules rules={rules} kind="instruccion_ia" />
               ) : content.trim() ? (
-                <div className="markdown-preview max-w-none">
+                <div className="markdown-preview max-w-3xl mx-auto">
                   <ReactMarkdown
                     components={{
                       a: ({ href, children, ...props }) => {
