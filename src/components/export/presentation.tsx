@@ -414,8 +414,8 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
 
                   {/* Veto Reason if discarded - kept at 100% opacity for high contrast/readability */}
                   {isDiscarded && candidate.veto_reason && (
-                    <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-xs text-red-850 font-sans italic shadow-sm">
-                      <strong className="text-red-700 not-italic mr-1">Motivo de veto:</strong> {candidate.veto_reason}
+                    <div className="mb-3 rounded-lg bg-red-950/40 border border-red-900/50 px-3 py-2.5 text-xs text-red-200 font-sans italic shadow-sm">
+                      <strong className="text-red-400 not-italic mr-1 font-bold">Motivo de veto:</strong> {candidate.veto_reason}
                     </div>
                   )}
 
