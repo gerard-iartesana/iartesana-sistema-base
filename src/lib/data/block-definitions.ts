@@ -11,7 +11,7 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   { id: 1, stage: 'A', title: 'Historia Narrativa', description: 'Trayectoria real del fundador, decisiones críticas, escala humana del negocio.', sort: 1 },
   { id: 2, stage: 'A', title: 'Propuesta de Valor Diferencial', description: 'Qué se perdería el cliente si la marca no existiera; misión, visión, valores.', sort: 2 },
   { id: 3, stage: 'A', title: 'Laboratorio de Naming', description: 'Candidatos con significado/sonoridad/viabilidad internacional + registro de vetos con su porqué.', sort: 3 },
-  { id: 4, stage: 'B', title: 'Matriz de Arquetipos', description: 'Arquetipo primario y secundario con descripción aplicada (no la rueda decorativa: roles reales).', sort: 4 },
+  { id: 4, stage: 'B', title: 'Matriz de Arquetipos', description: 'Mapeo interactivo sobre la rueda de arquetipos, identificando los perfiles primario y secundario con sus roles reales y descripción aplicada.', sort: 4 },
   { id: 5, stage: 'B', title: 'Tensión y Equilibrio de Voz', description: 'El balance que define la voz (ej. "cercanía CON profesionalidad"), registros falsos a evitar.', sort: 5 },
   { id: 6, stage: 'B', title: 'Identidad Verbal y Glosario', description: 'Reglas de tuteo por mercado, palabras prohibidas del sector, vocabulario nativo, tagline.', sort: 6 },
   { id: 7, stage: 'B', title: 'Conceptualización Visual', description: 'Tipografía, paleta (con hex/Pantone), formas y líneas, versatilidad a una tinta.', sort: 7 },
