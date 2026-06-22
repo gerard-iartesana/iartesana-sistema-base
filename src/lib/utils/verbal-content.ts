@@ -188,3 +188,36 @@ function finalizeSection(title: string, lines: string[]): VerbalSection {
     items,
   };
 }
+
+export function parseSavedVerbalImages(md: string): Record<string, string> {
+  if (!md) return {};
+  const match = md.match(/<!-- VERBAL_IMAGES:\s*(\{[\s\S]+?\})\s*-->/);
+  if (match) {
+    try {
+      return JSON.parse(match[1]);
+    } catch (e) {
+      console.error('Error parsing saved verbal images JSON:', e);
+    }
+  }
+  return {};
+}
+
+export function splitBlock6Content(md: string): { rawMarkdown: string; images: Record<string, string> } {
+  const images = parseSavedVerbalImages(md);
+  let rawMarkdown = md || '';
+  
+  // Remove the comment
+  rawMarkdown = rawMarkdown.replace(/\s*\n*<!-- VERBAL_IMAGES:[\s\S]+?-->/g, '').trim();
+
+  return {
+    rawMarkdown,
+    images
+  };
+}
+
+export function compileBlock6Content(rawMarkdown: string, images: Record<string, string>): string {
+  const cleanedMarkdown = rawMarkdown.replace(/\s*\n*<!-- VERBAL_IMAGES:[\s\S]+?-->/g, '').trim();
+  const jsonComment = `<!-- VERBAL_IMAGES:${JSON.stringify(images)} -->`;
+  return `${cleanedMarkdown}\n\n${jsonComment}`;
+}
+

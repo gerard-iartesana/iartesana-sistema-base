@@ -15,7 +15,7 @@ import {
   splitBlock7Content
 } from '@/lib/utils/visual-content';
 import { parseVoiceTensions, splitBlock5Content } from '@/lib/utils/voice-content';
-import { parseVerbalIdentity } from '@/lib/utils/verbal-content';
+import { parseVerbalIdentity, splitBlock6Content } from '@/lib/utils/verbal-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
@@ -783,7 +783,7 @@ function SharePageNamingLab({ content, candidates }: { content: string; candidat
 }
 
 
-const verbalImageMap: Record<string, string> = {
+const defaultVerbalImageMap: Record<string, string> = {
   voz_escrita: '/images/verbal_voz_escrita.png',
   tuteo: '/images/verbal_idiomas.png',
   usamos: '/images/verbal_glosario_usamos.png',
@@ -791,7 +791,8 @@ const verbalImageMap: Record<string, string> = {
 };
 
 function SharePageVerbalIdentity({ content }: { content: string }) {
-  const sections = parseVerbalIdentity(content);
+  const { rawMarkdown, images } = splitBlock6Content(content);
+  const sections = parseVerbalIdentity(rawMarkdown);
 
   if (sections.length === 0) {
     return (
@@ -801,10 +802,15 @@ function SharePageVerbalIdentity({ content }: { content: string }) {
     );
   }
 
+  const getSectionKey = (title: string) => {
+    return title.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  };
+
   return (
     <div className="space-y-16 w-full mt-4">
       {sections.map((section, idx) => {
-        const imageSrc = verbalImageMap[section.type];
+        const sectionKey = getSectionKey(section.title);
+        const imageSrc = images[sectionKey] || images[section.type] || defaultVerbalImageMap[section.type];
         const isEven = idx % 2 === 0;
 
         if (imageSrc) {
@@ -876,11 +882,11 @@ function SharePageVerbalIdentity({ content }: { content: string }) {
           );
 
           const imageBlock = (
-            <div className="w-full md:w-[320px] shrink-0 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 flex items-center justify-center p-2 shadow-lg">
+            <div className="w-full md:w-[320px] shrink-0 flex items-center justify-center select-none">
               <img 
                 src={imageSrc} 
                 alt={section.title} 
-                className="w-full h-auto object-cover rounded-xl aspect-square"
+                className="w-full h-auto object-contain aspect-square mix-blend-multiply opacity-80"
                 loading="lazy"
               />
             </div>
