@@ -371,3 +371,130 @@ select.bg-slate-50, input.bg-slate-50, textarea.bg-slate-50 {
 .status-borrador { background-color: rgba(227, 89, 156, 0.15) !important; color: var(--color-magenta) !important; }
 .status-en_revision { background-color: rgba(133, 191, 87, 0.15) !important; color: var(--color-verde) !important; }
 .status-validado { background-color: rgba(54, 168, 224, 0.15) !important; color: var(--color-azul) !important; }
+
+/* === PRESENTATION LIGHT THEME OVERRIDES === */
+.presentation-light-theme {
+  background-color: #f8fafc !important; /* Slate-50 background */
+  color: #0f172a !important; /* Slate-900 text */
+}
+
+/* Override dark globals for light mode wrapper */
+.presentation-light-theme .bg-white {
+  background-color: #ffffff !important;
+}
+
+.presentation-light-theme .bg-slate-50,
+.presentation-light-theme .bg-slate-50\/50,
+.presentation-light-theme .bg-slate-900\/30 {
+  background-color: #f1f5f9 !important; /* Slate-100 */
+}
+
+.presentation-light-theme .bg-slate-50\/20,
+.presentation-light-theme .bg-slate-100 {
+  background-color: #f8fafc !important; /* Slate-50 */
+}
+
+.presentation-light-theme .border-slate-100,
+.presentation-light-theme .border-slate-200,
+.presentation-light-theme .border-slate-800,
+.presentation-light-theme .border-slate-800\/60 {
+  border-color: #cbd5e1 !important; /* Slate-300 */
+}
+
+.presentation-light-theme .text-slate-900,
+.presentation-light-theme .text-slate-800,
+.presentation-light-theme .text-white {
+  color: #0f172a !important; /* Slate-900 */
+}
+
+.presentation-light-theme .text-slate-700,
+.presentation-light-theme .text-slate-750,
+.presentation-light-theme .text-slate-600,
+.presentation-light-theme .text-slate-300,
+.presentation-light-theme .text-slate-350 {
+  color: #334155 !important; /* Slate-700 */
+}
+
+.presentation-light-theme .text-slate-500 {
+  color: #64748b !important; /* Slate-500 */
+}
+
+.presentation-light-theme .text-slate-400 {
+  color: #94a3b8 !important; /* Slate-400 */
+}
+
+/* Naming lab card specific overrides in light theme */
+.presentation-light-theme .bg-emerald-50\/10 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+.presentation-light-theme .bg-red-50\/10 {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+/* Markdown preview links in light theme */
+.presentation-light-theme .markdown-preview a {
+  color: #7361a8 !important; /* Morado corporate */
+}
+.presentation-light-theme .markdown-preview h1,
+.presentation-light-theme .markdown-preview h2,
+.presentation-light-theme .markdown-preview h3,
+.presentation-light-theme .markdown-preview strong {
+  color: #0f172a !important;
+}
+.presentation-light-theme .markdown-preview p,
+.presentation-light-theme .markdown-preview li {
+  color: #334155 !important;
+}
+
+/* Badge and specific indicator overrides for light theme */
+.presentation-light-theme .text-blue-400 {
+  color: #2563eb !important; /* Blue-600 */
+}
+.presentation-light-theme .border-blue-500\/30 {
+  border-color: rgba(37, 99, 235, 0.25) !important;
+}
+.presentation-light-theme .bg-blue-500\/10 {
+  background-color: rgba(37, 99, 235, 0.08) !important;
+}
+
+.presentation-light-theme .text-violet-400 {
+  color: #7c3aed !important; /* Violet-600 */
+}
+.presentation-light-theme .border-violet-500\/30 {
+  border-color: rgba(124, 58, 237, 0.25) !important;
+}
+.presentation-light-theme .bg-violet-500\/10 {
+  background-color: rgba(124, 58, 237, 0.08) !important;
+}
+
+.presentation-light-theme .text-emerald-400 {
+  color: #059669 !important; /* Emerald-600 */
+}
+.presentation-light-theme .border-emerald-500\/30 {
+  border-color: rgba(5, 150, 105, 0.25) !important;
+}
+.presentation-light-theme .bg-emerald-500\/10 {
+  background-color: rgba(5, 150, 105, 0.08) !important;
+}
+
+.presentation-light-theme .text-amber-400 {
+  color: #d97706 !important; /* Amber-600 */
+}
+.presentation-light-theme .border-amber-500\/30 {
+  border-color: rgba(217, 119, 6, 0.25) !important;
+}
+.presentation-light-theme .bg-amber-500\/10 {
+  background-color: rgba(217, 119, 6, 0.08) !important;
+}
+
+/* Rules / Red line indicators overrides */
+.presentation-light-theme .text-red-400 {
+  color: #dc2626 !important; /* Red-600 */
+}
+.presentation-light-theme .border-red-500\/25 {
+  border-color: rgba(220, 38, 38, 0.25) !important;
+}
+.presentation-light-theme .bg-red-500\/5 {
+  background-color: rgba(220, 38, 38, 0.05) !important;
+}
+

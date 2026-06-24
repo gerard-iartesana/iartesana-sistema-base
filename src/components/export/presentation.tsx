@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye, Sun, Moon } from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
   'A': Sparkles,
@@ -204,7 +204,7 @@ const LiRenderer = ({ children, ...props }: any) => {
   return <li {...props}>{children}</li>;
 };
 
-function PresentationArchetypeWheel({ content }: { content: string }) {
+function PresentationArchetypeWheel({ content, isDarkMode = true }: { content: string; isDarkMode?: boolean }) {
   console.log('[PresentationArchetypeWheel] content:', JSON.stringify(content));
   const selected = parseArchetypes(content);
   console.log('[PresentationArchetypeWheel] selected:', selected);
@@ -274,16 +274,16 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
               {/* Slice Path */}
               <path
                 d={pathData}
-                fill={isSelected ? catColor : '#1d1d21'}
+                fill={isSelected ? catColor : (isDarkMode ? '#1d1d21' : '#f1f5f9')}
                 fillOpacity={isSelected ? 0.3 + 0.7 * (percentage / 100) : 0.4}
-                stroke="#0f0f11"
+                stroke={isDarkMode ? '#0f0f11' : '#cbd5e1'}
                 strokeWidth="2.5"
               />
 
               {/* Icon */}
               <g
                 transform={`translate(${ix - 12}, ${iy - 12})`}
-                className={isSelected ? 'text-white' : 'text-slate-600'}
+                className={isSelected ? (isDarkMode ? 'text-white' : 'text-slate-900') : (isDarkMode ? 'text-slate-650' : 'text-slate-400')}
               >
                 {ICON_PATHS[arc.icon]}
               </g>
@@ -293,7 +293,7 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
                 x={tx}
                 y={ty}
                 textAnchor={textAnchor}
-                fill={isSelected ? '#ffffff' : '#9ca3af'}
+                fill={isSelected ? (isDarkMode ? '#ffffff' : '#0f172a') : (isDarkMode ? '#9ca3af' : '#64748b')}
                 className={`transition-all duration-300 ${
                   isSelected 
                     ? 'text-[22px] font-bold' 
@@ -314,7 +314,7 @@ function PresentationArchetypeWheel({ content }: { content: string }) {
         })}
 
         {/* Inner center ring */}
-        <circle cx={cx} cy={cy} r="25" fill="#0f0f11" stroke="#2a2a2f" strokeWidth="1" />
+        <circle cx={cx} cy={cy} r="25" fill={isDarkMode ? '#0f0f11' : '#ffffff'} stroke={isDarkMode ? '#2a2a2f' : '#cbd5e1'} strokeWidth="1" />
       </svg>
     </div>
   );
@@ -772,7 +772,7 @@ const defaultImageMap: Record<string, string> = {
   evitar: '/images/verbal_glosario_evitar.png',
 };
 
-function PresentationVerbalIdentity({ content }: { content: string }) {
+function PresentationVerbalIdentity({ content, isDarkMode = true }: { content: string; isDarkMode?: boolean }) {
   const { rawMarkdown, images } = splitBlock6Content(content);
   const sections = parseVerbalIdentity(rawMarkdown);
 
@@ -825,14 +825,14 @@ function PresentationVerbalIdentity({ content }: { content: string }) {
                         )}
                         <div>
                           {item.term && <span className="text-sm font-bold text-white block">{item.term}</span>}
-                          <span className="text-xs text-slate-300 leading-relaxed block mt-1 font-sans">{item.definition}</span>
+                          <span className="text-xs text-slate-350 leading-relaxed block mt-1 font-sans">{item.definition}</span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-slate-300 leading-relaxed text-sm font-sans space-y-3">
+                <div className="text-slate-350 leading-relaxed text-sm font-sans space-y-3">
                   <ReactMarkdown
                     components={{
                       a: ({ href, children, ...props }) => {
@@ -868,7 +868,7 @@ function PresentationVerbalIdentity({ content }: { content: string }) {
               <img 
                 src={imageSrc} 
                 alt={section.title} 
-                className="w-full h-auto object-contain aspect-square invert mix-blend-difference opacity-50"
+                className={`w-full h-auto object-contain aspect-square ${isDarkMode ? 'invert mix-blend-difference opacity-50' : 'mix-blend-multiply opacity-70'}`}
                 loading="lazy"
               />
             </div>
@@ -906,7 +906,7 @@ function PresentationVerbalIdentity({ content }: { content: string }) {
                   ))}
                 </div>
               ) : (
-                <div className="text-slate-300 leading-relaxed text-sm font-sans">
+                <div className="text-slate-350 leading-relaxed text-sm font-sans">
                   <ReactMarkdown
                     components={{
                       a: ({ href, children, ...props }) => {
@@ -935,7 +935,7 @@ function PresentationVerbalIdentity({ content }: { content: string }) {
                 </div>
               )}
             </div>
-            );
+          );
         }
       })}
     </div>
@@ -965,6 +965,7 @@ export function PresentationViewer({
   initialSlide = 0
 }: PresentationViewerProps) {
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const totalSlides = BLOCK_DEFINITIONS.length;
 
   const goNext = useCallback(() => {
@@ -1007,7 +1008,7 @@ export function PresentationViewer({
   const content = brandBlock?.content_md || '';
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-white">
+    <div className={`fixed inset-0 z-[100] flex flex-col bg-white ${isDarkMode ? '' : 'presentation-light-theme'}`}>
       {/* Top Progress Line (13 segments representing block validation progress) */}
       <div className="flex h-2.5 w-full bg-slate-950 shrink-0 border-b border-slate-900">
         {BLOCK_DEFINITIONS.map((def, idx) => {
@@ -1015,7 +1016,7 @@ export function PresentationViewer({
           const status = block?.status || 'vacio';
           const stage = STAGES.find(s => s.key === def.stage);
           
-          let statusColor = '#1f2937'; // Default dark grey (zinc-800 / gray-800) for 'vacio'
+          let statusColor = isDarkMode ? '#1f2937' : '#e2e8f0'; // Default dark grey / light grey for 'vacio'
           let statusLabel = 'Vacío';
 
           if (status === 'validado') {
@@ -1049,7 +1050,7 @@ export function PresentationViewer({
       </div>
 
       {/* Top bar */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3">
+      <div className="flex items-center justify-between border-b border-slate-100 px-6 py-3 font-sans">
         <div className="flex items-center gap-3">
           {(() => {
             const Icon = stageIcons[blockDef.stage];
@@ -1064,9 +1065,18 @@ export function PresentationViewer({
           </span>
         </div>
         <div className="flex items-center gap-4">
+          {/* Theme Toggle Button */}
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="flex items-center justify-center p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors cursor-pointer select-none"
+            title={isDarkMode ? "Cambiar a modo día (tema claro)" : "Cambiar a modo noche (tema oscuro)"}
+          >
+            {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+
           {onClose ? (
             <>
-              <span className="font-mono text-sm font-medium text-slate-400">
+              <span className="font-mono text-sm font-medium text-slate-450">
                 {currentSlide + 1} / {totalSlides}
               </span>
               <button
@@ -1081,7 +1091,7 @@ export function PresentationViewer({
           ) : (
             <>
               <span className="text-sm font-semibold text-slate-500">{brand.name}</span>
-              <span className="font-mono text-sm font-medium text-slate-400">
+              <span className="font-mono text-sm font-medium text-slate-450">
                 {currentSlide + 1} / {totalSlides}
               </span>
             </>
@@ -1162,13 +1172,13 @@ export function PresentationViewer({
                   ) : null;
                 })()}
                 <div className="w-full flex justify-center mt-2">
-                  <PresentationArchetypeWheel content={content} />
+                  <PresentationArchetypeWheel content={content} isDarkMode={isDarkMode} />
                 </div>
               </div>
             ) : blockDef.id === 5 ? (
               <PresentationVoiceTensions content={content} />
             ) : blockDef.id === 6 ? (
-              <PresentationVerbalIdentity content={content} />
+              <PresentationVerbalIdentity content={content} isDarkMode={isDarkMode} />
             ) : blockDef.id === 7 ? (
               <div className="space-y-8 w-full">
                 {/* Clean text description */}
