@@ -10,7 +10,7 @@ export const ARCHETYPES = [
   { name: 'La Visionaria', category: 'CAMBIO', description: 'Visión para transformar lo corriente en extraordinario', icon: 'rocket', angleStart: 0, angleEnd: 30 },
   { name: 'La Comprometida', category: 'COLECTIVIDAD', description: 'Compromiso para afrontar causas justas', icon: 'sun', angleStart: 30, angleEnd: 60 },
   { name: 'La Humana', category: 'COLECTIVIDAD', description: 'Pertenencia y unión para que conectes con grupos', icon: 'footprints', angleStart: 60, angleEnd: 90 },
-  { name: 'La Sabia', category: 'COLECTIVIDAD', description: 'Conocimiento para obtener soluciones y respuestas', icon: 'atom', angleStart: 90, angleEnd: 120 },
+  { name: 'La Sabia', category: 'COLECTIVIDAD', description: 'Conocimiento para obtener soluciones y respuestas', icon: 'book', angleStart: 90, angleEnd: 120 },
   { name: 'La Maestra', category: 'ESTABILIDAD', description: 'Maestría para exponer tu experiencia y saber hacer', icon: 'knight', angleStart: 120, angleEnd: 150 },
   { name: 'La Gobernadora', category: 'ESTABILIDAD', description: 'Liderazgo y control para crear orden', icon: 'crown', angleStart: 150, angleEnd: 180 },
   { name: 'La Protectora', category: 'ESTABILIDAD', description: 'Cuidado y protección de los demás', icon: 'shield', angleStart: 180, angleEnd: 210 },
@@ -50,6 +50,9 @@ export const ICON_PATHS: Record<string, React.ReactNode> = {
       <circle cx="15.8" cy="8.2" r="0.6" fill="currentColor" />
       <circle cx="17" cy="7.7" r="0.6" fill="currentColor" />
     </>
+  ),
+  book: (
+    <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zm20 0h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   ),
   atom: (
     <>

@@ -498,3 +498,19 @@ select.bg-slate-50, input.bg-slate-50, textarea.bg-slate-50 {
   background-color: rgba(220, 38, 38, 0.05) !important;
 }
 
+/* Naming Veto Box contrast overrides for light theme */
+.presentation-light-theme .bg-red-950\/40 {
+  background-color: #fef2f2 !important; /* Red-50 (light red) */
+}
+.presentation-light-theme .border-red-900\/50 {
+  border-color: #fecaca !important; /* Red-200 */
+}
+.presentation-light-theme .text-red-200 {
+  color: #991b1b !important; /* Red-800 */
+}
+
+/* Bottom navigation hover override for light theme */
+.presentation-light-theme .hover\:bg-slate-50:hover {
+  background-color: #e2e8f0 !important; /* Slate-200 hover background */
+  color: #0f172a !important; /* Slate-900 text */
+}

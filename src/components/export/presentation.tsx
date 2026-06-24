@@ -1010,7 +1010,7 @@ export function PresentationViewer({
   return (
     <div className={`fixed inset-0 z-[100] flex flex-col bg-white ${isDarkMode ? '' : 'presentation-light-theme'}`}>
       {/* Top Progress Line (13 segments representing block validation progress) */}
-      <div className="flex h-2.5 w-full bg-slate-950 shrink-0 border-b border-slate-900">
+      <div className={`flex h-2.5 w-full shrink-0 border-b ${isDarkMode ? 'bg-slate-950 border-slate-900' : 'bg-slate-200 border-slate-300'}`}>
         {BLOCK_DEFINITIONS.map((def, idx) => {
           const block = blocks.find(b => b.block_id === def.id);
           const status = block?.status || 'vacio';
@@ -1041,7 +1041,7 @@ export function PresentationViewer({
               }`}
               style={{
                 backgroundColor: statusColor,
-                borderRight: idx < 12 ? '1px solid rgba(0, 0, 0, 0.4)' : 'none'
+                borderRight: idx < 12 ? (isDarkMode ? '1px solid rgba(0, 0, 0, 0.4)' : '1px solid rgba(255, 255, 255, 0.6)') : 'none'
               }}
               title={`${def.id}. ${def.title} (${statusLabel})`}
             />
