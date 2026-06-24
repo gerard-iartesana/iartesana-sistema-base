@@ -11,7 +11,7 @@ export const ARCHETYPES = [
   { name: 'La Comprometida', category: 'COLECTIVIDAD', description: 'Compromiso para afrontar causas justas', icon: 'sun', angleStart: 30, angleEnd: 60 },
   { name: 'La Humana', category: 'COLECTIVIDAD', description: 'Pertenencia y unión para que conectes con grupos', icon: 'footprints', angleStart: 60, angleEnd: 90 },
   { name: 'La Sabia', category: 'COLECTIVIDAD', description: 'Conocimiento para obtener soluciones y respuestas', icon: 'book', angleStart: 90, angleEnd: 120 },
-  { name: 'La Maestra', category: 'ESTABILIDAD', description: 'Maestría para exponer tu experiencia y saber hacer', icon: 'knight', angleStart: 120, angleEnd: 150 },
+  { name: 'La Maestra', category: 'ESTABILIDAD', description: 'Maestría para exponer tu experiencia y saber hacer', icon: 'graduation', angleStart: 120, angleEnd: 150 },
   { name: 'La Gobernadora', category: 'ESTABILIDAD', description: 'Liderazgo y control para crear orden', icon: 'crown', angleStart: 150, angleEnd: 180 },
   { name: 'La Protectora', category: 'ESTABILIDAD', description: 'Cuidado y protección de los demás', icon: 'shield', angleStart: 180, angleEnd: 210 },
   { name: 'La Hedonista', category: 'INDIVIDUALISMO', description: 'Placer para disfrutar y deleitarte con la vida', icon: 'heart', angleStart: 210, angleEnd: 240 },
@@ -60,6 +60,13 @@ export const ICON_PATHS: Record<string, React.ReactNode> = {
       <ellipse cx="12" cy="12" rx="3" fill="none" stroke="currentColor" strokeWidth="1.2" transform="rotate(30 12 12)" />
       <ellipse cx="12" cy="12" rx="3" fill="none" stroke="currentColor" strokeWidth="1.2" transform="rotate(-30 12 12)" />
       <ellipse cx="12" cy="12" rx="3" fill="none" stroke="currentColor" strokeWidth="1.2" transform="rotate(90 12 12)" />
+    </>
+  ),
+  graduation: (
+    <>
+      <path d="M21.4 11a1 1 0 0 0 0-1.8L12.8 5.2a2 2 0 0 0-1.6 0L2.6 9.2a1 1 0 0 0 0 1.8l8.6 3.9a2 2 0 0 0 1.6 0z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M21.5 12v6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </>
   ),
   knight: (
