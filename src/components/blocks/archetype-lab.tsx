@@ -72,7 +72,7 @@ export const ICON_PATHS: Record<string, React.ReactNode> = {
     </>
   ),
   shield: (
-    <path d="M12 3s7 1.8 7 7.5c0 5-4.5 8.7-7 10.5-2.5-1.8-7-5.5-7-10.5C5 4.8 12 3 12 3z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M12 4c3 0 7-1 7-1v8c0 5-4.5 8.7-7 10.5-2.5-1.8-7-5.5-7-10.5V3s4 1 7 1z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   ),
   heart: (
     <path d="M12 20.3l-1.3-1.2C6 14.8 3 12 3 8.6 3 5.8 5.2 3.6 8 3.6c1.6 0 3.1.7 4 1.9.9-1.2 2.4-1.9 4-1.9 2.8 0 5 2.2 5 5 0 3.4-3 6.2-7.7 10.5L12 20.3z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
