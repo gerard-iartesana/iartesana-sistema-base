@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { db } from '@/lib/db/local-storage';
 import { Brand, BrandBlock, Marker, NamingCandidate, Rule, KnowledgeItem } from '@/lib/db/types';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
-import { Lock, Eye, AlertTriangle, Star, Trophy, X, Sparkles, Info, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, ChevronLeft, ChevronRight, MessageSquare, Users, Shield } from 'lucide-react';
+import { Lock, Eye, AlertTriangle, Star, Trophy, X, Sparkles, Info, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, ChevronLeft, ChevronRight, MessageSquare, Users, Shield, Heart } from 'lucide-react';
 import { splitNamingRationale, splitBlock3Content } from '@/lib/utils/naming-content';
 import { getClosestColorName } from '@/components/blocks/visual-lab';
 import {
@@ -22,7 +22,7 @@ import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/comp
 import { PresentationViewer } from '@/components/export/presentation';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
-  'A': Sparkles,
+  'A': Heart,
   'B': MessageSquare,
   'C': Users,
   'D': Shield,

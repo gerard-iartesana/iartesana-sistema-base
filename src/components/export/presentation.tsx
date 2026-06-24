@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye, Sun, Moon } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye, Sun, Moon, Heart } from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
-  'A': Sparkles,
+  'A': Heart,
   'B': MessageSquare,
   'C': Users,
   'D': Shield,

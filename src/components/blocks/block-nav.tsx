@@ -16,11 +16,12 @@ import {
   FileText,
   Cpu,
   Link2,
-  MonitorPlay
+  MonitorPlay,
+  Heart
 } from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
-  'A': Sparkles,
+  'A': Heart,
   'B': MessageSquare,
   'C': Users,
   'D': Shield,
