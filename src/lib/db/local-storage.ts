@@ -685,6 +685,20 @@ async function deleteSlideComment(id: string): Promise<boolean> {
   return true;
 }
 
+async function updateSlideComment(id: string, text: string): Promise<SlideComment | undefined> {
+  const { data, error } = await supabase
+    .from('sb_slide_comments')
+    .update({ comment_text: text })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) {
+    console.error('[db] updateSlideComment:', error);
+    return undefined;
+  }
+  return data as SlideComment;
+}
+
 // ---------------------------------------------------------------------------
 // Exported db object — same interface as the old localStorage layer
 // ---------------------------------------------------------------------------
@@ -737,6 +751,7 @@ export const db = {
   getSlideComments,
   createSlideComment,
   deleteSlideComment,
+  updateSlideComment,
 };
 
 export type { SearchResult };

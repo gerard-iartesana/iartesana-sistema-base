@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye, Sun, Moon, Heart, Mic, MicOff, Send, Trash2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye, Sun, Moon, Heart, Mic, MicOff, Send, Trash2, Pencil, Check } from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
   'A': Heart,
@@ -960,6 +960,10 @@ function PresentationComments({
   const [isRecording, setIsRecording] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   useEffect(() => {
     let active = true;
     async function loadData() {
@@ -1065,9 +1069,30 @@ function PresentationComments({
       const success = await db.deleteSlideComment(id);
       if (success) {
         setComments(prev => prev.filter(c => c.id !== id));
+        if (editingId === id) {
+          setEditingId(null);
+          setEditingText('');
+        }
       }
     } catch (err) {
       console.error('Error deleting comment:', err);
+    }
+  };
+
+  const handleEditSave = async (id: string) => {
+    if (!editingText.trim()) return;
+    setIsSavingEdit(true);
+    try {
+      const updated = await db.updateSlideComment(id, editingText.trim());
+      if (updated) {
+        setComments(prev => prev.map(c => c.id === id ? updated : c));
+        setEditingId(null);
+        setEditingText('');
+      }
+    } catch (err) {
+      console.error('Error updating comment:', err);
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -1084,7 +1109,7 @@ function PresentationComments({
       </div>
 
       {/* List of comments */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 font-sans">
         {comments.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <MessageSquare className="h-8 w-8 text-slate-200 mb-2 opacity-60" />
@@ -1105,17 +1130,66 @@ function PresentationComments({
                   })}
                 </span>
               </div>
-              <p className="text-xs text-slate-700 leading-relaxed font-sans break-words whitespace-pre-wrap pr-4">
-                {c.comment_text}
-              </p>
-              {isAuthorized && (
-                <button
-                  onClick={() => handleDelete(c.id)}
-                  className="absolute right-2.5 bottom-2.5 opacity-0 group-hover:opacity-100 text-slate-350 hover:text-red-500 transition-opacity p-1 hover:bg-red-50 rounded cursor-pointer"
-                  title="Eliminar comentario"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+
+              {editingId === c.id ? (
+                <div className="mt-2 space-y-2">
+                  <textarea
+                    rows={2}
+                    value={editingText}
+                    onChange={e => setEditingText(e.target.value)}
+                    className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-400 transition-all resize-none"
+                    disabled={isSavingEdit}
+                    required
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditingText('');
+                      }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 text-[10px] font-semibold transition-colors cursor-pointer"
+                      disabled={isSavingEdit}
+                    >
+                      <X className="h-2.5 w-2.5 shrink-0" />
+                      <span>Cancelar</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEditSave(c.id)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 text-[10px] font-semibold transition-colors cursor-pointer"
+                      disabled={isSavingEdit || !editingText.trim()}
+                    >
+                      <Check className="h-2.5 w-2.5 shrink-0" />
+                      <span>Guardar</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-700 leading-relaxed font-sans break-words whitespace-pre-wrap pr-12">
+                    {c.comment_text}
+                  </p>
+                  <div className="absolute right-2.5 bottom-2.5 opacity-0 group-hover:opacity-100 flex items-center gap-1.5 transition-opacity">
+                    <button
+                      onClick={() => {
+                        setEditingId(c.id);
+                        setEditingText(c.comment_text);
+                      }}
+                      className="text-slate-350 hover:text-violet-600 transition-colors p-1 hover:bg-violet-50 rounded cursor-pointer"
+                      title="Editar comentario"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(c.id)}
+                      className="text-slate-350 hover:text-red-500 transition-colors p-1 hover:bg-red-50 rounded cursor-pointer"
+                      title="Eliminar comentario"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           ))
