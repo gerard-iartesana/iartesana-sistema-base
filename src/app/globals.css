@@ -514,3 +514,8 @@ select.bg-slate-50, input.bg-slate-50, textarea.bg-slate-50 {
   background-color: #e2e8f0 !important; /* Slate-200 hover background */
   color: #0f172a !important; /* Slate-900 text */
 }
+
+/* Comments sidebar overrides for light theme */
+.presentation-light-theme .border-slate-150 {
+  border-color: #e2e8f0 !important; /* Slate-200 */
+}

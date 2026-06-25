@@ -10,6 +10,7 @@ import {
   ShareLink,
   Member,
   BlockStatus,
+  SlideComment,
 } from './types';
 import { parseMarkers } from '../utils/markers';
 
@@ -638,6 +639,53 @@ async function searchGlobal(query: string): Promise<SearchResult[]> {
 }
 
 // ---------------------------------------------------------------------------
+// SLIDE COMMENTS
+// ---------------------------------------------------------------------------
+async function getSlideComments(brandId: string, blockId: number): Promise<SlideComment[]> {
+  const { data, error } = await supabase
+    .from('sb_slide_comments')
+    .select('*')
+    .eq('brand_id', brandId)
+    .eq('block_id', blockId)
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.error('[db] getSlideComments:', error);
+    return [];
+  }
+  return data as SlideComment[];
+}
+
+async function createSlideComment(input: {
+  brand_id: string;
+  block_id: number;
+  author_name: string;
+  comment_text: string;
+}): Promise<SlideComment> {
+  const { data, error } = await supabase
+    .from('sb_slide_comments')
+    .insert(input)
+    .select()
+    .single();
+  if (error) {
+    console.error('[db] createSlideComment:', error);
+    throw error;
+  }
+  return data as SlideComment;
+}
+
+async function deleteSlideComment(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('sb_slide_comments')
+    .delete()
+    .eq('id', id);
+  if (error) {
+    console.error('[db] deleteSlideComment:', error);
+    return false;
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------------------
 // Exported db object — same interface as the old localStorage layer
 // ---------------------------------------------------------------------------
 export const db = {
@@ -685,6 +733,10 @@ export const db = {
   deactivateShareLink,
   // Search
   searchGlobal,
+  // Slide Comments
+  getSlideComments,
+  createSlideComment,
+  deleteSlideComment,
 };
 
 export type { SearchResult };

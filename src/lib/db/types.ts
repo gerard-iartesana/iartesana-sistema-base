@@ -123,3 +123,12 @@ export interface ShareLink {
   active: boolean;
   created_at: string;
 }
+
+export interface SlideComment {
+  id: string;
+  brand_id: string;
+  block_id: number;
+  author_name: string;
+  comment_text: string;
+  created_at: string;
+}

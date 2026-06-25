@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye, Sun, Moon, Heart } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Maximize2, Sparkles, MessageSquare, Users, Shield, Info, Trophy, Star, Target, Award, CheckCircle2, ShieldAlert, BookOpen, Ban, Eye, Sun, Moon, Heart, Mic, MicOff, Send, Trash2 } from 'lucide-react';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
   'A': Heart,
@@ -12,7 +12,7 @@ const stageIcons: Record<string, React.ComponentType<any>> = {
 import { useBrand } from '@/lib/contexts/brand-context';
 import { db } from '@/lib/db/local-storage';
 import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
-import type { BrandBlock, NamingCandidate, Rule, KnowledgeItem } from '@/lib/db/types';
+import type { BrandBlock, NamingCandidate, Rule, KnowledgeItem, SlideComment } from '@/lib/db/types';
 import { splitNamingRationale, splitBlock3Content } from '@/lib/utils/naming-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
 import ReactMarkdown from 'react-markdown';
@@ -942,8 +942,241 @@ function PresentationVerbalIdentity({ content, isDarkMode = true }: { content: s
   );
 }
 
+// ===========================================================================
+// PRESENTATION COMMENTS PANEL (SIDEBAR)
+// ===========================================================================
+function PresentationComments({
+  brandId,
+  blockId,
+  isAuthorized
+}: {
+  brandId: string;
+  blockId: number;
+  isAuthorized: boolean;
+}) {
+  const [comments, setComments] = useState<SlideComment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [authorName, setAuthorName] = useState('Cliente');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recognition, setRecognition] = useState<any>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadData() {
+      try {
+        const data = await db.getSlideComments(brandId, blockId);
+        if (active) setComments(data);
+      } catch (err) {
+        console.error('Error loading comments:', err);
+      }
+    }
+    loadData();
+
+    async function loadUser() {
+      const user = await db.getCurrentUser();
+      if (active && user) {
+        setAuthorName(user.name);
+      } else if (active) {
+        const cached = localStorage.getItem('comments_author_name');
+        setAuthorName(cached || 'Cliente');
+      }
+    }
+    loadUser();
+
+    return () => { active = false; };
+  }, [brandId, blockId]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.continuous = true;
+        rec.interimResults = false;
+        rec.lang = 'es-ES';
+
+        rec.onresult = (event: any) => {
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            }
+          }
+          if (finalTranscript) {
+            setNewComment(prev => (prev ? prev + ' ' + finalTranscript.trim() : finalTranscript.trim()));
+          }
+        };
+
+        rec.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+          setIsRecording(false);
+        };
+
+        rec.onend = () => {
+          setIsRecording(false);
+        };
+
+        setRecognition(rec);
+      }
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognition) {
+      alert('La transcripción de voz no está soportada en este navegador. Te recomendamos usar Google Chrome o Safari.');
+      return;
+    }
+    if (isRecording) {
+      recognition.stop();
+    } else {
+      try {
+        recognition.start();
+        setIsRecording(true);
+      } catch (err) {
+        console.error('Failed to start speech recognition:', err);
+      }
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+
+    const name = authorName.trim() || 'Cliente';
+    localStorage.setItem('comments_author_name', name);
+
+    try {
+      const created = await db.createSlideComment({
+        brand_id: brandId,
+        block_id: blockId,
+        author_name: name,
+        comment_text: newComment.trim(),
+      });
+      setComments(prev => [...prev, created]);
+      setNewComment('');
+    } catch (err) {
+      console.error('Error creating comment:', err);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este comentario?')) return;
+    try {
+      const success = await db.deleteSlideComment(id);
+      if (success) {
+        setComments(prev => prev.filter(c => c.id !== id));
+      }
+    } catch (err) {
+      console.error('Error deleting comment:', err);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full font-sans select-none">
+      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-4 w-4 text-violet-500" />
+          <h3 className="text-sm font-bold text-slate-800">Anotaciones de la Diapositiva</h3>
+        </div>
+        <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded-full text-slate-500">
+          {comments.length}
+        </span>
+      </div>
+
+      {/* List of comments */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {comments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center py-8">
+            <MessageSquare className="h-8 w-8 text-slate-200 mb-2 opacity-60" />
+            <p className="text-xs text-slate-400 font-medium">Aún no hay anotaciones en esta slide.</p>
+            <p className="text-[10px] text-slate-400 mt-1 max-w-[200px]">Usa el formulario de abajo para añadir tus impresiones o comentarios de voz.</p>
+          </div>
+        ) : (
+          comments.map(c => (
+            <div key={c.id} className="bg-slate-50/50 border border-slate-150 rounded-xl p-3 shadow-sm flex flex-col group relative">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="text-xs font-bold text-slate-800 truncate max-w-[150px]">
+                  {c.author_name}
+                </span>
+                <span className="text-[9px] text-slate-400 font-mono">
+                  {new Date(c.created_at).toLocaleDateString('es-ES', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
+              <p className="text-xs text-slate-700 leading-relaxed font-sans break-words whitespace-pre-wrap pr-4">
+                {c.comment_text}
+              </p>
+              {isAuthorized && (
+                <button
+                  onClick={() => handleDelete(c.id)}
+                  className="absolute right-2.5 bottom-2.5 opacity-0 group-hover:opacity-100 text-slate-350 hover:text-red-500 transition-opacity p-1 hover:bg-red-50 rounded cursor-pointer"
+                  title="Eliminar comentario"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Form section at bottom */}
+      <form onSubmit={handleSend} className="border-t border-slate-100 p-4 space-y-3 shrink-0 bg-white">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Tu nombre"
+            value={authorName}
+            onChange={e => setAuthorName(e.target.value)}
+            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-400 transition-all font-semibold"
+            required
+          />
+        </div>
+
+        <div className="relative">
+          <textarea
+            rows={3}
+            placeholder={isRecording ? "Escuchando... Habla ahora" : "Escribe una anotación o usa el dictado por voz..."}
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            className={`w-full text-xs px-2.5 py-2 rounded-lg border bg-slate-50/50 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-violet-500/30 focus:border-violet-400 transition-all resize-none pr-8 ${
+              isRecording ? 'border-red-400 ring-1 ring-red-400/20 bg-red-50/5' : 'border-slate-200'
+            }`}
+            required
+            disabled={isRecording}
+          />
+          <button
+            type="button"
+            onClick={toggleRecording}
+            className={`absolute right-2.5 bottom-3.5 p-1 rounded-full border transition-all cursor-pointer ${
+              isRecording 
+                ? 'bg-red-500 text-white border-red-600 animate-pulse' 
+                : 'bg-slate-50 border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-600'
+            }`}
+            title={isRecording ? "Detener grabación de voz" : "Dictar comentario con voz"}
+          >
+            {isRecording ? <MicOff className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+
+        <button
+          type="submit"
+          disabled={!newComment.trim() || isRecording}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white text-xs font-semibold hover:bg-violet-700 disabled:opacity-50 transition-colors shadow-sm cursor-pointer select-none"
+        >
+          <Send className="h-3 w-3" />
+          <span>Añadir Anotación</span>
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export interface PresentationViewerProps {
   brand: {
+    id: string;
     name: string;
     logo_path?: string | null;
   };
@@ -966,6 +1199,7 @@ export function PresentationViewer({
 }: PresentationViewerProps) {
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [showComments, setShowComments] = useState(false);
   const totalSlides = BLOCK_DEFINITIONS.length;
 
   const goNext = useCallback(() => {
@@ -977,6 +1211,13 @@ export function PresentationViewer({
   }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (typeof document !== 'undefined') {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+      }
+    }
+
     switch (e.key) {
       case 'ArrowRight':
       case 'ArrowDown':
@@ -1065,6 +1306,19 @@ export function PresentationViewer({
           </span>
         </div>
         <div className="flex items-center gap-4">
+          {/* Comments Toggle Button */}
+          <button
+            onClick={() => setShowComments(!showComments)}
+            className={`flex items-center justify-center p-1.5 rounded-lg border transition-all cursor-pointer select-none ${
+              showComments
+                ? 'border-violet-500 bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                : 'border-slate-200 text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+            }`}
+            title={showComments ? "Ocultar anotaciones" : "Mostrar anotaciones"}
+          >
+            <MessageSquare className="h-4 w-4" />
+          </button>
+
           {/* Theme Toggle Button */}
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
@@ -1099,9 +1353,11 @@ export function PresentationViewer({
         </div>
       </div>
 
-      {/* Slide content */}
-      <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
-        <div className="w-full max-w-6xl my-auto">
+      {/* Main presentation body with side-by-side Slide + Comments */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Slide content */}
+        <div className="flex-1 overflow-y-auto px-16 py-12 flex justify-center items-start">
+          <div className="w-full max-w-6xl my-auto">
           {/* Title with Number */}
           <h1 className="mb-3 text-2xl md:text-3xl font-bold tracking-tight text-slate-900 flex items-baseline gap-3">
             <span
@@ -1438,6 +1694,23 @@ export function PresentationViewer({
               </div>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Comments Sidebar Panel */}
+        <div 
+          className={`border-l border-slate-100 flex flex-col shrink-0 transition-all duration-300 ${
+            showComments ? 'w-[360px] opacity-100' : 'w-0 opacity-0 pointer-events-none'
+          }`}
+        >
+          {showComments && (
+            <PresentationComments
+              key={`${brand.id}-${blockDef.id}`}
+              brandId={brand.id}
+              blockId={blockDef.id}
+              isAuthorized={!!onClose}
+            />
+          )}
         </div>
       </div>
 
