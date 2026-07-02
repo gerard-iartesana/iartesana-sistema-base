@@ -46,26 +46,31 @@ export function parseValuesList(valuesMarkdown: string): ValueItem[] {
     const trimmed = line.trim();
     if (!trimmed) continue;
     
-    // Matches: 1. **Title**: Text
-    const matchBold = trimmed.match(/^(?:\d+\.|\-|\*|\+)\s+\*\*([^*]+?)\*\*\s*[\:\-]?\s*(.*)$/);
+    // First, check if it starts with a list marker (e.g. "1. **Title**: Text" or "- **Title**: Text")
+    const matchBold = line.match(/^\s*(?:\d+\.|\-|\*|\+)\s+\*\*([^*]+?)\*\*\s*[\:\-]?\s*(.*)$/);
     if (matchBold) {
       items.push({
         title: matchBold[1].trim(),
         text: matchBold[2].trim()
       });
     } else {
-      // Matches standard list: 1. Title
-      const matchPlain = trimmed.match(/^(?:\d+\.|\-|\*|\+)\s+(.+)$/);
+      const matchPlain = line.match(/^\s*(?:\d+\.|\-|\*|\+)\s+(.+)$/);
       if (matchPlain) {
         items.push({
           title: matchPlain[1].trim(),
           text: ''
         });
       } else {
-        items.push({
-          title: trimmed,
-          text: ''
-        });
+        // It's a continuation line of the previous item's description
+        if (items.length > 0) {
+          const lastItem = items[items.length - 1];
+          lastItem.text = lastItem.text ? lastItem.text + '\n' + trimmed : trimmed;
+        } else {
+          items.push({
+            title: trimmed,
+            text: ''
+          });
+        }
       }
     }
   }
@@ -80,7 +85,12 @@ export function serializeValuesList(items: ValueItem[]): string {
       const title = item.title.trim();
       const text = item.text.trim();
       if (text) {
-        return `${idx + 1}. **${title}**: ${text}`;
+        // Indent subsequent lines of a multiline description by 3 spaces
+        const lines = text.split('\n');
+        const serializedText = lines
+          .map((line, lIdx) => lIdx === 0 ? line : `   ${line}`)
+          .join('\n');
+        return `${idx + 1}. **${title}**: ${serializedText}`;
       } else {
         return `${idx + 1}. **${title}**`;
       }

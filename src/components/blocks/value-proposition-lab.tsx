@@ -29,12 +29,17 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
   // Sync state with content_md prop when it changes
   useEffect(() => {
     const parsed = parseValueProposition(content_md);
-    setMission(parsed.mission);
-    setVision(parsed.vision);
+    setMission(prev => prev === parsed.mission ? prev : parsed.mission);
+    setVision(prev => prev === parsed.vision ? prev : parsed.vision);
     
     // Parse list of values with titles and descriptions
     const list = parseValuesList(parsed.values);
-    setValuesList(list.length > 0 ? list : [{ title: '', text: '' }]);
+    setValuesList(prev => {
+      const isEquivalent = list.length === prev.length && list.every((item, i) => 
+        item.title === prev[i]?.title && item.text === prev[i]?.text
+      );
+      return isEquivalent ? prev : (list.length > 0 ? list : [{ title: '', text: '' }]);
+    });
   }, [content_md]);
 
   const saveToDb = async (m: string, v: string, valList: ValueItem[]) => {

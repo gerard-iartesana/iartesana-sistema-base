@@ -529,40 +529,60 @@ function nodeToMarkdown(node: Node): string {
     childrenMarkdown += nodeToMarkdown(element.childNodes[i]);
   }
 
+  // Detect style-based bold/italic (e.g. from Google Docs/Word spans)
+  const style = element.getAttribute('style') || '';
+  const hasBoldStyle = /\bfont-weight\s*:\s*(?:bold|[7-9]00)\b/i.test(style);
+  const hasItalicStyle = /\bfont-style\s*:\s*italic\b/i.test(style);
+
+  const isBold = tag === 'strong' || tag === 'b' || hasBoldStyle;
+  const isItalic = tag === 'em' || tag === 'i' || hasItalicStyle;
+
+  // Apply bold/italic to the children markdown first
+  let formattedContent = childrenMarkdown;
+  if (isBold && formattedContent.trim()) {
+    // Keep spaces outside the markdown formatting markers
+    const leadingSpace = formattedContent.match(/^\s*/)?.[0] || '';
+    const trailingSpace = formattedContent.match(/\s*$/)?.[0] || '';
+    formattedContent = `${leadingSpace}**${formattedContent.trim()}**${trailingSpace}`;
+  }
+  if (isItalic && formattedContent.trim()) {
+    const leadingSpace = formattedContent.match(/^\s*/)?.[0] || '';
+    const trailingSpace = formattedContent.match(/\s*$/)?.[0] || '';
+    formattedContent = `${leadingSpace}*${formattedContent.trim()}*${trailingSpace}`;
+  }
+
   switch (tag) {
     case 'h1':
-      return `\n# ${childrenMarkdown.trim()}\n\n`;
+      return `\n# ${formattedContent.trim()}\n\n`;
     case 'h2':
-      return `\n## ${childrenMarkdown.trim()}\n\n`;
+      return `\n## ${formattedContent.trim()}\n\n`;
     case 'h3':
-      return `\n### ${childrenMarkdown.trim()}\n\n`;
+      return `\n### ${formattedContent.trim()}\n\n`;
     case 'h4':
     case 'h5':
     case 'h6':
-      return `\n#### ${childrenMarkdown.trim()}\n\n`;
+      return `\n#### ${formattedContent.trim()}\n\n`;
     case 'p':
-      return `\n${childrenMarkdown.trim()}\n\n`;
-    case 'strong':
-    case 'b':
-      return `**${childrenMarkdown}**`;
-    case 'em':
-    case 'i':
-      return `*${childrenMarkdown}*`;
-    case 'code':
-      return `\`${childrenMarkdown}\``;
-    case 'pre':
-      return `\n\`\`\`\n${childrenMarkdown}\n\`\`\`\n\n`;
+      return `\n${formattedContent.trim()}\n\n`;
+    case 'div':
+      return formattedContent.trim() ? `\n${formattedContent.trim()}\n\n` : '';
     case 'br':
       return '\n';
     case 'li':
-      return `\n- ${childrenMarkdown.trim()}`;
+      return `\n- ${formattedContent.trim()}`;
     case 'ul':
     case 'ol':
-      return `\n${childrenMarkdown}\n\n`;
+      return `\n${formattedContent}\n\n`;
     case 'a':
       const href = element.getAttribute('href') || '';
-      return `[${childrenMarkdown}](${href})`;
+      return `[${formattedContent.trim()}](${href})`;
+    case 'strong':
+    case 'b':
+    case 'em':
+    case 'i':
+      // Already handled above
+      return formattedContent;
     default:
-      return childrenMarkdown;
+      return formattedContent;
   }
 }
