@@ -99,6 +99,37 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
     }, 1500);
   };
 
+  const handlePasteClean = (
+    e: React.ClipboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    index: number,
+    field: keyof ValueItem
+  ) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text');
+    // Replace all returns and newlines with space, and replace multiple spaces with a single space
+    const cleaned = text.replace(/[\r\n]+/g, ' ').replace(/\s{2,}/g, ' ');
+    
+    const input = e.currentTarget;
+    const start = input.selectionStart ?? 0;
+    const end = input.selectionEnd ?? 0;
+    const value = input.value;
+    
+    const newValue = value.slice(0, start) + cleaned + value.slice(end);
+    handleValueChange(index, field, newValue);
+    
+    // Reset cursor selection to after the pasted text
+    setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(start + cleaned.length, start + cleaned.length);
+    }, 0);
+  };
+
+  const handleBlockEnter = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+
   const handleAddValue = () => {
     const newList = [...valuesList, { title: '', text: '' }];
     setValuesList(newList);
@@ -195,6 +226,8 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
                     type="text"
                     value={item.title}
                     onChange={(e) => handleValueChange(idx, 'title', e.target.value)}
+                    onPaste={(e) => handlePasteClean(e, idx, 'title')}
+                    onKeyDown={handleBlockEnter}
                     placeholder="Título del Valor (ej: Honestidad)"
                     className="bg-transparent border-none p-0 text-sm text-white font-bold placeholder-slate-700 focus:outline-none w-full"
                   />
@@ -212,6 +245,8 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
               <textarea
                 value={item.text}
                 onChange={(e) => handleValueChange(idx, 'text', e.target.value)}
+                onPaste={(e) => handlePasteClean(e, idx, 'text')}
+                onKeyDown={handleBlockEnter}
                 placeholder="Descripción detallada de cómo se aplica este valor en la marca..."
                 className="w-full h-20 bg-slate-950 border border-slate-800/60 rounded p-2.5 text-xs text-slate-300 placeholder-slate-700 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
                 spellCheck={false}
