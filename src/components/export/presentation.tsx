@@ -16,7 +16,7 @@ import type { BrandBlock, NamingCandidate, Rule, KnowledgeItem, SlideComment } f
 import { splitNamingRationale, splitBlock3Content } from '@/lib/utils/naming-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
 import ReactMarkdown from 'react-markdown';
-import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes, parseArchetypeWheels, cleanBlock4Content } from '@/components/blocks/archetype-lab';
+import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes, parseArchetypeWheels, cleanBlock4Content, getSliceColor } from '@/components/blocks/archetype-lab';
 import { getClosestColorName } from '@/components/blocks/visual-lab';
 import {
   parseSavedMockups,
@@ -274,14 +274,14 @@ function PresentationArchetypeWheel({ content, isDarkMode = true }: { content: s
 
                 const isSelected = selected[arc.name] !== undefined;
                 const percentage = selected[arc.name] || 0;
-                const catColor = CATEGORY_COLORS[arc.category];
+                const sliceColor = getSliceColor(arc.name, selected);
 
                 return (
                   <g key={arc.name}>
                     {/* Slice Path */}
                     <path
                       d={pathData}
-                      fill={isSelected ? catColor : (isDarkMode ? '#1d1d21' : '#f1f5f9')}
+                      fill={isSelected ? sliceColor : (isDarkMode ? '#1d1d21' : '#f1f5f9')}
                       fillOpacity={isSelected ? 0.3 + 0.7 * (percentage / 100) : 0.4}
                       stroke={isDarkMode ? '#0f0f11' : '#cbd5e1'}
                       strokeWidth="2.5"
@@ -311,7 +311,7 @@ function PresentationArchetypeWheel({ content, isDarkMode = true }: { content: s
                         {arc.name.replace('La ', '')}
                       </tspan>
                       {isSelected && (
-                        <tspan x={tx} dy="22" fill={catColor} className="font-mono font-bold text-[17px]">
+                        <tspan x={tx} dy="22" fill={sliceColor} className="font-mono font-bold text-[17px]">
                           {percentage}%
                         </tspan>
                       )}

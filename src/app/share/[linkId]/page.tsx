@@ -18,7 +18,7 @@ import { parseVoiceTensions, splitBlock5Content } from '@/lib/utils/voice-conten
 import { parseVerbalIdentity, splitBlock6Content } from '@/lib/utils/verbal-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
 import ReactMarkdown from 'react-markdown';
-import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes, parseArchetypeWheels, cleanBlock4Content } from '@/components/blocks/archetype-lab';
+import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes, parseArchetypeWheels, cleanBlock4Content, getSliceColor } from '@/components/blocks/archetype-lab';
 import { PresentationViewer } from '@/components/export/presentation';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
@@ -272,14 +272,14 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
 
                 const isSelected = selected[arc.name] !== undefined;
                 const percentage = selected[arc.name] || 0;
-                const catColor = CATEGORY_COLORS[arc.category];
+                const sliceColor = getSliceColor(arc.name, selected);
 
                 return (
                   <g key={arc.name}>
                     {/* Slice Path */}
                     <path
                       d={pathData}
-                      fill={isSelected ? catColor : '#1d1d21'}
+                      fill={isSelected ? sliceColor : '#1d1d21'}
                       fillOpacity={isSelected ? 0.3 + 0.7 * (percentage / 100) : 0.4}
                       stroke="#0f0f11"
                       strokeWidth="2.5"
@@ -309,7 +309,7 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
                         {arc.name.replace('La ', '')}
                       </tspan>
                       {isSelected && (
-                        <tspan x={tx} dy="22" fill={catColor} className="font-mono font-bold text-[17px]">
+                        <tspan x={tx} dy="22" fill={sliceColor} className="font-mono font-bold text-[17px]">
                           {percentage}%
                         </tspan>
                       )}

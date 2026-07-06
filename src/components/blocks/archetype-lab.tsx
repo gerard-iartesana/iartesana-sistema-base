@@ -120,6 +120,20 @@ export interface ArchetypeWheelData {
   selected: Record<string, number>;
 }
 
+export function getSliceColor(name: string, selected: Record<string, number>): string {
+  const entries = Object.entries(selected).filter(([_, pct]) => pct > 0);
+  if (entries.length === 0) return '#22c55e'; // default green
+  const maxPct = Math.max(...entries.map(([_, pct]) => pct));
+  const pct = selected[name] || 0;
+  if (pct === maxPct) {
+    return '#3b82f6'; // Clean bright blue
+  }
+  // For the rest, shades of green based on value
+  if (pct >= 50) return '#15803d'; // Green-700
+  if (pct >= 30) return '#22c55e'; // Green-500
+  return '#86efac'; // Green-300
+}
+
 export function parseArchetypeWheels(markdown: string): ArchetypeWheelData[] {
   const cleanMarkdown = (markdown || '').replace(/\r\n/g, '\n');
   const sections = cleanMarkdown.split(/### Arquetipos Seleccionados/i);
@@ -434,14 +448,14 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
 
                     const isSelected = wheel.selected[arc.name] !== undefined;
                     const percentage = wheel.selected[arc.name] || 0;
-                    const catColor = CATEGORY_COLORS[arc.category];
+                    const sliceColor = getSliceColor(arc.name, wheel.selected);
 
                     return (
                       <g key={arc.name} className="group cursor-pointer" onClick={() => handleToggleArchetype(wIdx, arc.name)}>
                         {/* Slice Path */}
                         <path
                           d={pathData}
-                          fill={isSelected ? catColor : '#1d1d21'}
+                          fill={isSelected ? sliceColor : '#1d1d21'}
                           fillOpacity={isSelected ? 0.2 + 0.8 * (percentage / 100) : 0.6}
                           stroke="#0f0f11"
                           strokeWidth="2.5"
@@ -473,7 +487,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                             {arc.name.replace('La ', '').toUpperCase()}
                           </tspan>
                           {isSelected && (
-                            <tspan x={tx} dy="11" fill={catColor} className="font-mono font-bold text-[9px]">
+                            <tspan x={tx} dy="11" fill={sliceColor} className="font-mono font-bold text-[9px]">
                               {percentage}%
                             </tspan>
                           )}
@@ -505,7 +519,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                     {Object.entries(wheel.selected).map(([name, pct]) => {
                       const arc = ARCHETYPES.find(a => a.name === name);
                       if (!arc) return null;
-                      const catColor = CATEGORY_COLORS[arc.category];
+                      const sliceColor = getSliceColor(name, wheel.selected);
 
                       return (
                         <div key={name} className="border border-slate-800 rounded-lg p-2.5 bg-slate-900/40">
@@ -513,7 +527,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                             <div className="flex items-center gap-1.5">
                               <span
                                 className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: catColor }}
+                                style={{ backgroundColor: sliceColor }}
                               />
                               <span className="text-[11px] font-bold text-white truncate max-w-[90px]">{name.replace('La ', '')}</span>
                               <span className="text-[8px] px-1 py-0.2 rounded bg-slate-800 text-slate-400 font-semibold uppercase">
@@ -521,7 +535,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                               </span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] font-mono font-bold text-white" style={{ color: catColor }}>
+                              <span className="text-[11px] font-mono font-bold text-white" style={{ color: sliceColor }}>
                                 {pct}%
                               </span>
                               <button
@@ -545,8 +559,8 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                               onChange={(e) => handlePercentageChange(wIdx, name, parseInt(e.target.value, 10))}
                               className="flex-1 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
                               style={{
-                                accentColor: catColor,
-                                backgroundImage: `linear-gradient(to right, ${catColor} ${pct}%, #1e293b ${pct}%)`
+                                accentColor: sliceColor,
+                                backgroundImage: `linear-gradient(to right, ${sliceColor} ${pct}%, #1e293b ${pct}%)`
                               }}
                             />
                             <span className="text-[9px] text-slate-500">100%</span>
