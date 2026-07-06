@@ -190,9 +190,8 @@ export function updateMarkdownArchetypes(currentMarkdown: string, wheels: Archet
       .filter(([_, pct]) => pct > 0)
       .map(([name, pct]) => `* **${name}**: ${pct}%`);
       
-    if (lines.length === 0) return '';
-    return `### Arquetipos Seleccionados: ${wheel.target.trim()}\n${lines.join('\n')}`;
-  }).filter(Boolean);
+    return `### Arquetipos Seleccionados: ${wheel.target.trim()}\n${lines.join('\n')}`.trim();
+  });
   
   if (wheelBlocks.length === 0) {
     return cleanText;
