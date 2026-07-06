@@ -216,12 +216,12 @@ function PresentationArchetypeWheel({ content, isDarkMode = true }: { content: s
   const textR = 215;
 
   return (
-    <div className="w-full flex flex-col md:flex-row items-center justify-center gap-8 select-none">
+    <div className="w-full flex flex-col items-center justify-center gap-12 select-none">
       {wheels.map((wheel, wIdx) => {
         const selected = wheel.selected;
         return (
-          <div key={wIdx} className="flex flex-col items-center gap-3 w-full max-w-[280px]">
-            <h4 className={`text-xs font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+          <div key={wIdx} className="flex flex-col items-center gap-4 w-full max-w-[450px]">
+            <h4 className={`text-base font-bold uppercase tracking-wider ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`}>
               Público: {wheel.target}
             </h4>
             <svg viewBox="-100 -50 700 600" className="w-full h-auto">
