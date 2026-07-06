@@ -280,6 +280,28 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
 
   const elegido = candidates.find(c => c.status === 'elegido');
 
+  // Sort candidates: Chosen (elegido) first, then Candidate (candidato) sorted by score/name, then Discarded (descartado)
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    const statusOrder = { elegido: 1, candidato: 2, descartado: 3 };
+    const priorityA = statusOrder[a.status] ?? 99;
+    const priorityB = statusOrder[b.status] ?? 99;
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+    
+    // Sort within status by AI overallScore descending
+    const { analysis: analysisA } = splitNamingRationale(a.rationale_md);
+    const { analysis: analysisB } = splitNamingRationale(b.rationale_md);
+    const scoreA = analysisA?.overallScore ?? 0;
+    const scoreB = analysisB?.overallScore ?? 0;
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+    
+    // Secondary fallback: alphabetical
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <div className="flex flex-col rounded-lg border border-slate-200 bg-white">
       {/* Header */}
@@ -366,7 +388,7 @@ No incluyas explicaciones previas ni posteriores, ni bloques de formato markdown
               </tr>
             </thead>
             <tbody>
-              {candidates.map(candidate => {
+              {sortedCandidates.map(candidate => {
                 const config = statusConfig[candidate.status];
                 const { userRationale, analysis } = splitNamingRationale(candidate.rationale_md);
                 const isExpanded = expandedId === candidate.id;

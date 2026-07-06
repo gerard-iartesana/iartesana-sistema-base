@@ -57,11 +57,33 @@ export function compileBlock3Content(rawMarkdown: string, candidates: MinimalNam
   let md = (rawMarkdown || '').trim();
   if (candidates.length === 0) return md;
 
+  // Sort candidates: Chosen (elegido) first, then Candidate (candidato) sorted by score/name, then Discarded (descartado)
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    const statusOrder = { elegido: 1, candidato: 2, descartado: 3 };
+    const priorityA = statusOrder[a.status] ?? 99;
+    const priorityB = statusOrder[b.status] ?? 99;
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+    
+    // Sort within status by AI overallScore descending
+    const { analysis: analysisA } = splitNamingRationale(a.rationale_md);
+    const { analysis: analysisB } = splitNamingRationale(b.rationale_md);
+    const scoreA = analysisA?.overallScore ?? 0;
+    const scoreB = analysisB?.overallScore ?? 0;
+    if (scoreA !== scoreB) {
+      return scoreB - scoreA;
+    }
+    
+    // Secondary fallback: alphabetical
+    return a.name.localeCompare(b.name);
+  });
+
   let tableMd = `\n\n### Tabla de Candidatos de Naming\n\n`;
   tableMd += `| Nombre | Estado | Notas / Razón de Veto |\n`;
   tableMd += `|---|---|---|\n`;
 
-  for (const c of candidates) {
+  for (const c of sortedCandidates) {
     const { userRationale, analysis } = splitNamingRationale(c.rationale_md);
     
     let notes = userRationale || '—';
