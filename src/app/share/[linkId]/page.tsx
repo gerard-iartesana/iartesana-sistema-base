@@ -18,7 +18,7 @@ import { parseVoiceTensions, splitBlock5Content } from '@/lib/utils/voice-conten
 import { parseVerbalIdentity, splitBlock6Content } from '@/lib/utils/verbal-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
 import ReactMarkdown from 'react-markdown';
-import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes } from '@/components/blocks/archetype-lab';
+import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes, parseArchetypeWheels, cleanBlock4Content } from '@/components/blocks/archetype-lab';
 import { PresentationViewer } from '@/components/export/presentation';
 
 const stageIcons: Record<string, React.ComponentType<any>> = {
@@ -200,12 +200,12 @@ const LiRenderer = ({ children, ...props }: any) => {
     );
   }
   return <li {...props}>{children}</li>;
-};
+}
 
 function SharePageArchetypeWheel({ content }: { content: string }) {
   console.log('[SharePageArchetypeWheel] content:', JSON.stringify(content));
-  const selected = parseArchetypes(content);
-  console.log('[SharePageArchetypeWheel] selected:', selected);
+  const wheels = parseArchetypeWheels(content);
+  console.log('[SharePageArchetypeWheel] wheels:', wheels);
 
   const cx = 250;
   const cy = 250;
@@ -214,106 +214,116 @@ function SharePageArchetypeWheel({ content }: { content: string }) {
   const textR = 215;
 
   return (
-    <div className="w-full flex flex-col items-center select-none">
-      <svg viewBox="-100 -50 700 600" className="w-full max-w-[560px] h-auto">
-        {/* Outer Category Labels */}
-        <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Cambio</text>
-        <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase">Estabilidad</text>
-        
-        <text
-          x={cx + r + 25}
-          y={cy}
-          textAnchor="middle"
-          className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase"
-          transform={`rotate(90, ${cx + r + 25}, ${cy})`}
-        >
-          Colectividad
-        </text>
-        <text
-          x={cx - r - 25}
-          y={cy}
-          textAnchor="middle"
-          className="text-[9px] font-bold tracking-widest fill-slate-600 opacity-40 uppercase"
-          transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
-        >
-          Individualismo
-        </text>
-
-        {/* Render the 12 sectors */}
-        {ARCHETYPES.map((arc, i) => {
-          const startAngle = ((arc.angleStart - 90) * Math.PI) / 180;
-          const endAngle = ((arc.angleEnd - 90) * Math.PI) / 180;
-          const midAngle = startAngle + (endAngle - startAngle) / 2;
-
-          const x1 = cx + r * Math.cos(startAngle);
-          const y1 = cy + r * Math.sin(startAngle);
-          const x2 = cx + r * Math.cos(endAngle);
-          const y2 = cy + r * Math.sin(endAngle);
-
-          const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
-
-          const ix = cx + iconR * Math.cos(midAngle);
-          const iy = cy + iconR * Math.sin(midAngle);
-
-          const tx = cx + textR * Math.cos(midAngle);
-          const ty = cy + textR * Math.sin(midAngle);
-
-          let textAnchor: 'inherit' | 'end' | 'middle' | 'start' = 'middle';
-          const cosValue = Math.cos(midAngle);
-          if (cosValue > 0.2) textAnchor = 'start';
-          else if (cosValue < -0.2) textAnchor = 'end';
-
-          const isSelected = selected[arc.name] !== undefined;
-          const percentage = selected[arc.name] || 0;
-          const catColor = CATEGORY_COLORS[arc.category];
-
-          return (
-            <g key={arc.name}>
-              {/* Slice Path */}
-              <path
-                d={pathData}
-                fill={isSelected ? catColor : '#1d1d21'}
-                fillOpacity={isSelected ? 0.3 + 0.7 * (percentage / 100) : 0.4}
-                stroke="#0f0f11"
-                strokeWidth="2.5"
-              />
-
-              {/* Icon */}
-              <g
-                transform={`translate(${ix - 12}, ${iy - 12})`}
-                className={isSelected ? 'text-white' : 'text-slate-600'}
-              >
-                {ICON_PATHS[arc.icon]}
-              </g>
-
-              {/* Text label */}
+    <div className="w-full flex flex-col md:flex-row items-center justify-center gap-8 select-none">
+      {wheels.map((wheel, wIdx) => {
+        const selected = wheel.selected;
+        return (
+          <div key={wIdx} className="flex flex-col items-center gap-3 w-full max-w-[280px]">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-350">
+              Público: {wheel.target}
+            </h4>
+            <svg viewBox="-100 -50 700 600" className="w-full h-auto">
+              {/* Outer Category Labels */}
+              <text x={cx} y={cy - r - 25} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-650 opacity-40 uppercase">Cambio</text>
+              <text x={cx} y={cy + r + 32} textAnchor="middle" className="text-[9px] font-bold tracking-widest fill-slate-655 opacity-40 uppercase">Estabilidad</text>
+              
               <text
-                x={tx}
-                y={ty}
-                textAnchor={textAnchor}
-                fill={isSelected ? '#ffffff' : '#9ca3af'}
-                className={`transition-all duration-300 ${
-                  isSelected 
-                    ? 'text-[22px] font-bold' 
-                    : 'text-[12px] font-medium'
-                }`}
+                x={cx + r + 25}
+                y={cy}
+                textAnchor="middle"
+                className="text-[9px] font-bold tracking-widest fill-slate-650 opacity-40 uppercase"
+                transform={`rotate(90, ${cx + r + 25}, ${cy})`}
               >
-                <tspan x={tx} dy="0">
-                  {arc.name.replace('La ', '')}
-                </tspan>
-                {isSelected && (
-                  <tspan x={tx} dy="22" fill={catColor} className="font-mono font-bold text-[17px]">
-                    {percentage}%
-                  </tspan>
-                )}
+                Colectividad
               </text>
-            </g>
-          );
-        })}
+              <text
+                x={cx - r - 25}
+                y={cy}
+                textAnchor="middle"
+                className="text-[9px] font-bold tracking-widest fill-slate-650 opacity-40 uppercase"
+                transform={`rotate(-90, ${cx - r - 25}, ${cy})`}
+              >
+                Individualismo
+              </text>
 
-        {/* Inner center ring */}
-        <circle cx={cx} cy={cy} r="25" fill="#0f0f11" stroke="#2a2a2f" strokeWidth="1" />
-      </svg>
+              {/* Render the 12 sectors */}
+              {ARCHETYPES.map((arc, i) => {
+                const startAngle = ((arc.angleStart - 90) * Math.PI) / 180;
+                const endAngle = ((arc.angleEnd - 90) * Math.PI) / 180;
+                const midAngle = startAngle + (endAngle - startAngle) / 2;
+
+                const x1 = cx + r * Math.cos(startAngle);
+                const y1 = cy + r * Math.sin(startAngle);
+                const x2 = cx + r * Math.cos(endAngle);
+                const y2 = cy + r * Math.sin(endAngle);
+
+                const pathData = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2} Z`;
+
+                const ix = cx + iconR * Math.cos(midAngle);
+                const iy = cy + iconR * Math.sin(midAngle);
+
+                const tx = cx + textR * Math.cos(midAngle);
+                const ty = cy + textR * Math.sin(midAngle);
+
+                let textAnchor: 'inherit' | 'end' | 'middle' | 'start' = 'middle';
+                const cosValue = Math.cos(midAngle);
+                if (cosValue > 0.2) textAnchor = 'start';
+                else if (cosValue < -0.2) textAnchor = 'end';
+
+                const isSelected = selected[arc.name] !== undefined;
+                const percentage = selected[arc.name] || 0;
+                const catColor = CATEGORY_COLORS[arc.category];
+
+                return (
+                  <g key={arc.name}>
+                    {/* Slice Path */}
+                    <path
+                      d={pathData}
+                      fill={isSelected ? catColor : '#1d1d21'}
+                      fillOpacity={isSelected ? 0.3 + 0.7 * (percentage / 100) : 0.4}
+                      stroke="#0f0f11"
+                      strokeWidth="2.5"
+                    />
+
+                    {/* Icon */}
+                    <g
+                      transform={`translate(${ix - 12}, ${iy - 12})`}
+                      className={isSelected ? 'text-white' : 'text-slate-600'}
+                    >
+                      {ICON_PATHS[arc.icon]}
+                    </g>
+
+                    {/* Text label */}
+                    <text
+                      x={tx}
+                      y={ty}
+                      textAnchor={textAnchor}
+                      fill={isSelected ? '#ffffff' : '#9ca3af'}
+                      className={`transition-all duration-300 ${
+                        isSelected 
+                          ? 'text-[22px] font-bold' 
+                          : 'text-[12px] font-medium'
+                      }`}
+                    >
+                      <tspan x={tx} dy="0">
+                        {arc.name.replace('La ', '')}
+                      </tspan>
+                      {isSelected && (
+                        <tspan x={tx} dy="22" fill={catColor} className="font-mono font-bold text-[17px]">
+                          {percentage}%
+                        </tspan>
+                      )}
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Inner center ring */}
+              <circle cx={cx} cy={cy} r="25" fill="#0f0f11" stroke="#2a2a2f" strokeWidth="1" />
+            </svg>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -989,13 +999,7 @@ export default function SharePage() {
                         );
                       }
                       if (def.id === 4) {
-                        const cleanContent = block?.content_md
-                          ? block.content_md
-                            .replace(/^### Arquetipos Seleccionados\s*\n?/gi, '')
-                            .replace(/^(?:[\*\-]\s*)?\*\*(La\s+[^*]+?)\*\*\:\s*\d+\s*%\s*\n?/gim, '')
-                            .replace(/^---\s*\n?/gi, '')
-                            .trim()
-                          : '';
+                        const cleanContent = block?.content_md ? cleanBlock4Content(block.content_md) : '';
 
                         return (
                           <div className="space-y-4">
