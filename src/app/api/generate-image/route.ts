@@ -19,14 +19,15 @@ Segment Description: "${text || ''}"
 
 Your task is to describe a single, simple, concrete visual metaphor or action in English that represents this segment.
 Avoid abstract concepts. Choose concrete physical objects or humans doing a clear, simple action.
+Keep the description focused solely on the main subject. Do NOT include any background elements, landscapes, surroundings, or decorative context.
 Examples:
-- "La familia que descubre" -> "parents silhouette holding hands with a child silhouette, studying a map together"
-- "La pareja de temporada media" -> "a couple silhouette standing together holding a single suitcase"
-- "El repetidor" -> "a person silhouette walking through an open door carrying a key"
+- "La familia que descubre" -> "parents silhouette holding hands with a child silhouette"
+- "La pareja de temporada media" -> "a couple silhouette standing together"
+- "El repetidor" -> "a key silhouette"
 
 Rules for the description:
-- Keep it extremely short (under 12 words).
-- Describe only the subject and their immediate concrete objects.
+- Keep it extremely short (under 8 words).
+- Describe only the main subject. No background or scenery.
 - Do NOT include any style keywords (like outline, background, color).
 - Speak only in English.
 - Output ONLY the description. No introduction, no quotes, no markdown.`;
@@ -50,7 +51,7 @@ Rules for the description:
     }
 
     // Phase 2: Compile the final strict style prompt and call gemini-2.5-flash-image
-    const finalPrompt = `extremely simple flat minimalist icon, bold conceptual pictogram style, thick clean black stroke on solid white background, no detail, no decoration, no gradients, no shading, no colors, raw graphic outline, subject: ${visualSubject}. CRITICAL: Do NOT include any text, letters, words, writing, numbers, labels, or characters inside the image. The symbol must be standalone, without being enclosed inside a circle, square, frame, shield, border, or any enclosing shape. Zero margin around the symbol. Zero padding. The pictogram lines must touch the very top, bottom, left, and right outer edges of the square frame, occupying 100% of the image space.`;
+    const finalPrompt = `extremely simple and clean flat minimalist icon, bold conceptual pictogram style, thick clean black stroke on solid white background, no detail, no decoration, no gradients, no shading, no colors, raw graphic outline, subject: ${visualSubject}. CRITICAL: Do NOT include any text, letters, words, writing, numbers, labels, or characters inside the image. The symbol must be standalone, floating in space on solid white background. Do NOT enclose inside a circle, square, frame, shield, border, or any enclosing shape. Do NOT add any outline border or box around the image edges. The canvas boundary must remain solid pure white.`;
 
     const imageUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${geminiKey.trim()}`;
     const imgResponse = await fetch(imageUrl, {
