@@ -101,13 +101,6 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
               <Check className="h-3 w-3" /> ¡Guardado!
             </span>
           )}
-          <button
-            onClick={handleAddModule}
-            className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-violet-750 transition-colors cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Añadir Público B2B</span>
-          </button>
         </div>
       </div>
 
@@ -173,6 +166,15 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
               </div>
             );
           })}
+          <div className="pt-4 flex justify-center border-t border-[#2a2a2f]/50">
+            <button
+              onClick={handleAddModule}
+              className="flex items-center justify-center gap-2 w-full md:w-auto rounded-xl border border-dashed border-violet-500/30 hover:border-violet-500/60 bg-violet-500/5 hover:bg-violet-500/10 px-8 py-3.5 text-xs font-bold text-violet-400 hover:text-violet-300 transition-all cursor-pointer select-none"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Añadir Público B2B</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
