@@ -48,6 +48,8 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
       const localApiKey = typeof window !== 'undefined' ? localStorage.getItem('pollinations_api_key') || '' : '';
 
       let url = '';
+      const headers: Record<string, string> = {};
+
       if (localModel === 'nanobanana') {
         if (!localApiKey.trim()) {
           alert('Para usar el modelo Nanobanana, por favor introduce tu Clave API de Pollinations en la configuración global (botón en la esquina inferior izquierda del menú).');
@@ -56,11 +58,12 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
           return;
         }
         url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=nanobanana&key=${encodeURIComponent(localApiKey.trim())}`;
+        headers['Authorization'] = `Bearer ${localApiKey.trim()}`;
       } else {
         url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=flux`;
       }
       
-      const response = await fetch(url);
+      const response = await fetch(url, { headers });
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Unauthorized: La Clave API es incorrecta o inválida.');
