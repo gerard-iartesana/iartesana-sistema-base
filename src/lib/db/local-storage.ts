@@ -55,7 +55,12 @@ async function getCurrentUser(): Promise<Member | null> {
         .select()
         .single();
 
-      if (!updateError && updatedMember) {
+      if (updateError) {
+        console.error('[db] Failed to update member auth_user_id:', updateError);
+        throw new Error(`Error al vincular el usuario: ${updateError.message} (Código: ${updateError.code})`);
+      }
+
+      if (updatedMember) {
         return {
           ...updatedMember,
           avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
@@ -80,7 +85,7 @@ async function getCurrentUser(): Promise<Member | null> {
 
   if (error) {
     console.error('[db] Failed to create member:', error);
-    return null;
+    throw new Error(`Error al registrar el usuario: ${error.message} (Código: ${error.code})`);
   }
   return {
     ...newMember,

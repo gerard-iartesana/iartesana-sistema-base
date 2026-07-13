@@ -52,8 +52,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         if (!cancelled) {
           setUser(currentUser);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('[auth] Failed to check session:', error);
+        alert(`Error de autenticación: ${error.message || error}`);
       } finally {
         if (!cancelled) {
           setIsLoading(false);
@@ -66,9 +67,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          const member = await db.getCurrentUser();
-          setUser(member);
-          setIsLoading(false);
+          try {
+            const member = await db.getCurrentUser();
+            setUser(member);
+          } catch (error: any) {
+            console.error('[auth] SIGNED_IN get member error:', error);
+            alert(`Error de sesión: ${error.message || error}`);
+          } finally {
+            setIsLoading(false);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setIsLoading(false);
