@@ -11,8 +11,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Call the official Google Gemini 3.5 Flash API
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey.trim()}`;
+    // Call the official Google Gemini 2.5 Flash Image API
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${geminiKey.trim()}`;
 
     const response = await fetch(url, {
       method: 'POST',
