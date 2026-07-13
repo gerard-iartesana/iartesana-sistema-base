@@ -40,7 +40,7 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
     setGeneratingIndex(index);
     setSavingState('saving');
       try {
-      const prompt = `extremely simple minimalist line art icon, vector style, flat black stroke on pure white background, no gradients, no shading, no colors, clean outline, topic: ${mod.title} - ${mod.text.slice(0, 80)}. CRITICAL: Do NOT include any text, letters, words, writing, numbers, labels, or characters inside the image. The icon must fill the entire canvas frame, fit closely to the borders, and maximize its size with minimal padding around the symbol. Only a clean visual icon.`;
+      const prompt = `extremely simple bold minimalist line art pictogram, vector style, thick flat black stroke on pure white background, no gradients, no shading, no colors, clean outline, topic: ${mod.title} - ${mod.text.slice(0, 80)}. CRITICAL: Do NOT include any text, letters, words, writing, numbers, labels, or characters inside the image. The pictogram must be standalone, without being enclosed inside a circle, square, frame, shield, border, or any enclosing shape. The symbol must fill the entire canvas frame, fit closely to the borders, and maximize its size with minimal padding. Only a clean visual pictogram.`;
       
       const geminiKey = typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key') || '' : '';
 
