@@ -125,7 +125,7 @@ async function updateMemberPermissions(
 
   if (error) {
     console.error('[db] Error updating member permissions:', error);
-    return false;
+    throw new Error(error.message);
   }
   
   // Log the permission change
@@ -893,6 +893,36 @@ async function setGlobalSetting(key: string, value: string): Promise<boolean> {
   }
 }
 
+async function deleteMember(id: string): Promise<boolean> {
+  await checkWritePermission();
+  
+  const currentUser = await getCurrentUser();
+  if (currentUser?.id === id) {
+    throw new Error('No puedes eliminar tu propio usuario.');
+  }
+
+  const { data: member } = await supabase
+    .from('sb_members')
+    .select('email')
+    .eq('id', id)
+    .single();
+
+  const { error } = await supabase
+    .from('sb_members')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('[db] Error deleting member:', error);
+    throw new Error(error.message);
+  }
+
+  if (member) {
+    await createActivityLog('delete_member', `Eliminó al usuario ${member.email}`);
+  }
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Exported db object — same interface as the old localStorage layer
 // ---------------------------------------------------------------------------
@@ -904,6 +934,7 @@ export const db = {
   isAuthenticated,
   getMembers,
   updateMemberPermissions,
+  deleteMember,
   getActivityLogs,
   createActivityLog,
   getGlobalSetting,

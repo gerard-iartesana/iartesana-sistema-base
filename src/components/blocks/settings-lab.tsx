@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Users, Shield, Key, Eye, EyeOff, Save, Check, RefreshCw, Activity, CheckSquare, Square } from 'lucide-react';
+import { Settings, Users, Shield, Key, Eye, EyeOff, Save, Check, RefreshCw, Activity, CheckSquare, Square, Trash2, X } from 'lucide-react';
 import { db } from '@/lib/db/local-storage';
 import type { Member, Brand, ActivityLog, MemberRole } from '@/lib/db/types';
 
@@ -19,9 +19,9 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
   const [showKey, setShowKey] = useState(false);
   const [activeTab, setActiveTab] = useState<'ai' | 'users' | 'activity'>('ai');
   
-  // Member edit state helper
   const [savingMemberId, setSavingMemberId] = useState<string | null>(null);
   const [memberEdits, setMemberEdits] = useState<Record<string, { role: MemberRole; allowed_brands: string[]; can_write: boolean }>>({});
+  const [deleteConfirmMemberId, setDeleteConfirmMemberId] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -103,30 +103,54 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
 
     setSavingMemberId(memberId);
     try {
-      const ok = await db.updateMemberPermissions(
+      await db.updateMemberPermissions(
         memberId,
         edits.role,
         edits.allowed_brands,
         edits.can_write
       );
-      if (ok) {
-        // Refresh local member list
-        const updatedMembers = await db.getMembers();
-        setMembers(updatedMembers);
-        
-        // Refresh activity log
-        const logsRes = await db.getActivityLogs();
-        setLogs(logsRes);
-        
-        if (onUpdate) onUpdate();
-      } else {
-        alert('Error al actualizar permisos.');
-      }
-    } catch (e) {
+      
+      // Refresh local member list
+      const updatedMembers = await db.getMembers();
+      setMembers(updatedMembers);
+      
+      // Refresh activity log
+      const logsRes = await db.getActivityLogs();
+      setLogs(logsRes);
+      
+      if (onUpdate) onUpdate();
+      alert('Permisos actualizados correctamente.');
+    } catch (e: any) {
       console.error(e);
-      alert('Error al actualizar permisos.');
+      alert('Error al actualizar permisos: ' + (e.message || e));
     } finally {
       setSavingMemberId(null);
+    }
+  };
+
+  const handleDeleteMember = async (memberId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar este usuario del sistema de forma permanente?')) {
+      setDeleteConfirmMemberId(null);
+      return;
+    }
+
+    try {
+      await db.deleteMember(memberId);
+      setDeleteConfirmMemberId(null);
+      
+      // Refresh local member list
+      const updatedMembers = await db.getMembers();
+      setMembers(updatedMembers);
+      
+      // Refresh activity log
+      const logsRes = await db.getActivityLogs();
+      setLogs(logsRes);
+      
+      if (onUpdate) onUpdate();
+      alert('Usuario eliminado correctamente.');
+    } catch (e: any) {
+      console.error(e);
+      alert('Error al eliminar usuario: ' + (e.message || e));
     }
   };
 
@@ -378,18 +402,48 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
 
                         {/* Actions */}
                         <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => handleSaveMemberPermissions(member.id)}
-                            disabled={savingMemberId === member.id}
-                            className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-900 text-white rounded px-2.5 py-1 text-[11px] font-bold transition disabled:opacity-50"
-                          >
-                            {savingMemberId === member.id ? (
-                              <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                            ) : (
-                              <Check className="h-3.5 w-3.5" />
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleSaveMemberPermissions(member.id)}
+                              disabled={savingMemberId === member.id}
+                              className="inline-flex items-center gap-1 bg-slate-800 hover:bg-slate-900 text-white rounded px-2.5 py-1 text-[11px] font-bold transition disabled:opacity-50 cursor-pointer"
+                            >
+                              {savingMemberId === member.id ? (
+                                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                              Aplicar
+                            </button>
+
+                            {!isCurrentUser && (
+                              deleteConfirmMemberId === member.id ? (
+                                <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 select-none">
+                                  <span className="text-[10px] text-red-600 font-semibold mr-1">¿Eliminar?</span>
+                                  <button
+                                    onClick={() => handleDeleteMember(member.id)}
+                                    className="rounded bg-red-600 px-2 py-0.5 text-[9px] font-bold text-white hover:bg-red-700 cursor-pointer"
+                                  >
+                                    Sí
+                                  </button>
+                                  <button
+                                    onClick={() => setDeleteConfirmMemberId(null)}
+                                    className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setDeleteConfirmMemberId(member.id)}
+                                  className="inline-flex items-center justify-center p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition cursor-pointer"
+                                  title="Eliminar usuario"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )
                             )}
-                            Aplicar
-                          </button>
+                          </div>
                         </td>
                       </tr>
                     );
