@@ -77,8 +77,6 @@ async function getCurrentUser(): Promise<Member | null> {
       email: session.user.email || '',
       name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
       role: 'editor',
-      can_write: true, // Default to true: "permisos de edición pero de ninguna marca visible"
-      allowed_brands: [],
     })
     .select()
     .single();
