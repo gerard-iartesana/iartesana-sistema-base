@@ -7,6 +7,7 @@ import type { KnowledgeItem, KnowledgeKind } from '@/lib/db/types';
 
 interface KnowledgeLibraryProps {
   brandId: string;
+  onUpdate?: () => void;
 }
 
 const KIND_CONFIG: Record<KnowledgeKind, { label: string; badgeClass: string }> = {
@@ -18,7 +19,7 @@ const KIND_CONFIG: Record<KnowledgeKind, { label: string; badgeClass: string }> 
 
 const ALL_KINDS: KnowledgeKind[] = ['recomendacion', 'faq', 'politica', 'normativa'];
 
-export function KnowledgeLibrary({ brandId }: KnowledgeLibraryProps) {
+export function KnowledgeLibrary({ brandId, onUpdate }: KnowledgeLibraryProps) {
   const [items, setItems] = useState<KnowledgeItem[]>([]);
   const [filterKind, setFilterKind] = useState<KnowledgeKind | 'all'>('all');
   const [search, setSearch] = useState('');
@@ -32,10 +33,29 @@ export function KnowledgeLibrary({ brandId }: KnowledgeLibraryProps) {
     try {
       const data = await db.getKnowledgeItems(brandId);
       setItems(data);
+      return data;
     } catch (error) {
       console.error('Failed to load knowledge items:', error);
+      return [];
     }
   }, [brandId]);
+
+  const syncBlock10Content = async (itemsList: KnowledgeItem[]) => {
+    try {
+      let itemsMd = `\n\n### Elementos de la Biblioteca\n\n`;
+      for (const item of itemsList) {
+        const verifiedLabel = item.verified ? ' (Verificado)' : ' (Pendiente)';
+        const audienceLabel = item.audience ? ` - *Público:* ${item.audience}` : '';
+        itemsMd += `#### ${item.title} [${item.kind.toUpperCase()}]${verifiedLabel}${audienceLabel}\n\n${item.body_md}\n\n`;
+      }
+      await db.updateBrandBlock(brandId, 10, {
+        content_md: itemsMd.trim(),
+      });
+      onUpdate?.();
+    } catch (err) {
+      console.error('[KnowledgeLibrary] Failed to sync block content:', err);
+    }
+  };
 
   useEffect(() => {
     load();
@@ -61,7 +81,8 @@ export function KnowledgeLibrary({ brandId }: KnowledgeLibraryProps) {
     });
     setNewItem({ title: '', kind: 'recomendacion', body_md: '', audience: '' });
     setShowAddForm(false);
-    await load();
+    const updated = await load();
+    await syncBlock10Content(updated);
   };
 
   const handleExpand = (id: string) => {
@@ -76,19 +97,22 @@ export function KnowledgeLibrary({ brandId }: KnowledgeLibraryProps) {
 
   const handleSaveBody = async (id: string) => {
     await db.updateKnowledgeItem(id, { body_md: editBody });
-    await load();
+    const updated = await load();
+    await syncBlock10Content(updated);
   };
 
   const handleToggleVerified = async (id: string, current: boolean) => {
     await db.updateKnowledgeItem(id, { verified: !current });
-    await load();
+    const updated = await load();
+    await syncBlock10Content(updated);
   };
 
   const handleDelete = async (id: string) => {
     await db.deleteKnowledgeItem(id);
     setDeleteConfirm(null);
     if (expandedId === id) setExpandedId(null);
-    await load();
+    const updated = await load();
+    await syncBlock10Content(updated);
   };
 
   return (

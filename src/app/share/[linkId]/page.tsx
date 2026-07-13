@@ -17,6 +17,8 @@ import {
 import { parseVoiceTensions, splitBlock5Content } from '@/lib/utils/voice-content';
 import { parseVerbalIdentity, splitBlock6Content } from '@/lib/utils/verbal-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
+import { parseSegmentationContent } from '@/lib/utils/segmentation-content';
+import { parseB2BContent } from '@/lib/utils/b2b-content';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes, parseArchetypeWheels, cleanBlock4Content, getSliceColor } from '@/components/blocks/archetype-lab';
 import { PresentationViewer } from '@/components/export/presentation';
@@ -200,6 +202,98 @@ const LiRenderer = ({ children, ...props }: any) => {
     );
   }
   return <li {...props}>{children}</li>;
+}
+
+function SharePageSegmentation({ content }: { content: string }) {
+  const { introMarkdown, modules } = parseSegmentationContent(content);
+
+  if (modules.length === 0) {
+    return <p className="text-slate-400 italic text-sm">Sin públicos segmentados.</p>;
+  }
+
+  return (
+    <div className="space-y-12 w-full mt-4">
+      {introMarkdown && (
+        <div className="markdown-preview text-slate-700 leading-relaxed text-sm font-sans mb-6">
+          <ReactMarkdown>{introMarkdown}</ReactMarkdown>
+        </div>
+      )}
+      <div className="space-y-10 divide-y divide-slate-200">
+        {modules.map((mod, idx) => {
+          const isEven = idx % 2 === 0;
+          const textBlock = (
+            <div className="flex-1 space-y-3">
+              <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-100 text-[10px] font-mono font-bold text-violet-600">
+                  {idx + 1}
+                </span>
+                {mod.title}
+              </h2>
+              <div className="text-slate-655 leading-relaxed text-sm font-sans whitespace-pre-wrap">
+                <ReactMarkdown>{mod.text}</ReactMarkdown>
+              </div>
+            </div>
+          );
+
+          const imageBlock = mod.image ? (
+            <div className="w-full md:w-[220px] shrink-0 flex items-center justify-center select-none bg-white rounded-lg border border-slate-200 p-2 aspect-square max-h-[220px]">
+              <img 
+                src={mod.image} 
+                alt={mod.title} 
+                className="w-full h-auto max-h-full object-contain mix-blend-multiply opacity-75"
+                loading="lazy"
+              />
+            </div>
+          ) : null;
+
+          return (
+            <div 
+              key={idx} 
+              className={`flex flex-col md:flex-row gap-6 items-center pt-8 first:pt-0 ${
+                isEven || !imageBlock ? '' : 'md:flex-row-reverse'
+              }`}
+            >
+              {textBlock}
+              {imageBlock}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SharePageB2B({ content }: { content: string }) {
+  const { introMarkdown, modules } = parseB2BContent(content);
+
+  if (modules.length === 0) {
+    return <p className="text-slate-400 italic text-sm">Sin públicos B2B configurados.</p>;
+  }
+
+  return (
+    <div className="space-y-8 w-full mt-4">
+      {introMarkdown && (
+        <div className="markdown-preview text-slate-700 leading-relaxed text-sm font-sans mb-6">
+          <ReactMarkdown>{introMarkdown}</ReactMarkdown>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {modules.map((mod, idx) => (
+          <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition-colors">
+            <div className="flex items-center gap-2.5 mb-3 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-mono font-bold text-blue-600">
+                {idx + 1}
+              </span>
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-widest leading-none mt-0.5">{mod.title}</span>
+            </div>
+            <div className="text-sm text-slate-655 leading-relaxed font-sans whitespace-pre-wrap">
+              <ReactMarkdown>{mod.text}</ReactMarkdown>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function SharePageArchetypeWheel({ content }: { content: string }) {
@@ -1179,6 +1273,12 @@ export default function SharePage() {
                             )}
                           </div>
                         );
+                      }
+                      if (def.id === 8) {
+                        return <SharePageSegmentation content={block?.content_md || ''} />;
+                      }
+                      if (def.id === 9) {
+                        return <SharePageB2B content={block?.content_md || ''} />;
                       }
                       if (def.id === 10) {
                         return <SharePageKnowledgeLibrary items={knowledgeItems} />;

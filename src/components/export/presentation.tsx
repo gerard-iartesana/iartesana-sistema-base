@@ -15,6 +15,8 @@ import { BLOCK_DEFINITIONS, STAGES } from '@/lib/data/block-definitions';
 import type { BrandBlock, NamingCandidate, Rule, KnowledgeItem, SlideComment } from '@/lib/db/types';
 import { splitNamingRationale, splitBlock3Content } from '@/lib/utils/naming-content';
 import { parseValueProposition, parseValuesList } from '@/lib/utils/valprop-content';
+import { parseSegmentationContent } from '@/lib/utils/segmentation-content';
+import { parseB2BContent } from '@/lib/utils/b2b-content';
 import ReactMarkdown from 'react-markdown';
 import { ARCHETYPES, CATEGORY_COLORS, ICON_PATHS, parseArchetypes, parseArchetypeWheels, cleanBlock4Content, getSliceColor } from '@/components/blocks/archetype-lab';
 import { getClosestColorName } from '@/components/blocks/visual-lab';
@@ -796,6 +798,106 @@ function PresentationRules({ rules, kind }: { rules: Rule[]; kind: 'linea_roja' 
   );
 }
 
+
+function PresentationSegmentation({ content, isDarkMode = true }: { content: string; isDarkMode?: boolean }) {
+  const { introMarkdown, modules } = parseSegmentationContent(content);
+
+  if (modules.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-lg text-slate-450 italic">Sin públicos segmentados. Configura módulos en el editor.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-12 w-full mt-4">
+      {introMarkdown && (
+        <div className="markdown-preview max-w-none text-slate-350 leading-relaxed text-sm font-sans mb-6">
+          <ReactMarkdown>{introMarkdown}</ReactMarkdown>
+        </div>
+      )}
+      <div className="space-y-10 divide-y divide-slate-800/40">
+        {modules.map((mod, idx) => {
+          const isEven = idx % 2 === 0;
+          const textBlock = (
+            <div className="flex-1 space-y-3">
+              <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-mono font-bold text-violet-400">
+                  {idx + 1}
+                </span>
+                {mod.title}
+              </h2>
+              <div className="text-slate-350 leading-relaxed text-xs font-sans whitespace-pre-wrap">
+                <ReactMarkdown>{mod.text}</ReactMarkdown>
+              </div>
+            </div>
+          );
+
+          const imageBlock = mod.image ? (
+            <div className="w-full md:w-[220px] shrink-0 flex items-center justify-center select-none bg-white rounded-lg p-2 aspect-square max-h-[220px]">
+              <img 
+                src={mod.image} 
+                alt={mod.title} 
+                className={`w-full h-auto max-h-full object-contain ${isDarkMode ? 'invert mix-blend-difference opacity-50' : 'mix-blend-multiply opacity-70'}`}
+                loading="lazy"
+              />
+            </div>
+          ) : null;
+
+          return (
+            <div 
+              key={idx} 
+              className={`flex flex-col md:flex-row gap-6 items-center pt-8 first:pt-0 ${
+                isEven || !imageBlock ? '' : 'md:flex-row-reverse'
+              }`}
+            >
+              {textBlock}
+              {imageBlock}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PresentationB2B({ content }: { content: string }) {
+  const { introMarkdown, modules } = parseB2BContent(content);
+
+  if (modules.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <p className="text-lg text-slate-455 italic font-sans">Sin públicos B2B configurados. Configura módulos en el editor.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8 w-full mt-4">
+      {introMarkdown && (
+        <div className="markdown-preview max-w-none text-slate-350 leading-relaxed text-sm font-sans mb-6">
+          <ReactMarkdown>{introMarkdown}</ReactMarkdown>
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {modules.map((mod, idx) => (
+          <div key={idx} className="bg-slate-900/30 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors">
+            <div className="flex items-center gap-2.5 mb-3 select-none">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/20 text-[10px] font-mono font-bold text-blue-400">
+                {idx + 1}
+              </span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">{mod.title}</span>
+            </div>
+            <div className="text-xs text-slate-350 leading-relaxed font-sans whitespace-pre-wrap">
+              <ReactMarkdown>{mod.text}</ReactMarkdown>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const defaultImageMap: Record<string, string> = {
   voz_escrita: '/images/verbal_voz_escrita.png',
@@ -1746,6 +1848,10 @@ export function PresentationViewer({
                   );
                 })()}
               </div>
+            ) : blockDef.id === 8 ? (
+              <PresentationSegmentation content={content} isDarkMode={isDarkMode} />
+            ) : blockDef.id === 9 ? (
+              <PresentationB2B content={content} />
             ) : blockDef.id === 10 ? (
               <PresentationKnowledgeLibrary items={knowledgeItems} />
             ) : blockDef.id === 11 ? (

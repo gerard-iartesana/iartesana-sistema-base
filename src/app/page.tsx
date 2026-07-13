@@ -8,6 +8,8 @@ import { BlockNav } from '@/components/blocks/block-nav';
 import { BlockEditor } from '@/components/blocks/block-editor';
 import { NamingLab } from '@/components/blocks/naming-lab';
 import { KnowledgeLibrary } from '@/components/blocks/knowledge-library';
+import { SegmentationLab } from '@/components/blocks/segmentation-lab';
+import { B2BLab } from '@/components/blocks/b2b-lab';
 import { RulesEditor } from '@/components/blocks/rules-editor';
 import { ArchetypeLab } from '@/components/blocks/archetype-lab';
 import { VisualLab } from '@/components/blocks/visual-lab';
@@ -321,9 +323,39 @@ export default function HomePage() {
                           />
                         </div>
                       )}
+                      {selectedBlockId === 8 && (
+                        <div className="mt-6">
+                          <SegmentationLab
+                            brandId={activeBrand.id}
+                            content_md={brandBlocks.find(b => b.block_id === 8)?.content_md || ''}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
+                        </div>
+                      )}
+                      {selectedBlockId === 9 && (
+                        <div className="mt-6">
+                          <B2BLab
+                            brandId={activeBrand.id}
+                            content_md={brandBlocks.find(b => b.block_id === 9)?.content_md || ''}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
+                        </div>
+                      )}
                       {selectedBlockId === 10 && (
                         <div className="mt-6">
-                          <KnowledgeLibrary brandId={activeBrand.id} />
+                          <KnowledgeLibrary
+                            brandId={activeBrand.id}
+                            onUpdate={() => {
+                              setEditorKey(prev => prev + 1);
+                              handleBlockUpdate();
+                            }}
+                          />
                         </div>
                       )}
                       {[11, 12, 13].includes(selectedBlockId) && (
