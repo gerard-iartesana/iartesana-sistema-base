@@ -25,13 +25,19 @@ export function BrandSelector({ blocks, markers, hideProgress = false }: BrandSe
   const [search, setSearch] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newName, setNewName] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const [localBlocks, setLocalBlocks] = useState<BrandBlock[]>([]);
   const [localMarkers, setLocalMarkers] = useState<Marker[]>([]);
 
   useEffect(() => {
-    refreshBrands();
+    async function load() {
+      await refreshBrands();
+      const user = await db.getCurrentUser();
+      setIsAdmin(user?.role === 'admin');
+    }
+    load();
   }, [refreshBrands]);
 
   useEffect(() => {
@@ -156,8 +162,8 @@ export function BrandSelector({ blocks, markers, hideProgress = false }: BrandSe
                     onClick={() => handleSelect(brand)}
                     className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
                       activeBrand?.id === brand.id
-                        ? 'bg-violet-500/20 text-white font-semibold'
-                        : 'text-slate-300 hover:text-white hover:bg-white/5'
+                        ? 'bg-violet-50 text-violet-600 font-semibold'
+                        : 'text-slate-650 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{
@@ -170,49 +176,51 @@ export function BrandSelector({ blocks, markers, hideProgress = false }: BrandSe
             </div>
 
             {/* Create new brand */}
-            <div className="border-t border-slate-100 p-2">
-              {showCreateForm ? (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Nombre de la marca"
-                    value={newName}
-                    onChange={e => setNewName(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
-                    autoFocus
-                  />
-                  {generatedSlug && (
-                    <p className="px-1 text-xs text-slate-400">
-                      Slug: <span className="font-mono text-slate-500">{generatedSlug}</span>
-                    </p>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleCreate}
-                      disabled={!newName.trim()}
-                      className="flex-1 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50"
-                    >
-                      Crear
-                    </button>
-                    <button
-                      onClick={() => { setShowCreateForm(false); setNewName(''); }}
-                      className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
-                    >
-                      Cancelar
-                    </button>
+            {isAdmin && (
+              <div className="border-t border-slate-100 p-2">
+                {showCreateForm ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      placeholder="Nombre de la marca"
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:border-violet-300 focus:ring-1 focus:ring-violet-200"
+                      autoFocus
+                    />
+                    {generatedSlug && (
+                      <p className="px-1 text-xs text-slate-400">
+                        Slug: <span className="font-mono text-slate-500">{generatedSlug}</span>
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCreate}
+                        disabled={!newName.trim()}
+                        className="flex-1 rounded-md bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50 cursor-pointer"
+                      >
+                        Crear
+                      </button>
+                      <button
+                        onClick={() => { setShowCreateForm(false); setNewName(''); }}
+                        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-violet-600 transition-colors hover:bg-violet-50"
-                >
-                  <Plus className="h-4 w-4" />
-                  Nueva marca
-                </button>
-              )}
-            </div>
+                ) : (
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-violet-600 transition-colors hover:bg-violet-50 cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Nueva marca
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

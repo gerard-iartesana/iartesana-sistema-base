@@ -188,19 +188,21 @@ export default function HomePage() {
           </div>
 
           {/* Settings Button at the bottom of the sidebar */}
-          <div className="border-t border-slate-100 mt-auto">
-            <button
-              onClick={() => setSelectedBlockId(105)}
-              className={`flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold transition-colors cursor-pointer select-none border-l-3 ${
-                selectedBlockId === 105
-                  ? 'bg-violet-50 text-violet-600 border-violet-600'
-                  : 'text-slate-500 border-transparent hover:bg-slate-50 hover:text-slate-800'
-              }`}
-            >
-              <Settings className={`h-4 w-4 shrink-0 ${selectedBlockId === 105 ? 'text-violet-600' : 'text-slate-400'}`} />
-              <span className="truncate">Configuración</span>
-            </button>
-          </div>
+          {currentUser?.role === 'admin' && (
+            <div className="border-t border-slate-100 mt-auto">
+              <button
+                onClick={() => setSelectedBlockId(105)}
+                className={`flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold transition-colors cursor-pointer select-none border-l-3 ${
+                  selectedBlockId === 105
+                    ? 'bg-violet-50 text-violet-600 border-violet-600'
+                    : 'text-slate-500 border-transparent hover:bg-slate-50 hover:text-slate-800'
+                }`}
+              >
+                <Settings className={`h-4 w-4 shrink-0 ${selectedBlockId === 105 ? 'text-violet-600' : 'text-slate-400'}`} />
+                <span className="truncate">Configuración</span>
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -277,7 +279,7 @@ export default function HomePage() {
                   {selectedBlockId === 102 && <PromptGlobal />}
                   {selectedBlockId === 103 && <LiveLink />}
                   {selectedBlockId === 104 && <Presentation />}
-                  {selectedBlockId === 105 && (
+                  {selectedBlockId === 105 && currentUser?.role === 'admin' && (
                     <SettingsLab
                       key={`settings-${editorKey}`}
                       onSaveKey={handleSaveGlobalSettings}

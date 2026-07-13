@@ -45,7 +45,9 @@ async function getCurrentUser(): Promise<Member | null> {
       auth_user_id: session.user.id,
       email: session.user.email || '',
       name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
-      role: 'admin',
+      role: 'editor',
+      can_write: false,
+      allowed_brands: [],
     })
     .select()
     .single();
