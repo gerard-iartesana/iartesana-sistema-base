@@ -23,7 +23,7 @@ import { LiveLink } from '@/components/export/live-link';
 import { Presentation } from '@/components/export/presentation';
 import { db } from '@/lib/db/local-storage';
 import { BrandBlock, Marker, Stage, AgentName } from '@/lib/db/types';
-import { LogOut, Sparkles, Clock, AlertTriangle } from 'lucide-react';
+import { LogOut, Sparkles, Clock, AlertTriangle, Settings } from 'lucide-react';
 import { getStageForBlock } from '@/lib/data/block-definitions';
 
 export default function HomePage() {
@@ -36,6 +36,27 @@ export default function HomePage() {
   const [editorKey, setEditorKey] = useState(0);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [copilotAgent, setCopilotAgent] = useState<AgentName | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [globalAiModel, setGlobalAiModel] = useState('flux');
+  const [globalApiKey, setGlobalApiKey] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedModel = localStorage.getItem('pollinations_model') || 'flux';
+      const savedKey = localStorage.getItem('pollinations_api_key') || '';
+      setGlobalAiModel(savedModel);
+      setGlobalApiKey(savedKey);
+    }
+  }, []);
+
+  const handleSaveGlobalSettings = (model: string, key: string) => {
+    setGlobalAiModel(model);
+    setGlobalApiKey(key);
+    localStorage.setItem('pollinations_model', model);
+    localStorage.setItem('pollinations_api_key', key);
+    // Trigger editor key increment to force labs to remount and read new settings
+    setEditorKey(prev => prev + 1);
+  };
 
   const loadData = async () => {
     if (!activeBrand) return;
@@ -164,6 +185,17 @@ export default function HomePage() {
                 onSelectBlock={handleSelectBlock}
                 brandBlocks={brandBlocks}
               />
+            </div>
+
+            {/* Global Settings Button at the bottom of the sidebar */}
+            <div className="px-4 py-2 border-t border-slate-100">
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer select-none"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Configuración Global</span>
+              </button>
             </div>
           </div>
         )}
@@ -395,6 +427,70 @@ export default function HomePage() {
           </div>
         )}
       </main>
+      {/* Global Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6 flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4.5 w-4.5 text-violet-600" />
+                <h3 className="text-sm font-bold text-slate-800">Configuración de Inteligencia Artificial</h3>
+              </div>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer text-xs font-semibold p-1 hover:bg-slate-50 rounded"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1 select-none">Modelo de Imagen por Defecto</label>
+                <select
+                  value={globalAiModel}
+                  onChange={(e) => handleSaveGlobalSettings(e.target.value, globalApiKey)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-750 outline-none focus:border-violet-500 cursor-pointer font-medium"
+                >
+                  <option value="flux">Flux (Gratuito, sin clave)</option>
+                  <option value="nanobanana">Nanobanana / Gemini Flash (Preciso, requiere clave)</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-600 select-none">Clave API de Pollinations</label>
+                  <a
+                    href="https://enter.pollinations.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-violet-600 hover:text-violet-500 hover:underline font-bold"
+                  >
+                    Obtener Clave Gratis ↗
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  value={globalApiKey}
+                  onChange={(e) => handleSaveGlobalSettings(globalAiModel, e.target.value)}
+                  placeholder={globalAiModel === 'flux' ? 'No requerida para Flux' : 'Pega tu clave api aquí...'}
+                  disabled={globalAiModel === 'flux'}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-500 disabled:opacity-40"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100 mt-2">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className="bg-violet-600 hover:bg-violet-750 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Cerrar y Aplicar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

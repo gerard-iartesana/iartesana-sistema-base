@@ -30,25 +30,6 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeModuleIndex, setActiveModuleIndex] = useState<number | null>(null);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
-  const [aiModel, setAiModel] = useState<string>('flux');
-  const [apiKey, setApiKey] = useState<string>('');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedModel = localStorage.getItem('pollinations_model') || 'flux';
-      const savedKey = localStorage.getItem('pollinations_api_key') || '';
-      setAiModel(savedModel);
-      setApiKey(savedKey);
-    }
-  }, []);
-
-  const handleSaveAISettings = (model: string, key: string) => {
-    setAiModel(model);
-    setApiKey(key);
-    localStorage.setItem('pollinations_model', model);
-    localStorage.setItem('pollinations_api_key', key);
-  };
-
   const handleGenerateAIImage = async (index: number) => {
     const mod = modules[index];
     if (!mod.title.trim()) {
@@ -63,15 +44,18 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
       const prompt = `extremely simple minimalist line art icon, vector style, flat black stroke on pure white background, no gradients, no shading, no colors, clean outline, topic: ${mod.title} - ${mod.text.slice(0, 100)}`;
       const seed = Math.floor(Math.random() * 99999999);
       
+      const localModel = typeof window !== 'undefined' ? localStorage.getItem('pollinations_model') || 'flux' : 'flux';
+      const localApiKey = typeof window !== 'undefined' ? localStorage.getItem('pollinations_api_key') || '' : '';
+
       let url = '';
-      if (aiModel === 'nanobanana') {
-        if (!apiKey.trim()) {
-          alert('Para usar el modelo Nanobanana, por favor introduce tu Clave API de Pollinations. Puedes conseguir una gratis haciendo clic en el enlace de configuración.');
+      if (localModel === 'nanobanana') {
+        if (!localApiKey.trim()) {
+          alert('Para usar el modelo Nanobanana, por favor introduce tu Clave API de Pollinations en la configuración global (botón en la esquina inferior izquierda del menú).');
           setGeneratingIndex(null);
           setSavingState('idle');
           return;
         }
-        url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=nanobanana&key=${encodeURIComponent(apiKey.trim())}`;
+        url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=nanobanana&key=${encodeURIComponent(localApiKey.trim())}`;
       } else {
         url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=flux`;
       }
@@ -218,47 +202,7 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
         </div>
       </div>
 
-      {/* AI Config Panel */}
-      <div className="border border-[#2a2a2f] rounded-xl bg-slate-950/20 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-350 flex items-center gap-1.5 select-none">
-            <Sparkles className="h-3.5 w-3.5 text-violet-400" />
-            Configuración de Motor de Imagen IA
-          </span>
-          <a 
-            href="https://enter.pollinations.ai" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-[10px] text-violet-400 hover:text-violet-300 underline font-bold"
-          >
-            Obtener Clave API Gratis ↗
-          </a>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] text-slate-500 font-bold uppercase mb-1 select-none">Modelo de Generación</label>
-            <select
-              value={aiModel}
-              onChange={(e) => handleSaveAISettings(e.target.value, apiKey)}
-              className="w-full bg-[#0f0f11] border border-[#2a2a2f] rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-violet-500 cursor-pointer"
-            >
-              <option value="flux">Flux (Gratuito, sin clave)</option>
-              <option value="nanobanana">Nanobanana / Gemini Flash (Preciso, requiere clave)</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] text-slate-500 font-bold uppercase mb-1 select-none">Clave API de Pollinations</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => handleSaveAISettings(aiModel, e.target.value)}
-              placeholder={aiModel === 'flux' ? 'No requerida para Flux' : 'Pega tu clave api gratis aquí...'}
-              disabled={aiModel === 'flux'}
-              className="w-full bg-[#0f0f11] border border-[#2a2a2f] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-655 outline-none focus:border-violet-500 disabled:opacity-40"
-            />
-          </div>
-        </div>
-      </div>
+
 
       {/* Hidden file uploader */}
       <input 
