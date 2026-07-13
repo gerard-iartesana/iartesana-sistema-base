@@ -28,6 +28,43 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeModuleIndex, setActiveModuleIndex] = useState<number | null>(null);
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+
+  const handleGenerateAIImage = async (index: number) => {
+    const mod = modules[index];
+    if (!mod.title.trim()) {
+      alert('Por favor, escribe un título para el público primero.');
+      return;
+    }
+    
+    setGeneratingIndex(index);
+    setSavingState('saving');
+    
+    try {
+      const prompt = `extremely simple minimalist line art icon, vector style, flat black stroke on pure white background, no gradients, no shading, no colors, clean outline, topic: ${mod.title} - ${mod.text.slice(0, 100)}`;
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false`;
+      
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        const updated = [...modules];
+        updated[index] = { ...updated[index], image: base64 };
+        setModules(updated);
+        await saveModules(updated);
+        setGeneratingIndex(null);
+      };
+      reader.readAsDataURL(blob);
+    } catch (err) {
+      console.error('[SegmentationLab] AI Generation failed:', err);
+      alert('No se pudo generar la imagen con IA. Inténtalo de nuevo.');
+      setGeneratingIndex(null);
+      setSavingState('idle');
+    }
+  };
 
   const saveModules = async (updatedModules: SegmentationModule[]) => {
     setSavingState('saving');
@@ -269,6 +306,28 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
                     >
                       <Upload size={12} />
                       <span>{isCustom ? 'Personalizada (Cambiar)' : 'Subir Icono'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleGenerateAIImage(idx)}
+                      disabled={generatingIndex === idx}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
+                        generatingIndex === idx
+                          ? 'border-violet-500 bg-violet-650 text-white animate-pulse'
+                          : 'border-[#2a2a2f] bg-[#0f0f11] text-violet-400 hover:border-slate-800 hover:bg-[#17171a]'
+                      }`}
+                    >
+                      {generatingIndex === idx ? (
+                        <>
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          <span>Generando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3.5 w-3.5" />
+                          <span>Generar con IA</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
