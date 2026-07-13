@@ -11,6 +11,7 @@ import { splitBlock7Content, compileBlock7Content } from '@/lib/utils/visual-con
 import { splitBlock2Content, compileBlock2Content } from '@/lib/utils/valprop-content';
 import { splitBlock3Content, compileBlock3Content } from '@/lib/utils/naming-content';
 import { splitBlock5Content, compileVoiceTensions } from '@/lib/utils/voice-content';
+import { splitBlock8Content, compileBlock8Content } from '@/lib/utils/segmentation-content';
 
 type ViewMode = 'edit' | 'preview';
 
@@ -155,6 +156,9 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         } else if (blockId === 5) {
           const parsed = splitBlock5Content(rawContent);
           rawContent = parsed.rawMarkdown;
+        } else if (blockId === 8) {
+          const parsed = splitBlock8Content(rawContent);
+          rawContent = parsed.rawMarkdown;
         }
         setContent(rawContent);
         setStatus(block.status);
@@ -206,6 +210,12 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         const parsed = splitBlock5Content(latestRaw);
         parsed.rawMarkdown = text;
         fullText = compileVoiceTensions(parsed.tensions, parsed.rawMarkdown);
+      } else if (blockId === 8) {
+        const blocks = await db.getBrandBlocks(brandId);
+        const latestBlock = blocks.find(b => b.block_id === 8);
+        const latestRaw = latestBlock?.content_md || '';
+        const parsed = splitBlock8Content(latestRaw);
+        fullText = compileBlock8Content(text, parsed.references);
       }
 
       const result = await db.updateBrandBlock(brandId, blockId, { content_md: fullText });

@@ -77,3 +77,31 @@ export function compileSegmentationContent(introMarkdown: string, modules: Segme
 
   return md.trim();
 }
+
+export function splitBlock8Content(rawContent: string): { rawMarkdown: string; references: string } {
+  if (!rawContent) return { rawMarkdown: '', references: '' };
+
+  const cleanMd = rawContent.replace(/\r\n/g, '\n');
+
+  // Extract reference style definitions, e.g. [img_ref_1]: data:image...
+  const refRegex = /^\[([^\]]+)\]:\s*([^\n]+)/gm;
+  const referencesList: string[] = [];
+  let match;
+  while ((match = refRegex.exec(cleanMd)) !== null) {
+    referencesList.push(match[0]);
+  }
+
+  // Remove the reference definitions from the markdown content
+  const rawMarkdown = cleanMd.replace(/^\[([^\]]+)\]:\s*[^\n]+/gm, '').trim();
+  const references = referencesList.join('\n');
+
+  return { rawMarkdown, references };
+}
+
+export function compileBlock8Content(rawMarkdown: string, references: string): string {
+  let md = rawMarkdown.trim();
+  if (references.trim()) {
+    md += '\n\n' + references.trim();
+  }
+  return md;
+}
