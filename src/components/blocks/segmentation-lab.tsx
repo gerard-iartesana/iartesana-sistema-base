@@ -43,7 +43,7 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
         try {
       const prompt = `extremely simple minimalist line art icon, vector style, flat black stroke on pure white background, no gradients, no shading, no colors, clean outline, topic: ${mod.title} - ${mod.text.slice(0, 100)}`;
       const seed = Math.floor(Math.random() * 99999999);
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=nanobanana`;
+      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=flux`;
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Network response was not ok');
