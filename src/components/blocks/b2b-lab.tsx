@@ -7,6 +7,7 @@ import {
   compileB2BContent,
   B2BModule 
 } from '@/lib/utils/b2b-content';
+import { handleMarkdownPaste } from '@/lib/utils/html-to-markdown';
 import { Trash2, Check, RefreshCw, Plus, ChevronUp, ChevronDown, Users } from 'lucide-react';
 
 interface B2BLabProps {
@@ -163,6 +164,7 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
                   <textarea 
                     value={mod.text}
                     onChange={(e) => handleFieldChange(idx, 'text', e.target.value)}
+                    onPaste={(e) => handleMarkdownPaste(e, (val) => handleFieldChange(idx, 'text', val))}
                     placeholder="Descripción de la relación y promesa..."
                     rows={3}
                     className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-violet-500 transition-colors resize-none"

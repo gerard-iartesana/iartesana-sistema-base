@@ -7,6 +7,7 @@ import {
   compileSegmentationContent,
   SegmentationModule 
 } from '@/lib/utils/segmentation-content';
+import { handleMarkdownPaste } from '@/lib/utils/html-to-markdown';
 import { Upload, Trash2, Check, Sparkles, Image, RefreshCw, Plus, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface SegmentationLabProps {
@@ -267,6 +268,7 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
                       <textarea 
                         value={mod.text}
                         onChange={(e) => handleFieldChange(idx, 'text', e.target.value)}
+                        onPaste={(e) => handleMarkdownPaste(e, (val) => handleFieldChange(idx, 'text', val))}
                         placeholder="Texto descriptivo..."
                         rows={3}
                         className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-violet-500 transition-colors resize-none"
