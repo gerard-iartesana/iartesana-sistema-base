@@ -264,7 +264,7 @@ export function KnowledgeLibrary({ brandId, onUpdate }: KnowledgeLibraryProps) {
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-[#2a2a2f]">
           {filtered.map(item => {
             const kindConf = KIND_CONFIG[item.kind];
             const isExpanded = expandedId === item.id;
