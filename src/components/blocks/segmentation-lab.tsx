@@ -46,8 +46,6 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
     setModules(updatedBeforeGen);
 
     try {
-      const prompt = `extremely simple flat minimalist icon, bold conceptual pictogram style, thick clean black stroke on solid white background, no detail, no decoration, no gradients, no shading, no colors, raw graphic outline, topic: ${mod.title}. CRITICAL: Do NOT include any text, letters, words, writing, numbers, labels, or characters. The symbol must be standalone, without being enclosed inside a circle, square, frame, shield, border, or any enclosing shape. Zero margin around the symbol. Zero padding. The pictogram lines must touch the very top, bottom, left, and right outer edges of the square frame, occupying 100% of the image space.`;
-      
       const geminiKey = typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key') || '' : '';
 
       if (!geminiKey.trim()) {
@@ -63,7 +61,8 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          prompt: prompt,
+          title: mod.title,
+          text: mod.text,
           geminiKey: geminiKey.trim()
         })
       });
