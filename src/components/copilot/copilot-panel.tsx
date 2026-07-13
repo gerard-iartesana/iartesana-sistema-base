@@ -100,15 +100,82 @@ export function CopilotPanel({ isOpen, setIsOpen, selectedAgent, setSelectedAgen
 
   const agent = selectedAgent ? AGENTS.find(a => a.key === selectedAgent) : null;
 
-  const handleRun = () => {
+  const handleRun = async () => {
     if (!activeBrand || !selectedAgent) return;
     setIsRunning(true);
     setResult(null);
 
-    // Simulate a brief delay then show the not-connected message
-    setTimeout(async () => {
-      const message = 'Agente IA no conectado. Configura las Edge Functions de Supabase para activar el copiloto.';
-      setResult(message);
+    const geminiKey = typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key') || '' : '';
+    if (!geminiKey.trim()) {
+      // Simulate a brief delay then show the not-connected message with help instructions
+      setTimeout(async () => {
+        const message = 'Copiloto de IA no conectado.\n\nPara activar los agentes Historiador, Lingüista, Estratega y Auditor en tiempo real directamente en tu navegador:\n1. Abre la **Configuración Global** (botón de engranaje en la esquina inferior izquierda del menú).\n2. Introduce una clave de **Google Gemini API** (la puedes obtener gratis en Google AI Studio).\n3. Guarda los cambios y vuelve a intentarlo.';
+        setResult(message);
+        setIsRunning(false);
+
+        // Save to history
+        await db.createAgentRun({
+          brand_id: activeBrand.id,
+          agent: selectedAgent,
+          input_text: inputText,
+          output_md: message,
+        });
+        await loadHistory();
+      }, 1000);
+      return;
+    }
+
+    try {
+      const blocks = await db.getBrandBlocks(activeBrand.id);
+      const contextLines = [];
+      for (const block of blocks) {
+        contextLines.push(`### Bloque ${block.block_id}:\n${block.content_md || '(Vacío)'}\n`);
+      }
+      const brandContext = contextLines.join('\n');
+
+      let systemPrompt = '';
+      if (selectedAgent === 'historiador') {
+        systemPrompt = `Eres un Historiador experto del Sistema Base iARTESANA. Tu tarea es estructurar, limpiar y procesar transcripciones o notas brutas de entrevistas con clientes, fundadores o partes interesadas. Tu objetivo es destilar la esencia pura de lo conversado. Reglas de formato:\n1. Conserva siempre citas textuales valiosas en formato de bloque de cita ('>').\n2. Si detectas contradicciones, lagunas de información o afirmaciones dudosas que requieran confirmación, márcalas explícitamente en el texto con la etiqueta '[verificar: descripción del dato dudoso]'.\n3. Devuelve la información de forma muy limpia, organizada y en un formato Markdown impecable.`;
+      } else if (selectedAgent === 'linguista') {
+        systemPrompt = `Eres un Lingüista y director de identidad verbal experto en el Sistema Base iARTESANA. Tu tarea es reescribir y refinar el texto ingresado por el usuario para alinear el tono, voz y vocabulario con el tono corporativo de la marca. Identifica y señala desviaciones de tono o vocabulario inadecuado. Reglas:\n1. Mantén la fidelidad del mensaje de origen.\n2. Adapta la sintaxis, el vocabulario y la cadencia según las directrices de la marca.\n3. Proporciona una explicación breve de los cambios realizados.\n4. Devuelve la salida en un formato Markdown impecable.`;
+      } else if (selectedAgent === 'estratega') {
+        systemPrompt = `Eres un Estratega de marca experto en el Sistema Base iARTESANA. Tu tarea es tomar notas desestructuradas, observaciones o bocetos sobre los clientes de la marca y generar fichas de segmentación no-demográfica detalladas. Reglas:\n1. Define con claridad el comportamiento, actitudes y motivaciones del público.\n2. Identifica sus valores esenciales.\n3. Define el "Perfil Excluido" (quién NO es nuestro cliente ideal).\n4. Devuelve la ficha completa con títulos de sección en formato Markdown impecable.`;
+      } else if (selectedAgent === 'auditor') {
+        systemPrompt = `Eres un Auditor de identidad y estratega senior de iARTESANA. Tu rol es analizar en su totalidad el Núcleo de Contexto de la marca provisto (todos los bloques de información) buscando contradicciones lógicas, huecos críticos, faltas de alineación entre la propuesta de valor y los públicos, o inconsistencias de tono. Reglas:\n1. Sé constructivo pero riguroso.\n2. Estructura tu reporte señalando: Contradicciones Detectadas, Brechas de Información y Oportunidades de Mejora.\n3. Al final de tu reporte, genera una propuesta concreta de instrucciones en texto que el usuario debería guardar en el "Bloque 13" (Instrucciones para IA) para que futuros agentes virtuales mantengan la coherencia absoluta con esta marca.\n4. Devuelve tu auditoría en formato Markdown impecable.`;
+      }
+
+      const promptText = `${systemPrompt}\n\n=======================\nDATOS ACTUALES DE LA MARCA (NÚCLEO DE CONTEXTO):\n${brandContext}\n=======================\n\nINPUT O NOTAS DEL USUARIO:\n${inputText || '(Sin notas adicionales provistas)'}`;
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey.trim()}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: promptText
+                }
+              ]
+            }
+          ]
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `Error del servidor Gemini: ${response.status}`);
+      }
+
+      const resData = await response.json();
+      const outputMd = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!outputMd) {
+        throw new Error('La API de Gemini devolvió una respuesta vacía o sin contenido.');
+      }
+
+      setResult(outputMd);
       setIsRunning(false);
 
       // Save to history
@@ -116,10 +183,22 @@ export function CopilotPanel({ isOpen, setIsOpen, selectedAgent, setSelectedAgen
         brand_id: activeBrand.id,
         agent: selectedAgent,
         input_text: inputText,
-        output_md: message,
+        output_md: outputMd,
       });
       await loadHistory();
-    }, 1000);
+    } catch (err: any) {
+      console.error('[CopilotPanel] Gemini API call failed:', err);
+      const errMsg = `Error al ejecutar el Copiloto Gemini: ${err.message || err}`;
+      setResult(errMsg);
+      setIsRunning(false);
+      await db.createAgentRun({
+        brand_id: activeBrand.id,
+        agent: selectedAgent,
+        input_text: inputText,
+        output_md: errMsg,
+      });
+      await loadHistory();
+    }
   };
 
   const handleCopy = (text: string) => {
