@@ -10,6 +10,8 @@ export interface Member {
   role: MemberRole;
   created_at: string;
   avatar_url?: string | null;
+  allowed_brands?: string[];
+  can_write?: boolean;
 }
 
 export type BrandStatus = 'activo' | 'pausado' | 'archivado';
@@ -130,5 +132,14 @@ export interface SlideComment {
   block_id: number;
   author_name: string;
   comment_text: string;
+  created_at: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  member_id: string;
+  email: string;
+  action: string;
+  details: string;
   created_at: string;
 }

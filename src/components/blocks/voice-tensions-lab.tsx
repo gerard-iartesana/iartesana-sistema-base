@@ -14,9 +14,10 @@ interface VoiceTensionsLabProps {
   brandId: string;
   content_md: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTensionsLabProps) {
+export function VoiceTensionsLab({ brandId, content_md, onUpdate, readOnly = false }: VoiceTensionsLabProps) {
   const [tensionsList, setTensionsList] = useState<VoiceTension[]>([]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -30,6 +31,7 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
   }, [content_md]);
 
   const saveToDb = async (list: VoiceTension[]) => {
+    if (readOnly) return;
     setSaveState('saving');
     try {
       const parsed = splitBlock5Content(content_md);
@@ -45,6 +47,7 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
   };
 
   const handleTensionChange = (index: number, field: keyof VoiceTension, value: string | number) => {
+    if (readOnly) return;
     const newList = [...tensionsList];
     newList[index] = {
       ...newList[index],
@@ -60,12 +63,14 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
   };
 
   const handleAddTension = () => {
+    if (readOnly) return;
     const newList = [...tensionsList, { left: 'Término A', right: 'Término B', value: 50, description: '' }];
     setTensionsList(newList);
     saveToDb(newList);
   };
 
   const handleRemoveTension = (index: number) => {
+    if (readOnly) return;
     let newList = tensionsList.filter((_, idx) => idx !== index);
     if (newList.length === 0) {
       newList = [{ left: 'Calidez', right: 'Resolución', value: 50, description: '' }];
@@ -123,13 +128,15 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
 
           return (
             <div key={idx} className="bg-slate-950 rounded-xl p-5 border border-slate-800/80 relative group hover:border-slate-700 transition-colors">
-              <button
-                onClick={() => handleRemoveTension(idx)}
-                className="text-slate-500 hover:text-red-400 transition-colors p-1.5 absolute right-3 top-3"
-                title="Eliminar tensión"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => handleRemoveTension(idx)}
+                  className="text-slate-500 hover:text-red-400 transition-colors p-1.5 absolute right-3 top-3 cursor-pointer"
+                  title="Eliminar tensión"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
 
               {/* Title / Inputs Left & Right */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pr-8">
@@ -139,8 +146,9 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
                     type="text"
                     value={tension.left}
                     onChange={(e) => handleTensionChange(idx, 'left', e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-850 rounded px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-slate-900 border border-slate-850 rounded px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-blue-500 transition-colors disabled:text-slate-400 disabled:border-transparent"
                     placeholder="Ej. Cercano"
+                    disabled={readOnly}
                   />
                 </div>
                 <div>
@@ -149,8 +157,9 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
                     type="text"
                     value={tension.right}
                     onChange={(e) => handleTensionChange(idx, 'right', e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-850 rounded px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-slate-900 border border-slate-850 rounded px-3 py-1.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-blue-500 transition-colors disabled:text-slate-400 disabled:border-transparent"
                     placeholder="Ej. Profesional"
+                    disabled={readOnly}
                   />
                 </div>
               </div>
@@ -171,7 +180,8 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
                     max="100"
                     value={tension.value}
                     onChange={(e) => handleTensionChange(idx, 'value', parseInt(e.target.value, 10))}
-                    className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-[#e3599c] focus:outline-none"
+                    className={`w-full h-1.5 bg-slate-800 rounded-lg appearance-none ${readOnly ? 'cursor-default' : 'cursor-pointer'} accent-[#e3599c] focus:outline-none`}
+                    disabled={readOnly}
                   />
                 </div>
 
@@ -194,8 +204,9 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
                   value={tension.description}
                   onChange={(e) => handleTensionChange(idx, 'description', e.target.value)}
                   placeholder="Detalla qué define esta tensión, cómo se sitúa la marca y qué excesos/errores deben evitarse en ambos extremos..."
-                  className="w-full h-24 bg-slate-900 border border-slate-850 rounded p-2.5 text-xs text-slate-200 placeholder-slate-700 focus:outline-none focus:border-blue-500 transition-colors resize-none editor-textarea"
+                  className="w-full h-24 bg-slate-900 border border-slate-850 rounded p-2.5 text-xs text-slate-200 placeholder-slate-700 focus:outline-none focus:border-blue-500 transition-colors resize-none editor-textarea disabled:text-slate-400 disabled:border-transparent"
                   spellCheck={false}
+                  disabled={readOnly}
                 />
               </div>
             </div>
@@ -204,13 +215,15 @@ export function VoiceTensionsLab({ brandId, content_md, onUpdate }: VoiceTension
       </div>
 
       {/* Add Tension Button */}
-      <button
-        onClick={handleAddTension}
-        className="mt-4 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-950 hover:bg-slate-900/50 px-4 py-2.5 text-xs text-slate-400 hover:text-white transition-all font-semibold"
-      >
-        <Plus className="h-4 w-4" />
-        Añadir Tensión
-      </button>
+      {!readOnly && (
+        <button
+          onClick={handleAddTension}
+          className="mt-4 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-950 hover:bg-slate-900/50 px-4 py-2.5 text-xs text-slate-400 hover:text-white transition-all font-semibold cursor-pointer"
+        >
+          <Plus className="h-4 w-4" />
+          Añadir Tensión
+        </button>
+      )}
     </div>
   );
 }

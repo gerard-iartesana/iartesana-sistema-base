@@ -14,6 +14,7 @@ interface SegmentationLabProps {
   brandId: string;
   content_md: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
 const PRESET_IMAGES = [
@@ -23,7 +24,7 @@ const PRESET_IMAGES = [
   { value: '/images/verbal_glosario_evitar.png', label: 'Escudo (Protección)', color: 'text-red-400' },
 ];
 
-export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationLabProps) {
+export function SegmentationLab({ brandId, content_md, onUpdate, readOnly = false }: SegmentationLabProps) {
   const { introMarkdown, modules: initialModules } = parseSegmentationContent(content_md);
   const [modules, setModules] = useState<SegmentationModule[]>(initialModules);
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -258,13 +259,15 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
                         alt={mod.title} 
                         className="max-h-full max-w-full object-contain" 
                       />
-                      <button
-                        onClick={() => handleClearImage(idx)}
-                        className="absolute top-1.5 right-1.5 p-1 bg-red-500 hover:bg-red-650 text-white rounded-md opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer shadow-md"
-                        title="Borrar imagen"
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={() => handleClearImage(idx)}
+                          className="absolute top-1.5 right-1.5 p-1 bg-red-500 hover:bg-red-650 text-white rounded-md opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer shadow-md"
+                          title="Borrar imagen"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
                     </>
                   ) : (
                     <span className="text-[10px] text-slate-500 italic">Sin icono</span>
@@ -278,30 +281,34 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-mono font-bold text-slate-500">PÚBLICO {(idx + 1).toString().padStart(2, '0')}</span>
                         {/* Sort Reorder Buttons */}
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => handleMoveUp(idx)}
-                            disabled={idx === 0}
-                            className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </button>
-                          <button
-                            onClick={() => handleMoveDown(idx)}
-                            disabled={idx === modules.length - 1}
-                            className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </button>
-                        </div>
+                        {!readOnly && (
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleMoveUp(idx)}
+                              disabled={idx === 0}
+                              className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={() => handleMoveDown(idx)}
+                              disabled={idx === modules.length - 1}
+                              className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <button
-                        onClick={() => handleRemoveModule(idx)}
-                        className="text-slate-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
-                        title="Quitar este público"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={() => handleRemoveModule(idx)}
+                          className="text-slate-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                          title="Quitar este público"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -311,6 +318,7 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
                         onChange={(e) => handleFieldChange(idx, 'title', e.target.value)}
                         placeholder="Título del público (ej. Clientes Jóvenes, Directivos B2B)"
                         className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-white font-bold placeholder-slate-600 outline-none focus:border-violet-500 transition-colors"
+                        disabled={readOnly}
                       />
                       <textarea 
                         value={mod.text}
@@ -319,79 +327,84 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
                         placeholder="Texto descriptivo..."
                         rows={3}
                         className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-violet-500 transition-colors resize-none"
+                        disabled={readOnly}
                       />
                     </div>
                   </div>
 
                   {/* Icon Presets & Upload Controls */}
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-1.5 bg-[#0f0f11] rounded-lg border border-[#2a2a2f] p-1 select-none">
-                      {PRESET_IMAGES.map((preset) => {
-                        const isSelected = mod.image === preset.value;
-                        return (
-                          <button
-                            key={preset.value}
-                            onClick={() => handleSelectPreset(idx, preset.value)}
-                            className={`px-2 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                              isSelected 
-                                ? 'bg-slate-850 text-white font-black' 
-                                : 'text-slate-500 hover:text-slate-350'
-                            }`}
-                          >
-                            <span className={`${preset.color} mr-1`}>●</span>
-                            {preset.label.split(' ')[0]}
-                          </button>
-                        );
-                      })}
+                  {!readOnly && (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-1.5 bg-[#0f0f11] rounded-lg border border-[#2a2a2f] p-1 select-none">
+                        {PRESET_IMAGES.map((preset) => {
+                          const isSelected = mod.image === preset.value;
+                          return (
+                            <button
+                              key={preset.value}
+                              onClick={() => handleSelectPreset(idx, preset.value)}
+                              className={`px-2 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-slate-850 text-white font-black' 
+                                  : 'text-slate-500 hover:text-slate-350'
+                              }`}
+                            >
+                              <span className={`${preset.color} mr-1`}>●</span>
+                              {preset.label.split(' ')[0]}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <button
+                        onClick={() => triggerFileUpload(idx)}
+                        className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
+                          isCustom 
+                            ? 'border-violet-500/30 bg-violet-500/5 text-violet-400' 
+                            : 'border-[#2a2a2f] bg-[#0f0f11] text-slate-400 hover:border-slate-800 hover:bg-[#17171a]'
+                        }`}
+                      >
+                        <Upload size={12} />
+                        <span>{isCustom ? 'Personalizada (Cambiar)' : 'Subir Icono'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleGenerateAIImage(idx)}
+                        disabled={generatingIndex === idx}
+                        className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
+                          generatingIndex === idx
+                            ? 'border-violet-500 bg-violet-650 text-white animate-pulse'
+                            : 'border-[#2a2a2f] bg-[#0f0f11] text-violet-400 hover:border-slate-800 hover:bg-[#17171a]'
+                        }`}
+                      >
+                        {generatingIndex === idx ? (
+                          <>
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            <span>Generando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3.5 w-3.5" />
+                            <span>Generar con IA</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => triggerFileUpload(idx)}
-                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
-                        isCustom 
-                          ? 'border-violet-500/30 bg-violet-500/5 text-violet-400' 
-                          : 'border-[#2a2a2f] bg-[#0f0f11] text-slate-400 hover:border-slate-800 hover:bg-[#17171a]'
-                      }`}
-                    >
-                      <Upload size={12} />
-                      <span>{isCustom ? 'Personalizada (Cambiar)' : 'Subir Icono'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleGenerateAIImage(idx)}
-                      disabled={generatingIndex === idx}
-                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
-                        generatingIndex === idx
-                          ? 'border-violet-500 bg-violet-650 text-white animate-pulse'
-                          : 'border-[#2a2a2f] bg-[#0f0f11] text-violet-400 hover:border-slate-800 hover:bg-[#17171a]'
-                      }`}
-                    >
-                      {generatingIndex === idx ? (
-                        <>
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                          <span>Generando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-3.5 w-3.5" />
-                          <span>Generar con IA</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
             );
           })}
-          <div className="pt-4 flex justify-center border-t border-[#2a2a2f]/50">
-            <button
-              onClick={handleAddModule}
-              className="flex items-center justify-center gap-2 w-full md:w-auto rounded-xl border border-dashed border-violet-500/30 hover:border-violet-500/60 bg-violet-500/5 hover:bg-violet-500/10 px-8 py-3.5 text-xs font-bold text-violet-400 hover:text-violet-300 transition-all cursor-pointer select-none"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Añadir Público de Segmentación</span>
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="pt-4 flex justify-center border-t border-[#2a2a2f]/50">
+              <button
+                onClick={handleAddModule}
+                className="flex items-center justify-center gap-2 w-full md:w-auto rounded-xl border border-dashed border-violet-500/30 hover:border-violet-500/60 bg-violet-500/5 hover:bg-violet-500/10 px-8 py-3.5 text-xs font-bold text-violet-400 hover:text-violet-300 transition-all cursor-pointer select-none"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Añadir Público de Segmentación</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

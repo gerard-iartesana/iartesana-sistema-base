@@ -226,9 +226,10 @@ interface ArchetypeLabProps {
   brandId: string;
   content_md: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProps) {
+export function ArchetypeLab({ brandId, content_md, onUpdate, readOnly = false }: ArchetypeLabProps) {
   const [wheels, setWheels] = useState<ArchetypeWheelData[]>([{ target: 'General', selected: {} }]);
   const [rawContent, setRawContent] = useState('');
   const savingRef = useRef(false);
@@ -241,6 +242,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
   }, [content_md]);
 
   const saveToDb = async (newWheels: ArchetypeWheelData[]) => {
+    if (readOnly) return;
     if (savingRef.current) return;
     savingRef.current = true;
     try {
@@ -256,6 +258,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
   };
 
   const handleToggleArchetype = (wIdx: number, name: string) => {
+    if (readOnly) return;
     const newWheels = [...wheels];
     const currentSelected = { ...newWheels[wIdx].selected };
     if (currentSelected[name] !== undefined) {
@@ -271,6 +274,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
   };
 
   const handlePercentageChange = (wIdx: number, name: string, value: number) => {
+    if (readOnly) return;
     const newWheels = [...wheels];
     const currentSelected = { ...newWheels[wIdx].selected, [name]: value };
     newWheels[wIdx] = { ...newWheels[wIdx], selected: currentSelected };
@@ -279,6 +283,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
   };
 
   const handleRemoveArchetype = (wIdx: number, name: string) => {
+    if (readOnly) return;
     const newWheels = [...wheels];
     const currentSelected = { ...newWheels[wIdx].selected };
     delete currentSelected[name];
@@ -288,16 +293,19 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
   };
 
   const handleTargetLocalChange = (wIdx: number, newTarget: string) => {
+    if (readOnly) return;
     const newWheels = [...wheels];
     newWheels[wIdx] = { ...newWheels[wIdx], target: newTarget };
     setWheels(newWheels);
   };
 
   const handleTargetBlur = () => {
+    if (readOnly) return;
     saveToDb(wheels);
   };
 
   const handleAddWheel = () => {
+    if (readOnly) return;
     if (wheels.length >= 2) return;
     const newWheels = [...wheels, { target: 'Segundo Público', selected: {} }];
     setWheels(newWheels);
@@ -305,6 +313,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
   };
 
   const handleRemoveWheel = (wIdx: number) => {
+    if (readOnly) return;
     if (!confirm('¿Estás seguro de que deseas eliminar esta rueda de arquetipos?')) return;
     let newWheels = wheels.filter((_, idx) => idx !== wIdx);
     if (newWheels.length === 0) {
@@ -315,6 +324,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
   };
 
   const handleClearWheel = (wIdx: number) => {
+    if (readOnly) return;
     const newWheels = [...wheels];
     newWheels[wIdx] = { ...newWheels[wIdx], selected: {} };
     setWheels(newWheels);
@@ -341,7 +351,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
           </p>
         </div>
         <div className="flex gap-2">
-          {wheels.length < 2 && (
+          {!readOnly && wheels.length < 2 && (
             <button
               onClick={handleAddWheel}
               className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-violet-700 cursor-pointer"
@@ -368,11 +378,12 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                   onChange={(e) => handleTargetLocalChange(wIdx, e.target.value)}
                   onBlur={handleTargetBlur}
                   placeholder="ej: Directivos o Clientes jóvenes"
-                  className="bg-transparent border-b border-slate-800 focus:border-violet-500 py-0.5 px-1.5 text-xs font-bold text-white outline-none w-full max-w-[200px] transition-colors"
+                  className="bg-transparent border-b border-slate-800 focus:border-violet-500 py-0.5 px-1.5 text-xs font-bold text-white outline-none w-full max-w-[200px] transition-colors disabled:text-slate-400 disabled:border-transparent"
+                  disabled={readOnly}
                 />
               </div>
               <div className="flex items-center gap-2 select-none">
-                {Object.keys(wheel.selected).length > 0 && (
+                {!readOnly && Object.keys(wheel.selected).length > 0 && (
                   <button
                     onClick={() => handleClearWheel(wIdx)}
                     className="text-[10px] font-bold text-slate-400 hover:text-white transition-colors bg-slate-800 px-2 py-1 rounded cursor-pointer"
@@ -380,7 +391,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                     Limpiar
                   </button>
                 )}
-                {wheels.length > 1 && (
+                {!readOnly && wheels.length > 1 && (
                   <button
                     onClick={() => handleRemoveWheel(wIdx)}
                     className="text-[10px] font-bold text-red-400 hover:text-red-300 transition-colors bg-red-950/30 border border-red-900/40 px-2 py-1 rounded cursor-pointer"
@@ -451,7 +462,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                     const sliceColor = getSliceColor(arc.name, wheel.selected);
 
                     return (
-                      <g key={arc.name} className="group cursor-pointer" onClick={() => handleToggleArchetype(wIdx, arc.name)}>
+                      <g key={arc.name} className={`group ${readOnly ? 'cursor-default' : 'cursor-pointer'}`} onClick={() => !readOnly && handleToggleArchetype(wIdx, arc.name)}>
                         {/* Slice Path */}
                         <path
                           d={pathData}
@@ -459,7 +470,7 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                           fillOpacity={isSelected ? 0.2 + 0.8 * (percentage / 100) : 0.6}
                           stroke="#0f0f11"
                           strokeWidth="2.5"
-                          className="transition-all duration-300 group-hover:fill-slate-800 group-hover:fill-opacity-80"
+                          className={`transition-all duration-300 ${readOnly ? '' : 'group-hover:fill-slate-800 group-hover:fill-opacity-80'}`}
                         />
 
                         {/* Icon */}
@@ -538,13 +549,15 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                               <span className="text-[11px] font-mono font-bold text-white" style={{ color: sliceColor }}>
                                 {pct}%
                               </span>
-                              <button
-                                onClick={() => handleRemoveArchetype(wIdx, name)}
-                                className="text-slate-500 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
-                                title="Quitar"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </button>
+                              {!readOnly && (
+                                <button
+                                  onClick={() => handleRemoveArchetype(wIdx, name)}
+                                  className="text-slate-500 hover:text-red-400 transition-colors p-0.5 cursor-pointer"
+                                  title="Quitar"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -557,11 +570,12 @@ export function ArchetypeLab({ brandId, content_md, onUpdate }: ArchetypeLabProp
                               step="5"
                               value={pct}
                               onChange={(e) => handlePercentageChange(wIdx, name, parseInt(e.target.value, 10))}
-                              className="flex-1 h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                              className={`flex-1 h-1 bg-slate-800 rounded-lg appearance-none ${readOnly ? 'cursor-default' : 'cursor-pointer'} accent-violet-500`}
                               style={{
                                 accentColor: sliceColor,
                                 backgroundImage: `linear-gradient(to right, ${sliceColor} ${pct}%, #1e293b ${pct}%)`
                               }}
+                              disabled={readOnly}
                             />
                             <span className="text-[9px] text-slate-500">100%</span>
                           </div>

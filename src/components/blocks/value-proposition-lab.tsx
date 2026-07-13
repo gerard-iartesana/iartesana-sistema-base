@@ -17,9 +17,10 @@ interface ValuePropositionLabProps {
   brandId: string;
   content_md: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValuePropositionLabProps) {
+export function ValuePropositionLab({ brandId, content_md, onUpdate, readOnly = false }: ValuePropositionLabProps) {
   const [mission, setMission] = useState('');
   const [vision, setVision] = useState('');
   const [valuesList, setValuesList] = useState<ValueItem[]>([{ title: '', text: '' }]);
@@ -65,6 +66,7 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
 
   // Handler for text area changes (mission, vision)
   const handleTextChange = (type: 'mission' | 'vision', value: string) => {
+    if (readOnly) return;
     let nextMission = mission;
     let nextVision = vision;
 
@@ -85,6 +87,7 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
 
   // Handlers for dynamic list of values with title and description
   const handleValueChange = (index: number, field: keyof ValueItem, value: string) => {
+    if (readOnly) return;
     const newList = [...valuesList];
     newList[index] = {
       ...newList[index],
@@ -185,6 +188,7 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             placeholder="¿Cuál es el propósito o razón de ser de la marca?..."
             className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
+            disabled={readOnly}
           />
         </div>
 
@@ -200,6 +204,7 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
             placeholder="¿Hacia dónde se dirige la marca a largo plazo?..."
             className="w-full h-48 bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
             spellCheck={false}
+            disabled={readOnly}
           />
         </div>
       </div>
@@ -230,16 +235,19 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
                     onKeyDown={handleBlockEnter}
                     placeholder="Título del Valor (ej: Honestidad)"
                     className="bg-transparent border-none p-0 text-sm text-white font-bold placeholder-slate-700 focus:outline-none w-full"
+                    disabled={readOnly}
                   />
                 </div>
                 
-                <button
-                  onClick={() => handleRemoveValue(idx)}
-                  className="text-slate-500 hover:text-red-400 transition-colors p-1.5 absolute right-3 top-3"
-                  title="Eliminar valor"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => handleRemoveValue(idx)}
+                    className="text-slate-500 hover:text-red-400 transition-colors p-1.5 absolute right-3 top-3 cursor-pointer"
+                    title="Eliminar valor"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               
               <textarea
@@ -250,18 +258,21 @@ export function ValuePropositionLab({ brandId, content_md, onUpdate }: ValueProp
                 placeholder="Descripción detallada de cómo se aplica este valor en la marca..."
                 className="w-full h-20 bg-slate-950 border border-slate-800/60 rounded p-2.5 text-xs text-slate-300 placeholder-slate-700 focus:outline-none focus:border-violet-500 transition-colors resize-none editor-textarea"
                 spellCheck={false}
+                disabled={readOnly}
               />
             </div>
           ))}
         </div>
 
-        <button
-          onClick={handleAddValue}
-          className="mt-3 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 px-4 py-2.5 text-xs text-slate-400 hover:text-white transition-all font-semibold"
-        >
-          <Plus className="h-4 w-4" />
-          Añadir Valor
-        </button>
+        {!readOnly && (
+          <button
+            onClick={handleAddValue}
+            className="mt-3 flex items-center justify-center gap-1.5 w-full rounded border border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/50 hover:bg-slate-900 px-4 py-2.5 text-xs text-slate-400 hover:text-white transition-all font-semibold cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            Añadir Valor
+          </button>
+        )}
       </div>
     </div>
   );

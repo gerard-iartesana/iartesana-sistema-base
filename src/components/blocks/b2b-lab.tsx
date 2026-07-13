@@ -14,14 +14,16 @@ interface B2BLabProps {
   brandId: string;
   content_md: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
-export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
+export function B2BLab({ brandId, content_md, onUpdate, readOnly = false }: B2BLabProps) {
   const { introMarkdown, modules: initialModules } = parseB2BContent(content_md);
   const [modules, setModules] = useState<B2BModule[]>(initialModules);
   const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   const saveModules = async (updatedModules: B2BModule[]) => {
+    if (readOnly) return;
     setSavingState('saving');
     try {
       const compiled = compileB2BContent(introMarkdown, updatedModules);
@@ -38,6 +40,7 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
   };
 
   const handleFieldChange = (index: number, field: keyof B2BModule, value: string) => {
+    if (readOnly) return;
     const updated = [...modules];
     updated[index] = { ...updated[index], [field]: value };
     setModules(updated);
@@ -45,6 +48,7 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
   };
 
   const handleAddModule = () => {
+    if (readOnly) return;
     const newMod: B2BModule = {
       title: 'Nuevo Público B2B / Aliado',
       text: 'Describe aquí la promesa central, expectativas o relación con este público.'
@@ -55,6 +59,7 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
   };
 
   const handleRemoveModule = (index: number) => {
+    if (readOnly) return;
     if (!confirm('¿Estás seguro de que deseas quitar este público B2B?')) return;
     const updated = modules.filter((_, i) => i !== index);
     setModules(updated);
@@ -62,6 +67,7 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
   };
 
   const handleMoveUp = (index: number) => {
+    if (readOnly) return;
     if (index === 0) return;
     const updated = [...modules];
     [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
@@ -70,6 +76,7 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
   };
 
   const handleMoveDown = (index: number) => {
+    if (readOnly) return;
     if (index === modules.length - 1) return;
     const updated = [...modules];
     [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
@@ -120,30 +127,34 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-bold text-slate-500 font-sans">PÚBLICO B2B {(idx + 1).toString().padStart(2, '0')}</span>
                     {/* Reorder Buttons */}
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
-                        onClick={() => handleMoveUp(idx)}
-                        disabled={idx === 0}
-                        className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
-                      >
-                        <ChevronUp className="h-3 w-3" />
-                      </button>
-                      <button
-                        onClick={() => handleMoveDown(idx)}
-                        disabled={idx === modules.length - 1}
-                        className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
-                      >
-                        <ChevronDown className="h-3 w-3" />
-                      </button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleMoveUp(idx)}
+                          disabled={idx === 0}
+                          className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveDown(idx)}
+                          disabled={idx === modules.length - 1}
+                          className="p-1 rounded text-slate-500 hover:bg-slate-800 disabled:opacity-30 cursor-pointer"
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  <button
-                    onClick={() => handleRemoveModule(idx)}
-                    className="text-slate-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
-                    title="Quitar este público"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => handleRemoveModule(idx)}
+                      className="text-slate-500 hover:text-red-400 p-1 transition-colors cursor-pointer"
+                      title="Quitar este público"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -152,7 +163,8 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
                     value={mod.title}
                     onChange={(e) => handleFieldChange(idx, 'title', e.target.value)}
                     placeholder="Público (ej. Inversores, Socios Minoristas, Proveedores de Materias Primas)"
-                    className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-white font-bold placeholder-slate-600 outline-none focus:border-violet-500 transition-colors"
+                    className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-white font-bold placeholder-slate-600 outline-none focus:border-violet-500 transition-colors disabled:text-slate-400 disabled:border-transparent"
+                    disabled={readOnly}
                   />
                   <textarea 
                     value={mod.text}
@@ -160,21 +172,24 @@ export function B2BLab({ brandId, content_md, onUpdate }: B2BLabProps) {
                     onPaste={(e) => handleMarkdownPaste(e, (val) => handleFieldChange(idx, 'text', val))}
                     placeholder="Descripción de la relación y promesa..."
                     rows={3}
-                    className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-violet-500 transition-colors resize-none"
+                    className="w-full bg-slate-900/50 border border-[#2a2a2f] rounded-lg px-3 py-1.5 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-violet-500 transition-colors resize-none disabled:text-slate-400 disabled:border-transparent"
+                    disabled={readOnly}
                   />
                 </div>
               </div>
             );
           })}
-          <div className="pt-4 flex justify-center border-t border-[#2a2a2f]/50">
-            <button
-              onClick={handleAddModule}
-              className="flex items-center justify-center gap-2 w-full md:w-auto rounded-xl border border-dashed border-violet-500/30 hover:border-violet-500/60 bg-violet-500/5 hover:bg-violet-500/10 px-8 py-3.5 text-xs font-bold text-violet-400 hover:text-violet-300 transition-all cursor-pointer select-none"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Añadir Público B2B</span>
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="pt-4 flex justify-center border-t border-[#2a2a2f]/50">
+              <button
+                onClick={handleAddModule}
+                className="flex items-center justify-center gap-2 w-full md:w-auto rounded-xl border border-dashed border-violet-500/30 hover:border-violet-500/60 bg-violet-500/5 hover:bg-violet-500/10 px-8 py-3.5 text-xs font-bold text-violet-400 hover:text-violet-300 transition-all cursor-pointer select-none"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Añadir Público B2B</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

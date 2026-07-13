@@ -9,8 +9,10 @@ import {
   AgentRun,
   ShareLink,
   Member,
+  MemberRole,
   BlockStatus,
   SlideComment,
+  ActivityLog,
 } from './types';
 import { parseMarkers } from '../utils/markers';
 
@@ -81,6 +83,90 @@ async function isAuthenticated(): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
+// PERMISSIONS, MEMBERS & ACTIVITY LOGS
+// ---------------------------------------------------------------------------
+async function checkWritePermission(): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('No autenticado.');
+  if (user.role !== 'admin' && user.can_write === false) {
+    throw new Error('No tienes permisos de escritura.');
+  }
+}
+
+async function getMembers(): Promise<Member[]> {
+  const { data, error } = await supabase
+    .from('sb_members')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.error('[db] Error fetching members:', error);
+    return [];
+  }
+  return (data || []).map(m => ({
+    ...m,
+    allowed_brands: m.allowed_brands || [],
+    can_write: m.can_write !== false
+  })) as Member[];
+}
+
+async function updateMemberPermissions(
+  id: string,
+  role: MemberRole,
+  allowed_brands: string[],
+  can_write: boolean
+): Promise<boolean> {
+  await checkWritePermission();
+  const { error } = await supabase
+    .from('sb_members')
+    .update({ role, allowed_brands, can_write })
+    .eq('id', id);
+
+  if (error) {
+    console.error('[db] Error updating member permissions:', error);
+    return false;
+  }
+  
+  // Log the permission change
+  const { data: targetMember } = await supabase.from('sb_members').select('email').eq('id', id).single();
+  if (targetMember) {
+    await createActivityLog(
+      'update_permissions',
+      `Modificó los permisos del usuario ${targetMember.email}: rol=${role}, marcas=[${allowed_brands.join(', ')}], escritura=${can_write}`
+    );
+  }
+  return true;
+}
+
+async function getActivityLogs(): Promise<ActivityLog[]> {
+  const { data, error } = await supabase
+    .from('sb_activity_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) {
+    console.error('[db] Error fetching activity logs:', error);
+    return [];
+  }
+  return data || [];
+}
+
+async function createActivityLog(action: string, details: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return;
+    
+    await supabase.from('sb_activity_logs').insert({
+      member_id: user.id,
+      email: user.email,
+      action,
+      details
+    });
+  } catch (err) {
+    console.error('[db] Failed to log activity:', err);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helper: get current member ID
 // ---------------------------------------------------------------------------
 async function getMemberId(): Promise<string | null> {
@@ -92,15 +178,34 @@ async function getMemberId(): Promise<string | null> {
 // BRANDS
 // ---------------------------------------------------------------------------
 async function getBrands(): Promise<Brand[]> {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('sb_brands')
     .select('*')
     .order('created_at', { ascending: false });
   if (error) { console.error('[db] getBrands:', error); return []; }
+
+  // If user is not an admin, filter brands to only those in allowed_brands
+  if (user.role !== 'admin') {
+    const allowed = user.allowed_brands || [];
+    return (data as Brand[]).filter(b => allowed.includes(b.id));
+  }
+
   return data as Brand[];
 }
 
 async function getBrand(id: string): Promise<Brand | undefined> {
+  const user = await getCurrentUser();
+  if (!user) return undefined;
+
+  // Enforce brand scope
+  if (user.role !== 'admin') {
+    const allowed = user.allowed_brands || [];
+    if (!allowed.includes(id)) return undefined;
+  }
+
   const { data, error } = await supabase
     .from('sb_brands')
     .select('*')
@@ -120,6 +225,7 @@ function slugify(text: string): string {
 }
 
 async function createBrand(input: { name: string }): Promise<Brand> {
+  await checkWritePermission();
   const memberId = await getMemberId();
   const { data, error } = await supabase
     .from('sb_brands')
@@ -135,7 +241,7 @@ async function createBrand(input: { name: string }): Promise<Brand> {
     console.error('[db] createBrand:', error);
     throw error;
   }
-  // Trigger auto-creates 13 brand_blocks in DB
+  await createActivityLog('create_brand', `Creó la marca '${input.name}'`);
   return data as Brand;
 }
 
@@ -143,6 +249,7 @@ async function updateBrand(
   id: string,
   data: Partial<Omit<Brand, 'id' | 'created_at' | 'created_by'>>
 ): Promise<Brand | undefined> {
+  await checkWritePermission();
   const updateData: Record<string, unknown> = { ...data };
   if (data.name && !data.slug) {
     updateData.slug = slugify(data.name);
@@ -154,15 +261,21 @@ async function updateBrand(
     .select()
     .single();
   if (error) { console.error('[db] updateBrand:', error); return undefined; }
+  await createActivityLog('update_brand', `Actualizó la marca '${updated.name}'`);
   return updated as Brand;
 }
 
 async function deleteBrand(id: string): Promise<boolean> {
+  await checkWritePermission();
+  const { data: brand } = await supabase.from('sb_brands').select('name').eq('id', id).single();
   const { error } = await supabase
     .from('sb_brands')
     .delete()
     .eq('id', id);
   if (error) { console.error('[db] deleteBrand:', error); return false; }
+  if (brand) {
+    await createActivityLog('delete_brand', `Eliminó la marca '${brand.name}'`);
+  }
   return true; // Cascade delete handles related tables
 }
 
@@ -216,6 +329,7 @@ async function updateBrandBlock(
   blockId: number,
   input: Partial<Pick<BrandBlock, 'content_md' | 'status' | 'updated_by'>>
 ): Promise<BrandBlock | undefined> {
+  await checkWritePermission();
   const memberId = await getMemberId();
   const updateData: Record<string, unknown> = { ...input };
   if (memberId) {
@@ -240,6 +354,13 @@ async function updateBrandBlock(
   if (error) {
     console.error('[db] updateBrandBlock:', error, { brandId, blockId, updateData });
     return undefined;
+  }
+
+  // Log activity
+  if (input.content_md !== undefined) {
+    await createActivityLog('update_block', `Actualizó el contenido del bloque ${blockId} para la marca`);
+  } else if (input.status !== undefined) {
+    await createActivityLog('update_block_status', `Cambió el estado del bloque ${blockId} a '${input.status}'`);
   }
 
   // Sync markers if content changed
@@ -270,6 +391,7 @@ async function createMarker(input: {
   text: string;
   blocks_what?: string | null;
 }): Promise<Marker> {
+  await checkWritePermission();
   const { data, error } = await supabase
     .from('sb_markers')
     .insert(input)
@@ -280,6 +402,7 @@ async function createMarker(input: {
 }
 
 async function resolveMarker(id: string): Promise<Marker | undefined> {
+  await checkWritePermission();
   const { data, error } = await supabase
     .from('sb_markers')
     .update({ resolved: true, resolved_at: new Date().toISOString() })
@@ -291,6 +414,7 @@ async function resolveMarker(id: string): Promise<Marker | undefined> {
 }
 
 async function deleteMarker(id: string): Promise<boolean> {
+  await checkWritePermission();
   const { error } = await supabase.from('sb_markers').delete().eq('id', id);
   return !error;
 }
@@ -300,6 +424,7 @@ async function syncMarkersFromContent(
   blockId: number,
   content: string
 ): Promise<void> {
+  await checkWritePermission();
   const parsed = parseMarkers(content);
 
   // Get existing unresolved markers for this block
@@ -356,12 +481,14 @@ async function createNamingCandidate(input: {
   rationale_md: string;
   status?: NamingCandidate['status'];
 }): Promise<NamingCandidate> {
+  await checkWritePermission();
   const { data, error } = await supabase
     .from('sb_naming_candidates')
     .insert(input)
     .select()
     .single();
   if (error) throw error;
+  await createActivityLog('create_naming_candidate', `Creó el candidato de naming '${input.name}'`);
   return data as NamingCandidate;
 }
 
@@ -369,6 +496,7 @@ async function updateNamingCandidate(
   id: string,
   input: Partial<Omit<NamingCandidate, 'id' | 'brand_id' | 'created_at'>>
 ): Promise<NamingCandidate | undefined> {
+  await checkWritePermission();
   const { data, error } = await supabase
     .from('sb_naming_candidates')
     .update(input)
@@ -376,11 +504,17 @@ async function updateNamingCandidate(
     .select()
     .single();
   if (error) return undefined;
+  await createActivityLog('update_naming_candidate', `Actualizó el candidato de naming '${data.name}' (status=${input.status})`);
   return data as NamingCandidate;
 }
 
 async function deleteNamingCandidate(id: string): Promise<boolean> {
+  await checkWritePermission();
+  const { data: candidate } = await supabase.from('sb_naming_candidates').select('name').eq('id', id).single();
   const { error } = await supabase.from('sb_naming_candidates').delete().eq('id', id);
+  if (!error && candidate) {
+    await createActivityLog('delete_naming_candidate', `Eliminó el candidato de naming '${candidate.name}'`);
+  }
   return !error;
 }
 
@@ -405,12 +539,14 @@ async function createKnowledgeItem(input: {
   audience: string;
   verified?: boolean;
 }): Promise<KnowledgeItem> {
+  await checkWritePermission();
   const { data, error } = await supabase
     .from('sb_knowledge_items')
     .insert(input)
     .select()
     .single();
   if (error) throw error;
+  await createActivityLog('create_knowledge_item', `Creó el ítem de conocimiento '${input.title}' (${input.kind})`);
   return data as KnowledgeItem;
 }
 
@@ -418,6 +554,7 @@ async function updateKnowledgeItem(
   id: string,
   input: Partial<Omit<KnowledgeItem, 'id' | 'brand_id' | 'created_at'>>
 ): Promise<KnowledgeItem | undefined> {
+  await checkWritePermission();
   const { data, error } = await supabase
     .from('sb_knowledge_items')
     .update(input)
@@ -425,11 +562,17 @@ async function updateKnowledgeItem(
     .select()
     .single();
   if (error) return undefined;
+  await createActivityLog('update_knowledge_item', `Actualizó el ítem de conocimiento '${data.title}'`);
   return data as KnowledgeItem;
 }
 
 async function deleteKnowledgeItem(id: string): Promise<boolean> {
+  await checkWritePermission();
+  const { data: item } = await supabase.from('sb_knowledge_items').select('title').eq('id', id).single();
   const { error } = await supabase.from('sb_knowledge_items').delete().eq('id', id);
+  if (!error && item) {
+    await createActivityLog('delete_knowledge_item', `Eliminó el ítem de conocimiento '${item.title}'`);
+  }
   return !error;
 }
 
@@ -708,6 +851,10 @@ export const db = {
   loginWithGoogle,
   logout,
   isAuthenticated,
+  getMembers,
+  updateMemberPermissions,
+  getActivityLogs,
+  createActivityLog,
   // Brands
   getBrands,
   getBrand,

@@ -20,6 +20,7 @@ interface BlockEditorProps {
   brandId: string;
   blockId: number;
   onSave?: () => void;
+  readOnly?: boolean;
 }
 
 const STATUS_OPTIONS: { value: BlockStatus; label: string; color: string; bgColor: string }[] = [
@@ -88,7 +89,7 @@ function renderMarkdownPreview(content: string): string {
   return `<p class="text-sm text-slate-700 leading-relaxed my-2">${html}</p>`;
 }
 
-export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
+export function BlockEditor({ brandId, blockId, onSave, readOnly = false }: BlockEditorProps) {
   const blockDef = getBlockById(blockId);
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<BlockStatus>('vacio');
@@ -97,6 +98,12 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [confirmValidado, setConfirmValidado] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => {
+    if (readOnly) {
+      setViewMode('preview');
+    }
+  }, [readOnly]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -370,46 +377,54 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
             )}
           </div>
 
-          {/* Status dropdown */}
-          <div className="relative" ref={statusDropdownRef}>
-            <button
-              onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${currentStatusConfig.bgColor} ${currentStatusConfig.color} border-slate-200 hover:border-slate-300`}
-            >
+          {/* Status dropdown or badge */}
+          {readOnly ? (
+            <span className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium ${currentStatusConfig.bgColor} ${currentStatusConfig.color} border-slate-200`}>
               {currentStatusConfig.label}
-              <ChevronDown className="h-3 w-3" />
-            </button>
-            {showStatusDropdown && (
-              <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                {STATUS_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => handleStatusChange(opt.value)}
-                    className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors hover:bg-slate-50 ${
-                      status === opt.value ? 'font-semibold' : ''
-                    } ${opt.color}`}
-                  >
-                    {status === opt.value && <Check className="h-3 w-3" />}
-                    <span className={status !== opt.value ? 'ml-5' : ''}>{opt.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+            </span>
+          ) : (
+            <div className="relative" ref={statusDropdownRef}>
+              <button
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${currentStatusConfig.bgColor} ${currentStatusConfig.color} border-slate-200 hover:border-slate-300`}
+              >
+                {currentStatusConfig.label}
+                <ChevronDown className="h-3 w-3" />
+              </button>
+              {showStatusDropdown && (
+                <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                  {STATUS_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleStatusChange(opt.value)}
+                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors hover:bg-slate-50 ${
+                        status === opt.value ? 'font-semibold' : ''
+                      } ${opt.color}`}
+                    >
+                      {status === opt.value && <Check className="h-3 w-3" />}
+                      <span className={status !== opt.value ? 'ml-5' : ''}>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* View mode toggle */}
           <div className="flex rounded-lg border border-slate-200 bg-slate-50">
-            <button
-              onClick={() => setViewMode('edit')}
-              className={`rounded-l-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'edit' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Editor de texto"
-            >
-              <Edit3 className="h-3.5 w-3.5" />
-              <span>Editor</span>
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setViewMode('edit')}
+                className={`rounded-l-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'edit' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                title="Editor de texto"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                <span>Editor</span>
+              </button>
+            )}
             <button
               onClick={() => setViewMode('preview')}
-              className={`rounded-r-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'preview' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`${readOnly ? 'rounded-lg' : 'rounded-r-lg'} px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'preview' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
               title="Vista previa"
             >
               <Eye className="h-3.5 w-3.5" />

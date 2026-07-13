@@ -8,6 +8,7 @@ import type { Rule, RuleKind } from '@/lib/db/types';
 interface RulesEditorProps {
   brandId: string;
   kind: RuleKind;
+  readOnly?: boolean;
 }
 
 const KIND_CONFIG: Record<RuleKind, { title: string; description: string; color: string; bgColor: string; borderColor: string }> = {
@@ -34,7 +35,7 @@ const KIND_CONFIG: Record<RuleKind, { title: string; description: string; color:
   },
 };
 
-export function RulesEditor({ brandId, kind }: RulesEditorProps) {
+export function RulesEditor({ brandId, kind, readOnly = false }: RulesEditorProps) {
   const [rules, setRules] = useState<Rule[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -58,6 +59,7 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
   }, [load]);
 
   const handleAdd = async () => {
+    if (readOnly) return;
     if (!newRule.trim()) return;
     await db.createRule({ brand_id: brandId, kind, body_md: newRule.trim() });
     setNewRule('');
@@ -66,11 +68,13 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
   };
 
   const handleStartEdit = (rule: Rule) => {
+    if (readOnly) return;
     setEditingId(rule.id);
     setEditText(rule.body_md);
   };
 
   const handleSaveEdit = async () => {
+    if (readOnly) return;
     if (!editingId || !editText.trim()) return;
     await db.updateRule(editingId, { body_md: editText.trim() });
     setEditingId(null);
@@ -84,6 +88,7 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
   };
 
   const handleDelete = async (id: string) => {
+    if (readOnly) return;
     await db.deleteRule(id);
     setDeleteConfirm(null);
     if (editingId === id) handleCancelEdit();
@@ -91,6 +96,7 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
   };
 
   const handleMoveUp = async (index: number) => {
+    if (readOnly) return;
     if (index <= 0) return;
     const newOrder = [...rules];
     [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
@@ -102,6 +108,7 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
   };
 
   const handleMoveDown = async (index: number) => {
+    if (readOnly) return;
     if (index >= rules.length - 1) return;
     const newOrder = [...rules];
     [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
@@ -122,13 +129,15 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500">{rules.length} regla{rules.length !== 1 ? 's' : ''}</span>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm border border-slate-200 transition-colors hover:bg-slate-50"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Nueva regla
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm border border-slate-200 transition-colors hover:bg-slate-50 cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Nueva regla
+            </button>
+          )}
         </div>
       </div>
 
@@ -173,28 +182,30 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
           {rules.map((rule, index) => (
             <div key={rule.id} className="group flex items-start gap-2 px-3 py-2.5 transition-colors hover:bg-slate-50/50">
               {/* Drag handle / sort number */}
-              <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5">
-                <GripVertical className="h-3.5 w-3.5 text-slate-300" />
+              <div className="flex shrink-0 flex-col items-center gap-0.5 pt-0.5 select-none">
+                {!readOnly && <GripVertical className="h-3.5 w-3.5 text-slate-300" />}
                 <span className="text-[10px] font-bold text-slate-300">{index + 1}</span>
               </div>
 
               {/* Move buttons */}
-              <div className="flex shrink-0 flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleMoveUp(index)}
-                  disabled={index === 0}
-                  className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-30"
-                >
-                  <ChevronUp className="h-3 w-3" />
-                </button>
-                <button
-                  onClick={() => handleMoveDown(index)}
-                  disabled={index === rules.length - 1}
-                  className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-30"
-                >
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="flex shrink-0 flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleMoveUp(index)}
+                    disabled={index === 0}
+                    className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-30 cursor-pointer"
+                  >
+                    <ChevronUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => handleMoveDown(index)}
+                    disabled={index === rules.length - 1}
+                    className="rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-600 disabled:opacity-30 cursor-pointer"
+                  >
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
 
               {/* Rule content */}
               <div className="min-w-0 flex-1">
@@ -228,24 +239,24 @@ export function RulesEditor({ brandId, kind }: RulesEditorProps) {
               </div>
 
               {/* Actions */}
-              {editingId !== rule.id && (
+              {!readOnly && editingId !== rule.id && (
                 <div className="flex shrink-0 gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleStartEdit(rule)}
-                    className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                    className="rounded p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 cursor-pointer"
                     title="Editar"
                   >
                     <Edit3 className="h-3.5 w-3.5" />
                   </button>
                   {deleteConfirm === rule.id ? (
                     <div className="flex items-center gap-1">
-                      <button onClick={() => handleDelete(rule.id)} className="rounded bg-red-500 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-red-600">Sí</button>
-                      <button onClick={() => setDeleteConfirm(null)} className="rounded border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-100">No</button>
+                      <button onClick={() => handleDelete(rule.id)} className="rounded bg-red-500 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-red-600 cursor-pointer">Sí</button>
+                      <button onClick={() => setDeleteConfirm(null)} className="rounded border border-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-500 hover:bg-slate-100 cursor-pointer">No</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => setDeleteConfirm(rule.id)}
-                      className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                      className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500 cursor-pointer"
                       title="Eliminar"
                     >
                       <Trash2 className="h-3.5 w-3.5" />

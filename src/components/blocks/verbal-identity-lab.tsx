@@ -13,6 +13,7 @@ interface VerbalIdentityLabProps {
   brandId: string;
   content_md: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
 const PRESET_IMAGES = [
@@ -22,7 +23,7 @@ const PRESET_IMAGES = [
   { value: '/images/verbal_glosario_evitar.png', label: 'Glosario No (Escudo)', color: 'text-red-400' },
 ];
 
-export function VerbalIdentityLab({ brandId, content_md, onUpdate }: VerbalIdentityLabProps) {
+export function VerbalIdentityLab({ brandId, content_md, onUpdate, readOnly = false }: VerbalIdentityLabProps) {
   const { rawMarkdown, images: initialImages } = splitBlock6Content(content_md);
   const sections = parseVerbalIdentity(rawMarkdown);
   
@@ -32,6 +33,7 @@ export function VerbalIdentityLab({ brandId, content_md, onUpdate }: VerbalIdent
   const [activeSectionKey, setActiveSectionKey] = useState<string | null>(null);
 
   const saveImages = async (newImages: Record<string, string>) => {
+    if (readOnly) return;
     setSavingState('saving');
     try {
       const compiled = compileBlock6Content(rawMarkdown, newImages);
@@ -170,7 +172,7 @@ export function VerbalIdentityLab({ brandId, content_md, onUpdate }: VerbalIdent
                 ) : (
                   <span className="text-[10px] text-slate-500 italic">Sin imagen</span>
                 )}
-                {activeImage && (
+                {!readOnly && activeImage && (
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity gap-2">
                     <button
                       onClick={() => handleRemoveImage(sectionKey)}
@@ -199,64 +201,75 @@ export function VerbalIdentityLab({ brandId, content_md, onUpdate }: VerbalIdent
                 </div>
 
                 {/* Buttons controls */}
-                <div className="flex flex-wrap items-center gap-3">
-                  {/* Select Presets */}
-                  <div className="flex items-center gap-1.5 bg-[#0f0f11] rounded-lg border border-[#2a2a2f] p-1">
-                    {PRESET_IMAGES.map((preset) => {
-                      const isSelected = images[sectionKey] === preset.value || (!images[sectionKey] && section.type === 'general' && false) || (!images[sectionKey] && activeImage === preset.value);
-                      return (
-                        <button
-                          key={preset.value}
-                          onClick={() => handleSelectPreset(sectionKey, preset.value)}
-                          className={`px-2 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
-                            isSelected 
-                              ? 'bg-slate-850 text-white font-black' 
-                              : 'text-slate-500 hover:text-slate-350'
-                          }`}
-                          title={`Usar preset ${preset.label}`}
-                        >
-                          <span className={`${preset.color} mr-1 font-bold`}>●</span>
-                          {preset.label.split(' ')[0]}
-                        </button>
-                      );
-                    })}
-                  </div>
+                {!readOnly ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Select Presets */}
+                    <div className="flex items-center gap-1.5 bg-[#0f0f11] rounded-lg border border-[#2a2a2f] p-1">
+                      {PRESET_IMAGES.map((preset) => {
+                        const isSelected = images[sectionKey] === preset.value || (!images[sectionKey] && section.type === 'general' && false) || (!images[sectionKey] && activeImage === preset.value);
+                        return (
+                          <button
+                            key={preset.value}
+                            onClick={() => handleSelectPreset(sectionKey, preset.value)}
+                            className={`px-2 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                              isSelected 
+                                ? 'bg-slate-850 text-white font-black' 
+                                : 'text-slate-500 hover:text-slate-350'
+                            }`}
+                            title={`Usar preset ${preset.label}`}
+                          >
+                            <span className={`${preset.color} mr-1 font-bold`}>●</span>
+                            {preset.label.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                  {/* Upload custom image */}
-                  <button
-                    onClick={() => triggerFileUpload(sectionKey)}
-                    className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
-                      isCustom 
-                        ? 'border-violet-500/30 bg-violet-500/5 text-violet-400' 
-                        : 'border-[#2a2a2f] bg-[#0f0f11] text-slate-400 hover:border-slate-800 hover:bg-[#17171a]'
-                    }`}
-                  >
-                    <Upload size={12} />
-                    <span>{isCustom ? 'Personalizada (Cambiar)' : 'Subir Imagen'}</span>
-                  </button>
-
-                  {/* Reset indicators */}
-                  {!isMappedToDefault && (
+                    {/* Upload custom image */}
                     <button
-                      onClick={() => handleRemoveImage(sectionKey)}
-                      className="text-[10px] font-bold text-slate-500 hover:text-slate-350 cursor-pointer flex items-center gap-1 py-1"
-                      title="Volver a la imagen predeterminada por tipo"
+                      onClick={() => triggerFileUpload(sectionKey)}
+                      className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[10px] font-bold transition-colors cursor-pointer ${
+                        isCustom 
+                          ? 'border-violet-500/30 bg-violet-500/5 text-violet-400' 
+                          : 'border-[#2a2a2f] bg-[#0f0f11] text-slate-400 hover:border-slate-800 hover:bg-[#17171a]'
+                      }`}
                     >
-                      <Trash2 size={11} />
-                      <span>Quitar</span>
+                      <Upload size={12} />
+                      <span>{isCustom ? 'Personalizada (Cambiar)' : 'Subir Imagen'}</span>
                     </button>
-                  )}
 
-                  {isMappedToDefault && (
-                    <span className="text-[9px] font-bold font-mono text-slate-500 select-none">
-                      Predeterminada
+                    {/* Reset indicators */}
+                    {!isMappedToDefault && (
+                      <button
+                        onClick={() => handleRemoveImage(sectionKey)}
+                        className="text-[10px] font-bold text-slate-500 hover:text-slate-350 cursor-pointer flex items-center gap-1 py-1"
+                        title="Volver a la imagen predeterminada por tipo"
+                      >
+                        <Trash2 size={11} />
+                        <span>Quitar</span>
+                      </button>
+                    )}
+
+                    {isMappedToDefault && (
+                      <span className="text-[9px] font-bold font-mono text-slate-500 select-none">
+                        Predeterminada
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  isMappedToDefault ? (
+                    <span className="text-[9px] font-bold font-mono text-slate-600 select-none">
+                      Ilustración Predeterminada
                     </span>
-                  )}
-                </div>
+                  ) : (
+                    <span className="text-[9px] font-bold font-mono text-violet-400 select-none">
+                      Ilustración Personalizada
+                    </span>
+                  )
+                )}       </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );

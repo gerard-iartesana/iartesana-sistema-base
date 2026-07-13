@@ -34,6 +34,7 @@ import {
 interface VisualLabProps {
   brandId: string;
   onUpdate: () => void;
+  readOnly?: boolean;
 }
 
 // Basic color naming dictionary and distance calculator
@@ -288,7 +289,7 @@ function extractColorsFromImage(imgElement: HTMLImageElement): string[] {
   return results;
 }
 
-export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
+export function VisualLab({ brandId, onUpdate, readOnly = false }: VisualLabProps) {
   const { activeBrand, refreshBrands, setActiveBrand } = useBrand();
   const { user } = useAuth();
   
@@ -345,6 +346,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   const [isSavingMockup, setIsSavingMockup] = useState<string | null>(null);
   // Save current extractedColors state to Block 7 content_md
   const saveColorsToDb = async (colorsToSave: string[]) => {
+    if (readOnly) return;
     try {
       const blocks = await db.getBrandBlocks(brandId);
       const block7 = blocks.find(b => b.block_id === 7);
@@ -365,12 +367,14 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   };
 
   const handleColorChange = (index: number, newHex: string) => {
+    if (readOnly) return;
     const updated = [...extractedColors];
     updated[index] = newHex;
     setExtractedColors(updated);
   };
 
   const handleColorBlur = async (index: number, val: string) => {
+    if (readOnly) return;
     let normalized = val.trim();
     if (!normalized.startsWith('#')) {
       normalized = '#' + normalized;
@@ -385,18 +389,21 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   };
 
   const handleRemoveColor = async (index: number) => {
+    if (readOnly) return;
     const updated = extractedColors.filter((_, idx) => idx !== index);
     setExtractedColors(updated);
     await saveColorsToDb(updated);
   };
 
   const handleAddColor = async () => {
+    if (readOnly) return;
     const updated = [...extractedColors, '#ffffff'];
     setExtractedColors(updated);
     await saveColorsToDb(updated);
   };
 
   const handleResetColors = async () => {
+    if (readOnly) return;
     if (!logoSrc) return;
     const img = new Image();
     img.onload = async () => {
@@ -408,6 +415,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   };
 
   const handleAddVariantSubmit = async () => {
+    if (readOnly) return;
     if (!newVariantName.trim() || !newVariantFile) return;
 
     const reader = new FileReader();
@@ -447,6 +455,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   };
 
   const handleRemoveVariant = async (id: string) => {
+    if (readOnly) return;
     const updated = variants.filter(v => v.id !== id);
     setVariants(updated);
 
@@ -469,6 +478,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   };
 
   const handleSaveMockup = async (key: keyof SavedMockups, base64: string) => {
+    if (readOnly) return;
     setIsSavingMockup(key);
     try {
       const blocks = await db.getBrandBlocks(brandId);
@@ -499,6 +509,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   };
 
   const handleDeleteMockup = async (key: keyof SavedMockups) => {
+    if (readOnly) return;
     try {
       const blocks = await db.getBrandBlocks(brandId);
       const block7 = blocks.find(b => b.block_id === 7);
@@ -614,6 +625,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   }, []);
 
   const handleSaveApiKey = (key: string) => {
+    if (readOnly) return;
     setApiKey(key);
     if (typeof window !== 'undefined') {
       localStorage.setItem('sb_gemini_api_key', key);
@@ -621,6 +633,7 @@ export function VisualLab({ brandId, onUpdate }: VisualLabProps) {
   };
 
   const handleRefinePrompt = async (userIdeaText: string) => {
+    if (readOnly) return;
     if (!apiKey) {
       setPromptError('Introduce tu API Key primero');
       return;
@@ -726,6 +739,7 @@ Requisitos obligatorios del prompt resultante:
   };
 
   const handleGenerateImage = async (promptText: string) => {
+    if (readOnly) return;
     if (!apiKey) {
       setApiError('Introduce tu API Key primero');
       return;
@@ -827,6 +841,7 @@ Requisitos obligatorios del prompt resultante:
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -865,6 +880,7 @@ Requisitos obligatorios del prompt resultante:
   };
 
   const handleRemoveLogo = async () => {
+    if (readOnly) return;
     setLogoSrc(null);
     setExtractedColors([]);
     setAnalysisReport(null);
@@ -903,6 +919,7 @@ Requisitos obligatorios del prompt resultante:
 
   // Run the visual scanner audit with Gemini 3.5 Flash
   const runAnalysis = async () => {
+    if (readOnly) return;
     if (!logoSrc) return;
     if (!apiKey) {
       setApiError('Ingresa tu clave de API de Google AI Studio en el recuadro para ejecutar el análisis.');
@@ -1218,15 +1235,17 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                       setLogoDimensions({ width: img.naturalWidth, height: img.naturalHeight });
                     }}
                   />
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    <button
-                      onClick={handleRemoveLogo}
-                      className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors"
-                      title="Eliminar logotipo"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <button
+                        onClick={handleRemoveLogo}
+                        className="p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors cursor-pointer"
+                        title="Eliminar logotipo"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex justify-between items-center text-[10px] text-slate-500 font-mono px-1">
@@ -1236,8 +1255,10 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
               </div>
             ) : (
               <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-800 hover:border-violet-500/50 rounded-lg p-6 bg-slate-900/20 text-center cursor-pointer transition-all hover:bg-slate-800/10 group flex flex-col items-center justify-center min-h-[140px]"
+                onClick={() => !readOnly && fileInputRef.current?.click()}
+                className={`border-2 border-dashed border-slate-800 rounded-lg p-6 bg-slate-900/20 text-center transition-all group flex flex-col items-center justify-center min-h-[140px] ${
+                  readOnly ? 'cursor-default' : 'hover:border-violet-500/50 hover:bg-slate-800/10 cursor-pointer'
+                }`}
               >
                 <div className="w-10 h-10 rounded-full bg-slate-800/50 flex items-center justify-center mb-2.5 text-slate-500 group-hover:text-violet-400 group-hover:bg-slate-800/80 transition-colors">
                   <Upload className="h-5 w-5" />
@@ -1263,7 +1284,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Variantes de la Marca</h4>
                   <p className="text-[9px] text-slate-500 mt-0.5">Sube símbolos o versiones reducidas para el análisis.</p>
                 </div>
-                {!showAddVariant && (
+                {!readOnly && !showAddVariant && (
                   <button
                     onClick={() => setShowAddVariant(true)}
                     className="bg-slate-900 hover:bg-slate-850 text-slate-300 hover:text-white font-bold text-[10px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-750 transition-all cursor-pointer font-sans"
@@ -1348,13 +1369,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                         <span className="text-[10px] font-bold text-white truncate leading-tight">{v.name}</span>
                         <span className="text-[8px] text-slate-500 font-mono mt-0.5 leading-none">Variante</span>
                       </div>
-                      <button
-                        onClick={() => handleRemoveVariant(v.id)}
-                        className="absolute right-1 top-1 p-1 bg-red-950/80 text-red-400 hover:bg-red-900 hover:text-red-200 rounded border border-red-900/50 opacity-0 group-hover/var:opacity-100 transition-opacity cursor-pointer"
-                        title="Eliminar variante"
-                      >
-                        <Trash2 className="h-2.5 w-2.5" />
-                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={() => handleRemoveVariant(v.id)}
+                          className="absolute right-1 top-1 p-1 bg-red-950/80 text-red-400 hover:bg-red-900 hover:text-red-200 rounded border border-red-900/50 opacity-0 group-hover/var:opacity-100 transition-opacity cursor-pointer"
+                          title="Eliminar variante"
+                        >
+                          <Trash2 className="h-2.5 w-2.5" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1374,25 +1397,27 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
               </div>
 
               {/* Toolbar */}
-              <div className="flex items-center justify-between gap-2 mb-3 bg-slate-900/50 p-1.5 rounded-lg border border-slate-850 select-none">
-                <span className="text-[10px] text-slate-400 font-medium pl-1">Gestionar paleta</span>
-                <div className="flex gap-1.5">
-                  <button 
-                    onClick={handleAddColor}
-                    className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] py-1 px-2.5 rounded border border-slate-700 hover:border-slate-600 transition-all cursor-pointer font-bold font-sans"
-                    title="Añadir un color personalizado"
-                  >
-                    <span>+ Añadir</span>
-                  </button>
-                  <button 
-                    onClick={handleResetColors}
-                    className="flex items-center gap-1 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-slate-300 text-[10px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-700 transition-all cursor-pointer font-bold font-sans"
-                    title="Restablecer a la extracción automática"
-                  >
-                    <span>↺ Restablecer</span>
-                  </button>
+              {!readOnly && (
+                <div className="flex items-center justify-between gap-2 mb-3 bg-slate-900/50 p-1.5 rounded-lg border border-slate-850 select-none">
+                  <span className="text-[10px] text-slate-400 font-medium pl-1">Gestionar paleta</span>
+                  <div className="flex gap-1.5">
+                    <button 
+                      onClick={handleAddColor}
+                      className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] py-1 px-2.5 rounded border border-slate-700 hover:border-slate-600 transition-all cursor-pointer font-bold font-sans"
+                      title="Añadir un color personalizado"
+                    >
+                      <span>+ Añadir</span>
+                    </button>
+                    <button 
+                      onClick={handleResetColors}
+                      className="flex items-center gap-1 bg-slate-850 hover:bg-slate-800 text-slate-400 hover:text-slate-300 text-[10px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-700 transition-all cursor-pointer font-bold font-sans"
+                      title="Restablecer a la extracción automática"
+                    >
+                      <span>↺ Restablecer</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {extractedColors.length === 0 ? (
                 <div className="text-center py-6 text-slate-500 text-xs italic">
@@ -1418,37 +1443,47 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                     return (
                       <div key={idx} className="bg-slate-900 border border-slate-800 rounded-lg p-2.5 flex flex-col justify-between relative group/card">
                         {/* Absolute delete button */}
-                        <button 
-                          onClick={() => handleRemoveColor(idx)}
-                          className="absolute -top-1.5 -right-1.5 p-1 bg-red-950 text-red-400 hover:bg-red-900 hover:text-red-200 rounded-full border border-red-900/50 opacity-0 group-hover/card:opacity-100 transition-opacity shadow-sm z-10 cursor-pointer"
-                          title="Eliminar color"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                        {!readOnly && (
+                          <button 
+                            onClick={() => handleRemoveColor(idx)}
+                            className="absolute -top-1.5 -right-1.5 p-1 bg-red-950 text-red-400 hover:bg-red-900 hover:text-red-200 rounded-full border border-red-900/50 opacity-0 group-hover/card:opacity-100 transition-opacity shadow-sm z-10 cursor-pointer"
+                            title="Eliminar color"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        )}
 
                         <div>
                           {/* Swatch & Color Picker */}
                           <div className="relative mb-2">
                             <div 
-                              className="h-8 w-full rounded-md shadow-inner border border-slate-950 cursor-pointer relative group/swatch"
+                              className={`h-8 w-full rounded-md shadow-inner border border-slate-950 relative group/swatch ${
+                                readOnly ? 'cursor-default' : 'cursor-pointer'
+                              }`}
                               style={{ backgroundColor: hex }}
-                              title="Haz clic para seleccionar un color"
+                              title={readOnly ? undefined : "Haz clic para seleccionar un color"}
                               onClick={() => {
-                                document.getElementById(`color-picker-${idx}`)?.click();
+                                if (!readOnly) {
+                                  document.getElementById(`color-picker-${idx}`)?.click();
+                                }
                               }}
                             >
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/swatch:opacity-100 flex items-center justify-center transition-opacity rounded-md">
-                                <Sparkles className="h-3.5 w-3.5 text-white" />
-                              </div>
+                              {!readOnly && (
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/swatch:opacity-100 flex items-center justify-center transition-opacity rounded-md">
+                                  <Sparkles className="h-3.5 w-3.5 text-white" />
+                                </div>
+                              )}
                             </div>
-                            <input 
-                              id={`color-picker-${idx}`}
-                              type="color" 
-                              value={hex.startsWith('#') && (hex.length === 4 || hex.length === 7) ? hex : '#ffffff'} 
-                              onChange={(e) => handleColorChange(idx, e.target.value)}
-                              onBlur={(e) => handleColorBlur(idx, e.target.value)}
-                              className="absolute w-0 h-0 opacity-0 pointer-events-none"
-                            />
+                            {!readOnly && (
+                              <input 
+                                id={`color-picker-${idx}`}
+                                type="color" 
+                                value={hex.startsWith('#') && (hex.length === 4 || hex.length === 7) ? hex : '#ffffff'} 
+                                onChange={(e) => handleColorChange(idx, e.target.value)}
+                                onBlur={(e) => handleColorBlur(idx, e.target.value)}
+                                className="absolute w-0 h-0 opacity-0 pointer-events-none"
+                              />
+                            )}
                           </div>
 
                           {/* Direct Hex Input */}
@@ -1459,7 +1494,8 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                               value={hex}
                               onChange={(e) => handleColorChange(idx, e.target.value)}
                               onBlur={(e) => handleColorBlur(idx, e.target.value)}
-                              className="w-full bg-transparent text-[10px] font-mono font-bold text-white focus:outline-none uppercase border-none p-0 select-all"
+                              className="w-full bg-transparent text-[10px] font-mono font-bold text-white focus:outline-none uppercase border-none p-0 select-all disabled:text-slate-400"
+                              disabled={readOnly}
                             />
                             <button
                               onClick={() => copyToClipboard(hex)}
@@ -1517,10 +1553,10 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Auditoría Visual de Identidad</h4>
                   <p className="text-[9px] text-slate-500 mt-0.5">Examen de rendimiento de los 15 parámetros clásicos.</p>
                 </div>
-                {analysisReport && !isScanning && scannedImage === logoSrc && (
+                {!readOnly && analysisReport && !isScanning && scannedImage === logoSrc && (
                   <button 
                     onClick={runAnalysis}
-                    className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold text-[9px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-700 transition-all cursor-pointer animate-fadeIn"
+                    className="flex items-center gap-1 bg-slate-900 hover:bg-slate-850 text-slate-300 font-bold text-[9px] py-1 px-2.5 rounded border border-slate-800 hover:border-slate-700 transition-all cursor-pointer animate-fadeIn"
                     title="Ejecutar análisis de nuevo"
                   >
                     <Sparkles className="h-2.5 w-2.5 text-violet-400" />
@@ -1529,8 +1565,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                 )}
               </div>
 
+              {/* If read-only and no report yet */}
+              {readOnly && !analysisReport && (
+                <div className="bg-slate-900/40 border border-slate-900/60 rounded-lg p-3 text-center text-slate-500 text-[10px] italic select-none">
+                  La auditoría de identidad de marca no ha sido ejecutada todavía.
+                </div>
+              )}
+
               {/* If no API key, show inline input for convenience */}
-              {!apiKey && (
+              {!readOnly && !apiKey && (
                 <div className="bg-slate-900/60 border border-slate-850 rounded-lg p-3 space-y-2.5 select-none">
                   <div className="flex justify-between items-center text-[9px] font-semibold">
                     <span className="text-slate-400">Google AI Studio API Key Requerida</span>
@@ -1557,7 +1600,7 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
               )}
 
               {/* If API key exists but no report yet */}
-              {apiKey && !analysisReport && !isScanning && (
+              {!readOnly && apiKey && !analysisReport && !isScanning && (
                 <div className="flex justify-between items-center bg-slate-900/40 border border-slate-900/60 rounded-lg p-3">
                   <span className="text-[10px] text-slate-400 font-sans">Listo para analizar el logotipo.</span>
                   <button 
@@ -1704,20 +1747,22 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                 <Shirt className="h-3 w-3" />
                 Merch
               </button>
-              <button
-                onClick={() => {
-                  setMockupCategory('ai');
-                  setCopiedPrompt(false);
-                }}
-                className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold cursor-pointer transition-all ${
-                  mockupCategory === 'ai' 
-                    ? 'bg-violet-600 text-white shadow-sm' 
-                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Inspiración IA
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => {
+                    setMockupCategory('ai');
+                    setCopiedPrompt(false);
+                  }}
+                  className={`flex items-center gap-1 rounded-md px-2.5 py-1 text-[10px] font-bold cursor-pointer transition-all ${
+                    mockupCategory === 'ai' 
+                      ? 'bg-violet-600 text-white shadow-sm' 
+                      : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                  }`}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Inspiración IA
+                </button>
+              )}
             </div>
           </div>
 
@@ -1763,13 +1808,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                           alt="Mockup Tarjeta Guardada" 
                           className="w-full h-full object-cover" 
                         />
-                        <button
-                          onClick={() => handleDeleteMockup('card')}
-                          className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors"
-                          title="Eliminar diseño IA"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {!readOnly && (
+                          <button
+                            onClick={() => handleDeleteMockup('card')}
+                            className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors cursor-pointer"
+                            title="Eliminar diseño IA"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <>
@@ -1900,13 +1947,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                               alt="Mockup Móvil Guardado" 
                               className="w-full h-full object-cover" 
                             />
-                            <button
-                              onClick={() => handleDeleteMockup('mobile')}
-                              className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors z-35"
-                              title="Eliminar diseño IA"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                            {!readOnly && (
+                              <button
+                                onClick={() => handleDeleteMockup('mobile')}
+                                className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors z-35 cursor-pointer"
+                                title="Eliminar diseño IA"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <>
@@ -2040,13 +2089,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                           alt="Mockup Papel Guardado" 
                           className="w-full h-full object-cover" 
                         />
-                        <button
-                          onClick={() => handleDeleteMockup('letter')}
-                          className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors"
-                          title="Eliminar diseño IA"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        {!readOnly && (
+                          <button
+                            onClick={() => handleDeleteMockup('letter')}
+                            className="absolute top-2 right-2 p-1.5 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded-md border border-red-900/50 transition-colors cursor-pointer"
+                            title="Eliminar diseño IA"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     ) : (
                       <div className="w-[320px] h-[420px] bg-white rounded-lg border border-slate-200 shadow-2xl p-6 text-left text-slate-800 relative flex flex-col justify-between overflow-hidden">
@@ -2152,13 +2203,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                             alt="Mockup Bolso Guardado" 
                             className="w-full h-full object-cover" 
                           />
-                          <button
-                            onClick={() => handleDeleteMockup('tote')}
-                            className="absolute top-1.5 right-1.5 p-1 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded border border-red-900/50 transition-colors"
-                            title="Eliminar diseño IA"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          {!readOnly && (
+                            <button
+                              onClick={() => handleDeleteMockup('tote')}
+                              className="absolute top-1.5 right-1.5 p-1 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded border border-red-900/50 transition-colors cursor-pointer"
+                              title="Eliminar diseño IA"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <div className="relative bg-slate-900 border border-slate-800 rounded-xl p-4 w-[130px] h-[150px] flex items-center justify-center overflow-hidden">
@@ -2207,13 +2260,15 @@ IMPORTANTE: Devuelve ÚNICAMENTE el código JSON válido en español. No agregue
                             alt="Mockup Camiseta Guardada" 
                             className="w-full h-full object-cover" 
                           />
-                          <button
-                            onClick={() => handleDeleteMockup('tshirt')}
-                            className="absolute top-1.5 right-1.5 p-1 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded border border-red-900/50 transition-colors"
-                            title="Eliminar diseño IA"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
+                          {!readOnly && (
+                            <button
+                              onClick={() => handleDeleteMockup('tshirt')}
+                              className="absolute top-1.5 right-1.5 p-1 bg-red-950/80 hover:bg-red-900 text-red-400 hover:text-red-200 rounded border border-red-900/50 transition-colors cursor-pointer"
+                              title="Eliminar diseño IA"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
                         </div>
                       ) : (
                         <div className="relative bg-slate-900 border border-slate-800 rounded-xl p-4 w-[130px] h-[150px] flex items-center justify-center overflow-hidden">

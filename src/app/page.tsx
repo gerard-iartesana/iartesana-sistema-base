@@ -17,18 +17,20 @@ import { ValuePropositionLab } from '@/components/blocks/value-proposition-lab';
 import { VoiceTensionsLab } from '@/components/blocks/voice-tensions-lab';
 import { VerbalIdentityLab } from '@/components/blocks/verbal-identity-lab';
 import { CopilotPanel, AGENTS } from '@/components/copilot/copilot-panel';
+import { SettingsLab } from '@/components/blocks/settings-lab';
 import { MarkdownExport } from '@/components/export/markdown-export';
 import { PromptGlobal } from '@/components/export/prompt-global';
 import { LiveLink } from '@/components/export/live-link';
 import { Presentation } from '@/components/export/presentation';
 import { db } from '@/lib/db/local-storage';
-import { BrandBlock, Marker, Stage, AgentName } from '@/lib/db/types';
+import { BrandBlock, Marker, Stage, AgentName, Member } from '@/lib/db/types';
 import { LogOut, Sparkles, Clock, AlertTriangle, Settings } from 'lucide-react';
 import { getStageForBlock } from '@/lib/data/block-definitions';
 
 export default function HomePage() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const { activeBrand } = useBrand();
+  const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [selectedStage, setSelectedStage] = useState<Stage>('A');
   const [selectedBlockId, setSelectedBlockId] = useState<number>(1);
   const [brandBlocks, setBrandBlocks] = useState<BrandBlock[]>([]);
@@ -36,18 +38,20 @@ export default function HomePage() {
   const [editorKey, setEditorKey] = useState(0);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [copilotAgent, setCopilotAgent] = useState<AgentName | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [globalGeminiKey, setGlobalGeminiKey] = useState('');
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedGeminiKey = localStorage.getItem('gemini_api_key') || '';
-      setGlobalGeminiKey(savedGeminiKey);
+    async function loadUser() {
+      const u = await db.getCurrentUser();
+      setCurrentUser(u);
     }
-  }, []);
+    if (user) {
+      loadUser();
+    }
+  }, [user, editorKey]);
+
+  const isReadOnly = currentUser ? (currentUser.role !== 'admin' && currentUser.can_write === false) : false;
 
   const handleSaveGlobalSettings = (geminiKey: string) => {
-    setGlobalGeminiKey(geminiKey);
     localStorage.setItem('gemini_api_key', geminiKey);
     // Trigger editor key increment to force labs to remount and read new settings
     setEditorKey(prev => prev + 1);
@@ -169,10 +173,10 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* Block Navigation */}
-        {activeBrand && (
-          <div className="flex-1 overflow-y-auto flex flex-col justify-between py-2">
-            <div>
+        {/* Block Navigation & Settings */}
+        <div className="flex-1 overflow-y-auto flex flex-col justify-between py-2">
+          <div>
+            {activeBrand && (
               <BlockNav
                 selectedStage={selectedStage}
                 selectedBlockId={selectedBlockId}
@@ -180,20 +184,24 @@ export default function HomePage() {
                 onSelectBlock={handleSelectBlock}
                 brandBlocks={brandBlocks}
               />
-            </div>
-
-            {/* Global Settings Button at the bottom of the sidebar */}
-            <div className="border-t border-slate-800/60 mt-auto">
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold transition-colors text-white hover:bg-slate-50/50 hover:text-white cursor-pointer select-none"
-              >
-                <Settings className="h-4 w-4 shrink-0 text-white" />
-                <span className="truncate">Configuración Global</span>
-              </button>
-            </div>
+            )}
           </div>
-        )}
+
+          {/* Settings Button at the bottom of the sidebar */}
+          <div className="border-t border-slate-100 mt-auto">
+            <button
+              onClick={() => setSelectedBlockId(105)}
+              className={`flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold transition-colors cursor-pointer select-none border-l-3 ${
+                selectedBlockId === 105
+                  ? 'bg-violet-50 text-violet-600 border-violet-600'
+                  : 'text-slate-500 border-transparent hover:bg-slate-50 hover:text-slate-800'
+              }`}
+            >
+              <Settings className={`h-4 w-4 shrink-0 ${selectedBlockId === 105 ? 'text-violet-600' : 'text-slate-400'}`} />
+              <span className="truncate">Configuración</span>
+            </button>
+          </div>
+        </div>
       </aside>
 
       {/* Main Content */}
@@ -258,7 +266,7 @@ export default function HomePage() {
           </div>
         </header>
 
-        {activeBrand ? (
+        {activeBrand || selectedBlockId === 105 ? (
           <>
             {/* Editor Area */}
             <div className="flex-1 flex overflow-hidden">
@@ -269,14 +277,24 @@ export default function HomePage() {
                   {selectedBlockId === 102 && <PromptGlobal />}
                   {selectedBlockId === 103 && <LiveLink />}
                   {selectedBlockId === 104 && <Presentation />}
+                  {selectedBlockId === 105 && (
+                    <SettingsLab
+                      key={`settings-${editorKey}`}
+                      onSaveKey={handleSaveGlobalSettings}
+                      onUpdate={() => {
+                        setEditorKey(prev => prev + 1);
+                      }}
+                    />
+                  )}
 
-                  {selectedBlockId < 100 && (
+                  {selectedBlockId < 100 && activeBrand && (
                     <>
                       <BlockEditor
                         key={`editor-${activeBrand.id}-${selectedBlockId}-${editorKey}`}
                         brandId={activeBrand.id}
                         blockId={selectedBlockId}
                         onSave={handleBlockUpdate}
+                        readOnly={isReadOnly}
                       />
 
                       {/* Special UIs for certain blocks */}
@@ -289,6 +307,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -300,6 +319,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -312,6 +332,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -324,6 +345,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -336,6 +358,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -347,6 +370,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -359,6 +383,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -371,6 +396,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -382,6 +408,7 @@ export default function HomePage() {
                               setEditorKey(prev => prev + 1);
                               handleBlockUpdate();
                             }}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -390,6 +417,7 @@ export default function HomePage() {
                           <RulesEditor
                             brandId={activeBrand.id}
                             kind={ruleKindMap[selectedBlockId]}
+                            readOnly={isReadOnly}
                           />
                         </div>
                       )}
@@ -422,57 +450,6 @@ export default function HomePage() {
           </div>
         )}
       </main>
-      {/* Global Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-6 flex flex-col gap-4 relative animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Settings className="h-4.5 w-4.5 text-violet-600" />
-                <h3 className="text-sm font-bold text-slate-800">Configuración de Inteligencia Artificial</h3>
-              </div>
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="text-slate-400 hover:text-slate-600 cursor-pointer text-xs font-semibold p-1 hover:bg-slate-50 rounded"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-600 select-none">Clave API de Google Gemini (Copiloto e Imágenes)</label>
-                  <a
-                    href="https://aistudio.google.com/app/apikey"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] text-violet-600 hover:text-violet-500 hover:underline font-bold"
-                  >
-                    Obtener Clave Gratis ↗
-                  </a>
-                </div>
-                <input
-                  type="password"
-                  value={globalGeminiKey}
-                  onChange={(e) => handleSaveGlobalSettings(e.target.value)}
-                  placeholder="Pega tu clave de Google AI Studio (AIzaSy...)"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-3 border-t border-slate-100 mt-2">
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="bg-violet-600 hover:bg-violet-750 text-white rounded-lg px-4 py-2 text-xs font-bold transition-colors cursor-pointer"
-              >
-                Cerrar y Aplicar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
