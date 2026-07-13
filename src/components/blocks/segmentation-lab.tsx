@@ -51,21 +51,24 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
         return;
       }
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${geminiKey.trim()}`, {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${geminiKey.trim()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          instances: [
+          contents: [
             {
-              prompt: prompt
+              role: 'user',
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
             }
           ],
-          parameters: {
-            sampleCount: 1,
-            aspectRatio: '1:1',
-            outputMimeType: 'image/png'
+          generationConfig: {
+            responseModalities: ['IMAGE']
           }
         })
       });
@@ -76,12 +79,23 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
       }
 
       const resData = await response.json();
-      const base64Data = resData.predictions?.[0]?.bytesBase64Encoded;
-      if (!base64Data) {
-        throw new Error('La API de Google Imagen no devolvió datos de imagen válidos.');
+      const parts = resData.candidates?.[0]?.content?.parts || [];
+      let base64Data = '';
+      let mimeType = 'image/png';
+
+      for (const part of parts) {
+        if (part.inlineData) {
+          base64Data = part.inlineData.data;
+          mimeType = part.inlineData.mimeType || 'image/png';
+          break;
+        }
       }
 
-      const base64 = `data:image/png;base64,${base64Data}`;
+      if (!base64Data) {
+        throw new Error('La API de Gemini 2.5 no devolvió datos de imagen (inlineData).');
+      }
+
+      const base64 = `data:${mimeType};base64,${base64Data}`;
       const updated = [...modules];
       updated[index] = { ...updated[index], image: base64 };
       setModules(updated);
