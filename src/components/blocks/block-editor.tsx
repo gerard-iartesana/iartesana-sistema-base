@@ -30,8 +30,11 @@ const STATUS_OPTIONS: { value: BlockStatus; label: string; color: string; bgColo
 function renderMarkdownPreview(content: string): string {
   if (!content.trim()) return '<p class="text-slate-400 italic">Sin contenido</p>';
 
-  // Clean mockup base64 image tags from preview pane
-  const cleanContent = content.replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '').trim();
+  // Clean mockup base64 images and reference-style link/image definitions from preview pane
+  const cleanContent = content
+    .replace(/^\[[^\]]+\]:\s*[^\n]+/gm, '')
+    .replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '')
+    .trim();
   if (!cleanContent) return '<p class="text-slate-400 italic">Sin contenido</p>';
 
   let html = cleanContent
