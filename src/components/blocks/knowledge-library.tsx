@@ -24,6 +24,9 @@ export function KnowledgeLibrary({ brandId, onUpdate }: KnowledgeLibraryProps) {
   const [filterKind, setFilterKind] = useState<KnowledgeKind | 'all'>('all');
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editKind, setEditKind] = useState<KnowledgeKind>('recomendacion');
+  const [editAudience, setEditAudience] = useState('');
   const [editBody, setEditBody] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [newItem, setNewItem] = useState({ title: '', kind: 'recomendacion' as KnowledgeKind, body_md: '', audience: '' });
@@ -122,11 +125,24 @@ export function KnowledgeLibrary({ brandId, onUpdate }: KnowledgeLibraryProps) {
     }
     const item = items.find(i => i.id === id);
     setExpandedId(id);
+    setEditTitle(item?.title || '');
+    setEditKind(item?.kind || 'recomendacion');
+    setEditAudience(item?.audience || '');
     setEditBody(item?.body_md || '');
   };
 
-  const handleSaveBody = async (id: string) => {
-    await db.updateKnowledgeItem(id, { body_md: editBody });
+  const handleSaveItem = async (id: string) => {
+    if (!editTitle.trim()) {
+      alert('El título no puede estar vacío.');
+      return;
+    }
+    await db.updateKnowledgeItem(id, {
+      title: editTitle.trim(),
+      kind: editKind,
+      audience: editAudience.trim(),
+      body_md: editBody,
+    });
+    setExpandedId(null);
     const updated = await load();
     await syncBlock10Content(updated);
   };
@@ -289,6 +305,13 @@ export function KnowledgeLibrary({ brandId, onUpdate }: KnowledgeLibraryProps) {
                   >
                     {item.verified ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
                   </button>
+                  <button
+                    onClick={() => handleExpand(item.id)}
+                    className={`rounded p-1 transition-colors ${isExpanded ? 'text-violet-500 hover:bg-violet-55 bg-violet-50/10' : 'text-slate-300 hover:bg-slate-100 hover:text-slate-500'}`}
+                    title="Editar ítem"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
                   {deleteConfirm === item.id ? (
                     <div className="flex items-center gap-1">
                       <button onClick={() => handleDelete(item.id)} className="rounded bg-red-500 px-2 py-0.5 text-[10px] font-medium text-white hover:bg-red-600">Eliminar</button>
@@ -306,20 +329,65 @@ export function KnowledgeLibrary({ brandId, onUpdate }: KnowledgeLibraryProps) {
 
                 {/* Expanded edit area */}
                 {isExpanded && (
-                  <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="border-t border-[#2a2a2f] bg-slate-50 p-4 space-y-4">
+                    <div className="flex items-center gap-2">
                       <Edit3 className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Editar contenido</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Editar ítem</span>
                     </div>
-                    <textarea
-                      value={editBody}
-                      onChange={e => setEditBody(e.target.value)}
-                      className="w-full resize-none rounded-md border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-700 outline-none focus:border-violet-300"
-                      rows={5}
-                    />
-                    <div className="mt-2 flex justify-end">
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="mb-1 block text-[10px] font-medium text-slate-400 uppercase tracking-wider">Título</label>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={e => setEditTitle(e.target.value)}
+                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-violet-350"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-medium text-slate-400 uppercase tracking-wider">Tipo</label>
+                        <select
+                          value={editKind}
+                          onChange={e => setEditKind(e.target.value as KnowledgeKind)}
+                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-violet-350"
+                        >
+                          {ALL_KINDS.map(kind => (
+                            <option key={kind} value={kind}>{KIND_CONFIG[kind].label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-[10px] font-medium text-slate-400 uppercase tracking-wider">Audiencia / Público</label>
+                        <input
+                          type="text"
+                          value={editAudience}
+                          onChange={e => setEditAudience(e.target.value)}
+                          className="w-full rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 outline-none focus:border-violet-350"
+                          placeholder="Ej: parejas"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-[10px] font-medium text-slate-400 uppercase tracking-wider">Contenido (Markdown)</label>
+                      <textarea
+                        value={editBody}
+                        onChange={e => setEditBody(e.target.value)}
+                        className="w-full resize-none rounded-md border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-700 outline-none focus:border-violet-350"
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => handleSaveBody(item.id)}
+                        onClick={() => setExpandedId(null)}
+                        className="rounded-md border border-slate-200 px-4 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        onClick={() => handleSaveItem(item.id)}
                         className="rounded-md bg-violet-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-violet-700"
                       >
                         Guardar cambios
