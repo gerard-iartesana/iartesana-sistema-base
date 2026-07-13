@@ -88,6 +88,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const isPublicPath = PUBLIC_PATHS.some((p) => pathname?.startsWith(p));
     if (!user && !isPublicPath) {
       router.replace('/login');
+    } else if (user && pathname === '/login') {
+      router.replace('/');
     }
   }, [user, isLoading, pathname, router]);
 

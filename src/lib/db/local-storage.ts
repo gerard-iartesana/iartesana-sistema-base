@@ -24,12 +24,12 @@ async function getCurrentUser(): Promise<Member | null> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) return null;
 
-  // Look up member record
+  // 1. Look up member record by auth_user_id
   const { data: member } = await supabase
     .from('sb_members')
     .select('*')
     .eq('auth_user_id', session.user.id)
-    .single();
+    .maybeSingle();
 
   if (member) {
     return {
@@ -38,7 +38,33 @@ async function getCurrentUser(): Promise<Member | null> {
     } as Member;
   }
 
-  // Auto-create member on first login
+  // 2. Fallback: look up by email (if profile exists from prior login or pre-creation)
+  if (session.user.email) {
+    const { data: memberByEmail } = await supabase
+      .from('sb_members')
+      .select('*')
+      .eq('email', session.user.email)
+      .maybeSingle();
+
+    if (memberByEmail) {
+      // Link the profile to the new auth_user_id
+      const { data: updatedMember, error: updateError } = await supabase
+        .from('sb_members')
+        .update({ auth_user_id: session.user.id })
+        .eq('id', memberByEmail.id)
+        .select()
+        .single();
+
+      if (!updateError && updatedMember) {
+        return {
+          ...updatedMember,
+          avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+        } as Member;
+      }
+    }
+  }
+
+  // 3. Auto-create member on first login if no match is found
   const { data: newMember, error } = await supabase
     .from('sb_members')
     .insert({
@@ -46,7 +72,7 @@ async function getCurrentUser(): Promise<Member | null> {
       email: session.user.email || '',
       name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '',
       role: 'editor',
-      can_write: false,
+      can_write: true, // Default to true: "permisos de edición pero de ninguna marca visible"
       allowed_brands: [],
     })
     .select()
