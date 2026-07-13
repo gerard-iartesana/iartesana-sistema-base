@@ -698,13 +698,30 @@ function PresentationValueProp({ content }: { content: string }) {
   );
 }
 
-function PresentationKnowledgeLibrary({ items }: { items: KnowledgeItem[] }) {
-  if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <p className="text-lg text-slate-300 italic">No hay ítems en la Biblioteca de Conocimiento.</p>
-      </div>
-    );
+function PresentationKnowledgeLibrary({ content, items }: { content: string; items: KnowledgeItem[] }) {
+  let introMd = '';
+  if (content) {
+    const cleanMd = content.replace(/\r\n/g, '\n');
+    const markerIndex = cleanMd.indexOf('### Elementos de la Biblioteca');
+    const firstItemIndex = cleanMd.indexOf('#### ');
+
+    let cutoffIndex = -1;
+    if (markerIndex !== -1 && firstItemIndex !== -1) {
+      cutoffIndex = Math.min(markerIndex, firstItemIndex);
+    } else if (markerIndex !== -1) {
+      cutoffIndex = markerIndex;
+    } else if (firstItemIndex !== -1) {
+      cutoffIndex = firstItemIndex;
+    }
+
+    if (cutoffIndex !== -1) {
+      introMd = cleanMd.substring(0, cutoffIndex).trim();
+    } else {
+      introMd = cleanMd.trim();
+      if (introMd.startsWith('####') || introMd.includes('### Elementos de la Biblioteca')) {
+        introMd = '';
+      }
+    }
   }
 
   const kindConfig: Record<string, { label: string; badgeClass: string }> = {
@@ -715,34 +732,48 @@ function PresentationKnowledgeLibrary({ items }: { items: KnowledgeItem[] }) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-      {items.map((item) => {
-        const config = kindConfig[item.kind] || { label: item.kind, badgeClass: 'bg-slate-500/10 text-slate-400 border-slate-500/30' };
-        return (
-          <div key={item.id} className="flex flex-col border border-slate-200 rounded-2xl p-6 bg-slate-50/50 shadow-sm hover:shadow-md transition-shadow animate-fade-in">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold tracking-wider uppercase ${config.badgeClass}`}>
-                {config.label}
-              </span>
-              {item.audience && (
-                <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200/50 truncate max-w-[150px]" title={item.audience}>
-                  Público: {item.audience}
-                </span>
-              )}
-            </div>
-            <h4 className="text-base font-bold text-slate-800 mb-3 leading-snug">{item.title}</h4>
-            <div className="text-sm text-slate-600 leading-relaxed font-sans flex-1">
-              <ReactMarkdown>{item.body_md}</ReactMarkdown>
-            </div>
-            {item.verified && (
-              <div className="mt-5 border-t border-slate-150/40 pt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 select-none">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Verificado</span>
+    <div className="w-full mt-4">
+      {introMd && (
+        <div className="markdown-preview max-w-none text-slate-350 leading-relaxed text-sm font-sans mb-8">
+          <ReactMarkdown>{introMd}</ReactMarkdown>
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-lg text-slate-300 italic">No hay ítems en la Biblioteca de Conocimiento.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {items.map((item) => {
+            const config = kindConfig[item.kind] || { label: item.kind, badgeClass: 'bg-slate-500/10 text-slate-400 border-slate-500/30' };
+            return (
+              <div key={item.id} className="flex flex-col border border-slate-200 rounded-2xl p-6 bg-slate-50/50 shadow-sm hover:shadow-md transition-shadow animate-fade-in">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold tracking-wider uppercase ${config.badgeClass}`}>
+                    {config.label}
+                  </span>
+                  {item.audience && (
+                    <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200/50 truncate max-w-[150px]" title={item.audience}>
+                      Público: {item.audience}
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-base font-bold text-slate-800 mb-3 leading-snug">{item.title}</h4>
+                <div className="text-sm text-slate-600 leading-relaxed font-sans flex-1">
+                  <ReactMarkdown>{item.body_md}</ReactMarkdown>
+                </div>
+                {item.verified && (
+                  <div className="mt-5 border-t border-slate-150/40 pt-3 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 select-none">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Verificado</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -1853,7 +1884,7 @@ export function PresentationViewer({
             ) : blockDef.id === 9 ? (
               <PresentationB2B content={content} />
             ) : blockDef.id === 10 ? (
-              <PresentationKnowledgeLibrary items={knowledgeItems} />
+              <PresentationKnowledgeLibrary content={content} items={knowledgeItems} />
             ) : blockDef.id === 11 ? (
               <PresentationRules rules={rules} kind="linea_roja" />
             ) : blockDef.id === 12 ? (

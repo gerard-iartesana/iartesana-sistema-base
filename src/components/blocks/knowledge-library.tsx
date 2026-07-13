@@ -42,14 +42,44 @@ export function KnowledgeLibrary({ brandId, onUpdate }: KnowledgeLibraryProps) {
 
   const syncBlock10Content = async (itemsList: KnowledgeItem[]) => {
     try {
+      const blocks = await db.getBrandBlocks(brandId);
+      const latestBlock = blocks.find(b => b.block_id === 10);
+      const latestRaw = latestBlock?.content_md || '';
+
+      // Extract introduction (everything before first ### Elementos de la Biblioteca or first #### item header)
+      let introMd = '';
+      const markerIndex = latestRaw.indexOf('### Elementos de la Biblioteca');
+      const firstItemIndex = latestRaw.indexOf('#### ');
+
+      let cutoffIndex = -1;
+      if (markerIndex !== -1 && firstItemIndex !== -1) {
+        cutoffIndex = Math.min(markerIndex, firstItemIndex);
+      } else if (markerIndex !== -1) {
+        cutoffIndex = markerIndex;
+      } else if (firstItemIndex !== -1) {
+        cutoffIndex = firstItemIndex;
+      }
+
+      if (cutoffIndex !== -1) {
+        introMd = latestRaw.substring(0, cutoffIndex).trim();
+      } else {
+        introMd = latestRaw.trim();
+        if (introMd.startsWith('####') || introMd.includes('### Elementos de la Biblioteca')) {
+          introMd = '';
+        }
+      }
+
       let itemsMd = `\n\n### Elementos de la Biblioteca\n\n`;
       for (const item of itemsList) {
         const verifiedLabel = item.verified ? ' (Verificado)' : ' (Pendiente)';
         const audienceLabel = item.audience ? ` - *Público:* ${item.audience}` : '';
         itemsMd += `#### ${item.title} [${item.kind.toUpperCase()}]${verifiedLabel}${audienceLabel}\n\n${item.body_md}\n\n`;
       }
+
+      const fullContent = introMd ? `${introMd}\n\n${itemsMd.trim()}` : itemsMd.trim();
+
       await db.updateBrandBlock(brandId, 10, {
-        content_md: itemsMd.trim(),
+        content_md: fullContent,
       });
       onUpdate?.();
     } catch (err) {

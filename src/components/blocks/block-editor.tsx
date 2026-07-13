@@ -12,6 +12,7 @@ import { splitBlock2Content, compileBlock2Content } from '@/lib/utils/valprop-co
 import { splitBlock3Content, compileBlock3Content } from '@/lib/utils/naming-content';
 import { splitBlock5Content, compileVoiceTensions } from '@/lib/utils/voice-content';
 import { splitBlock8Content, compileBlock8Content } from '@/lib/utils/segmentation-content';
+import { splitBlock10Content, compileBlock10Content } from '@/lib/utils/knowledge-content';
 
 type ViewMode = 'edit' | 'preview';
 
@@ -32,10 +33,21 @@ function renderMarkdownPreview(content: string): string {
   if (!content.trim()) return '<p class="text-slate-400 italic">Sin contenido</p>';
 
   // Clean mockup base64 images and reference-style link/image definitions from preview pane
-  const cleanContent = content
+  let cleanContent = content
     .replace(/^\[[^\]]+\]:\s*[^\n]+/gm, '')
     .replace(/\s*\n*!\[Mockup (Tarjeta|Movil|Papel A4|Camiseta|Bolso Tote)\]\(data:image\/[^)]+\)/g, '')
     .trim();
+
+  // Strip block 10 items section to keep preview clean
+  const elementsIndex = cleanContent.indexOf('### Elementos de la Biblioteca');
+  if (elementsIndex !== -1) {
+    cleanContent = cleanContent.substring(0, elementsIndex).trim();
+  }
+  const firstItemIndex = cleanContent.indexOf('#### ');
+  if (firstItemIndex !== -1) {
+    cleanContent = cleanContent.substring(0, firstItemIndex).trim();
+  }
+
   if (!cleanContent) return '<p class="text-slate-400 italic">Sin contenido</p>';
 
   let html = cleanContent
@@ -159,6 +171,9 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         } else if (blockId === 8) {
           const parsed = splitBlock8Content(rawContent);
           rawContent = parsed.rawMarkdown;
+        } else if (blockId === 10) {
+          const parsed = splitBlock10Content(rawContent);
+          rawContent = parsed.rawMarkdown;
         }
         setContent(rawContent);
         setStatus(block.status);
@@ -216,6 +231,12 @@ export function BlockEditor({ brandId, blockId, onSave }: BlockEditorProps) {
         const latestRaw = latestBlock?.content_md || '';
         const parsed = splitBlock8Content(latestRaw);
         fullText = compileBlock8Content(text, parsed.references);
+      } else if (blockId === 10) {
+        const blocks = await db.getBrandBlocks(brandId);
+        const latestBlock = blocks.find(b => b.block_id === 10);
+        const latestRaw = latestBlock?.content_md || '';
+        const parsed = splitBlock10Content(latestRaw);
+        fullText = compileBlock10Content(text, parsed.itemsSection);
       }
 
       const result = await db.updateBrandBlock(brandId, blockId, { content_md: fullText });
