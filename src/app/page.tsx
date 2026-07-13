@@ -37,17 +37,22 @@ export default function HomePage() {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [copilotAgent, setCopilotAgent] = useState<AgentName | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [globalApiKey, setGlobalApiKey] = useState('');
   const [globalGeminiKey, setGlobalGeminiKey] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const savedKey = localStorage.getItem('pollinations_api_key') || '';
       const savedGeminiKey = localStorage.getItem('gemini_api_key') || '';
+      setGlobalApiKey(savedKey);
       setGlobalGeminiKey(savedGeminiKey);
     }
   }, []);
 
-  const handleSaveGlobalSettings = (geminiKey: string) => {
+  const handleSaveGlobalSettings = (key: string, geminiKey: string) => {
+    setGlobalApiKey(key);
     setGlobalGeminiKey(geminiKey);
+    localStorage.setItem('pollinations_api_key', key);
     localStorage.setItem('gemini_api_key', geminiKey);
     // Trigger editor key increment to force labs to remount and read new settings
     setEditorKey(prev => prev + 1);
@@ -442,7 +447,28 @@ export default function HomePage() {
             <div className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-600 select-none">Clave API de Google Gemini (Copiloto e Imágenes)</label>
+                  <label className="block text-xs font-bold text-slate-600 select-none">Clave API de Pollinations (Imágenes Nanobanana 2.0)</label>
+                  <a
+                    href="https://enter.pollinations.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-violet-600 hover:text-violet-500 hover:underline font-bold"
+                  >
+                    Obtener Clave Gratis ↗
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  value={globalApiKey}
+                  onChange={(e) => handleSaveGlobalSettings(e.target.value, globalGeminiKey)}
+                  placeholder="Pega tu clave api de Pollinations aquí (evita geobloqueo)"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-500"
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-600 select-none">Clave API de Google Gemini (Copiloto de Texto)</label>
                   <a
                     href="https://aistudio.google.com/app/apikey"
                     target="_blank"
@@ -455,7 +481,7 @@ export default function HomePage() {
                 <input
                   type="password"
                   value={globalGeminiKey}
-                  onChange={(e) => handleSaveGlobalSettings(e.target.value)}
+                  onChange={(e) => handleSaveGlobalSettings(globalApiKey, e.target.value)}
                   placeholder="Pega tu clave de Google AI Studio (AIzaSy...)"
                   className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-violet-500"
                 />

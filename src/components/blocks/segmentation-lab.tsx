@@ -42,65 +42,37 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
       try {
       const prompt = `extremely simple minimalist line art icon, vector style, flat black stroke on pure white background, no gradients, no shading, no colors, clean outline, topic: ${mod.title} - ${mod.text.slice(0, 80)}. CRITICAL: Do NOT include any text, letters, words, writing, numbers, labels, or characters inside the image. Only a clean visual icon.`;
       
-      const geminiKey = typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key') || '' : '';
+      const pollinationsKey = typeof window !== 'undefined' ? localStorage.getItem('pollinations_api_key') || '' : '';
 
-      if (!geminiKey.trim()) {
-        alert('Por favor, introduce tu Clave API de Google Gemini en la configuración global (botón en la esquina inferior izquierda del menú) para poder generar imágenes.');
+      if (!pollinationsKey.trim()) {
+        alert('Por favor, introduce tu Clave API de Pollinations en la configuración global (botón en la esquina inferior izquierda del menú) para poder generar imágenes.');
         setGeneratingIndex(null);
         setSavingState('idle');
         return;
       }
       
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiKey.trim()}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
-            }
-          ],
-          generationConfig: {
-            responseModalities: ['IMAGE']
-          }
-        })
-      });
-
+      const seed = Math.floor(Math.random() * 99999999);
+      const url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&private=true&enhance=false&seed=${seed}&model=nanobanana&key=${encodeURIComponent(pollinationsKey.trim())}`;
+      
+      const response = await fetch(url);
       if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error?.message || `Error del servidor Gemini: ${response.status}`);
-      }
-
-      const resData = await response.json();
-      const parts = resData.candidates?.[0]?.content?.parts || [];
-      let base64Data = '';
-      let mimeType = 'image/png';
-
-      for (const part of parts) {
-        if (part.inlineData) {
-          base64Data = part.inlineData.data;
-          mimeType = part.inlineData.mimeType || 'image/png';
-          break;
+        if (response.status === 401) {
+          throw new Error('Unauthorized: La Clave API de Pollinations es incorrecta o inválida.');
         }
+        throw new Error(`Error del servidor Pollinations: ${response.status}`);
       }
-
-      if (!base64Data) {
-        throw new Error('La API de Gemini 2.5 no devolvió datos de imagen (inlineData).');
-      }
-
-      const base64 = `data:${mimeType};base64,${base64Data}`;
-      const updated = [...modules];
-      updated[index] = { ...updated[index], image: base64 };
-      setModules(updated);
-      await saveModules(updated);
-      setGeneratingIndex(null);
+      const blob = await response.blob();
+      
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        const updated = [...modules];
+        updated[index] = { ...updated[index], image: base64 };
+        setModules(updated);
+        await saveModules(updated);
+        setGeneratingIndex(null);
+      };
+      reader.readAsDataURL(blob);
     } catch (err: any) {
       console.error('[SegmentationLab] AI Generation failed:', err);
       alert(err.message || 'No se pudo generar la imagen con IA. Inténtalo de nuevo.');
