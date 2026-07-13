@@ -39,7 +39,13 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
     
     setGeneratingIndex(index);
     setSavingState('saving');
-      try {
+
+    // Clear the current image in the state immediately to generate from scratch
+    const updatedBeforeGen = [...modules];
+    updatedBeforeGen[index] = { ...updatedBeforeGen[index], image: '' };
+    setModules(updatedBeforeGen);
+
+    try {
       const prompt = `extremely simple flat minimalist icon, bold conceptual pictogram style, thick clean black stroke on solid white background, no detail, no decoration, no gradients, no shading, no colors, raw graphic outline, topic: ${mod.title}. CRITICAL: Do NOT include any text, letters, words, writing, numbers, labels, or characters. The symbol must be standalone, without being enclosed inside a circle, square, frame, shield, border, or any enclosing shape. Zero margin around the symbol. Zero padding. The pictogram lines must touch the very top, bottom, left, and right outer edges of the square frame, occupying 100% of the image space.`;
       
       const geminiKey = typeof window !== 'undefined' ? localStorage.getItem('gemini_api_key') || '' : '';
@@ -112,6 +118,13 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
       console.error('[SegmentationLab] Failed to save modules:', err);
       setSavingState('idle');
     }
+  };
+
+  const handleClearImage = (index: number) => {
+    const updated = [...modules];
+    updated[index] = { ...updated[index], image: '' };
+    setModules(updated);
+    saveModules(updated);
   };
 
   const handleFieldChange = (index: number, field: keyof SegmentationModule, value: string) => {
@@ -238,13 +251,22 @@ export function SegmentationLab({ brandId, content_md, onUpdate }: SegmentationL
                 className="flex flex-col md:flex-row gap-5 p-5 rounded-xl border border-[#2a2a2f] bg-[#1d1d21]/30 hover:border-slate-800 transition-colors relative group"
               >
                 {/* Image Preview / Selector */}
-                <div className="w-full md:w-[130px] aspect-square rounded-lg border border-[#2a2a2f] flex items-center justify-center p-2 relative overflow-hidden shrink-0 bg-white">
+                <div className="w-full md:w-[130px] aspect-square rounded-lg border border-[#2a2a2f] flex items-center justify-center p-2 relative overflow-hidden shrink-0 bg-white group/img">
                   {mod.image ? (
-                    <img 
-                      src={mod.image} 
-                      alt={mod.title} 
-                      className="max-h-full max-w-full object-contain" 
-                    />
+                    <>
+                      <img 
+                        src={mod.image} 
+                        alt={mod.title} 
+                        className="max-h-full max-w-full object-contain" 
+                      />
+                      <button
+                        onClick={() => handleClearImage(idx)}
+                        className="absolute top-1.5 right-1.5 p-1 bg-red-500 hover:bg-red-650 text-white rounded-md opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer shadow-md"
+                        title="Borrar imagen"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </>
                   ) : (
                     <span className="text-[10px] text-slate-500 italic">Sin icono</span>
                   )}
