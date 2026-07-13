@@ -188,13 +188,13 @@ export default function HomePage() {
             </div>
 
             {/* Global Settings Button at the bottom of the sidebar */}
-            <div className="px-4 py-2 border-t border-slate-100">
+            <div className="border-t border-slate-800/60 mt-auto">
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer select-none"
+                className="flex w-full items-center gap-2.5 px-4 py-3 text-left text-sm font-semibold transition-colors text-white hover:bg-slate-50/50 hover:text-white cursor-pointer select-none"
               >
-                <Settings className="h-4 w-4" />
-                <span>Configuración Global</span>
+                <Settings className="h-4 w-4 shrink-0 text-white" />
+                <span className="truncate">Configuración Global</span>
               </button>
             </div>
           </div>
