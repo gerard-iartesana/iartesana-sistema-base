@@ -823,7 +823,7 @@ function PresentationSegmentation({ content, isDarkMode = true }: { content: str
           const textBlock = (
             <div className="flex-1 space-y-3">
               <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-500/20 text-[10px] font-mono font-bold text-violet-400">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/20 text-sm font-bold text-sky-400 shrink-0">
                   {idx + 1}
                 </span>
                 {mod.title}
@@ -884,7 +884,7 @@ function PresentationB2B({ content }: { content: string }) {
         {modules.map((mod, idx) => (
           <div key={idx} className="bg-slate-900/30 border border-slate-800 rounded-2xl p-5 hover:border-slate-700 transition-colors">
             <div className="flex items-center gap-2.5 mb-3 select-none">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500/20 text-[10px] font-mono font-bold text-blue-400">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/20 text-sm font-bold text-sky-400 shrink-0">
                 {idx + 1}
               </span>
               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">{mod.title}</span>

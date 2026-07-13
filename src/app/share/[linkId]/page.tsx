@@ -224,7 +224,7 @@ function SharePageSegmentation({ content }: { content: string }) {
           const textBlock = (
             <div className="flex-1 space-y-3">
               <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-violet-100 text-[10px] font-mono font-bold text-violet-600">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-600 shrink-0">
                   {idx + 1}
                 </span>
                 {mod.title}
@@ -281,7 +281,7 @@ function SharePageB2B({ content }: { content: string }) {
         {modules.map((mod, idx) => (
           <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 hover:border-slate-300 transition-colors">
             <div className="flex items-center gap-2.5 mb-3 select-none">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-mono font-bold text-blue-600">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sm font-bold text-sky-600 shrink-0">
                 {idx + 1}
               </span>
               <span className="text-xs font-bold text-slate-700 uppercase tracking-widest leading-none mt-0.5">{mod.title}</span>
