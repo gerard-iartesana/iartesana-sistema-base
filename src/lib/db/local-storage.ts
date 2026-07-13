@@ -844,6 +844,55 @@ async function updateSlideComment(id: string, text: string): Promise<SlideCommen
   return data as SlideComment;
 }
 
+async function getGlobalSetting(key: string): Promise<string> {
+  try {
+    const { data, error } = await supabase
+      .from('sb_settings')
+      .select('value')
+      .eq('key', key)
+      .single();
+    if (error) {
+      console.warn('[db] Failed to fetch global setting from DB, using localStorage fallback:', error.message);
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem(key) || '';
+      }
+      return '';
+    }
+    return data?.value || '';
+  } catch (err) {
+    console.error('[db] Error in getGlobalSetting:', err);
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(key) || '';
+    }
+    return '';
+  }
+}
+
+async function setGlobalSetting(key: string, value: string): Promise<boolean> {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(key, value);
+  }
+  
+  try {
+    const user = await getCurrentUser();
+    if (user?.role !== 'admin') return false;
+
+    const { error } = await supabase
+      .from('sb_settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() });
+
+    if (error) {
+      console.error('[db] Failed to save setting in DB:', error.message);
+      return false;
+    }
+    await createActivityLog('settings_update', `Actualizó la configuración global '${key}'`);
+    return true;
+  } catch (err) {
+    console.error('[db] Error in setGlobalSetting:', err);
+    return false;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Exported db object — same interface as the old localStorage layer
 // ---------------------------------------------------------------------------
@@ -857,6 +906,8 @@ export const db = {
   updateMemberPermissions,
   getActivityLogs,
   createActivityLog,
+  getGlobalSetting,
+  setGlobalSetting,
   // Brands
   getBrands,
   getBrand,

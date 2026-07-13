@@ -40,12 +40,21 @@ export default function HomePage() {
   const [copilotAgent, setCopilotAgent] = useState<AgentName | null>(null);
 
   useEffect(() => {
-    async function loadUser() {
+    async function loadUserAndConfig() {
       const u = await db.getCurrentUser();
       setCurrentUser(u);
+
+      try {
+        const key = await db.getGlobalSetting('gemini_api_key');
+        if (key) {
+          localStorage.setItem('gemini_api_key', key);
+        }
+      } catch (err) {
+        console.error('Failed to sync global API key:', err);
+      }
     }
     if (user) {
-      loadUser();
+      loadUserAndConfig();
     }
   }, [user, editorKey]);
 

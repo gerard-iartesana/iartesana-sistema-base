@@ -58,17 +58,23 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setApiKey(localStorage.getItem('gemini_api_key') || '');
+    async function loadKey() {
+      const key = await db.getGlobalSetting('gemini_api_key');
+      setApiKey(key);
     }
+    loadKey();
     loadData();
   }, []);
 
-  const handleSaveApiKey = () => {
-    localStorage.setItem('gemini_api_key', apiKey.trim());
-    if (onSaveKey) onSaveKey(apiKey.trim());
-    if (onUpdate) onUpdate();
-    alert('Clave API de Gemini guardada correctamente.');
+  const handleSaveApiKey = async () => {
+    const ok = await db.setGlobalSetting('gemini_api_key', apiKey.trim());
+    if (ok) {
+      if (onSaveKey) onSaveKey(apiKey.trim());
+      if (onUpdate) onUpdate();
+      alert('Clave API de Gemini guardada globalmente correctamente.');
+    } else {
+      alert('Error al guardar la Clave API en la base de datos.');
+    }
   };
 
   const handleToggleBrandPermission = (memberId: string, brandId: string) => {
