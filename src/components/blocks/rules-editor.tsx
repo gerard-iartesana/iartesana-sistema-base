@@ -11,27 +11,24 @@ interface RulesEditorProps {
   readOnly?: boolean;
 }
 
-const KIND_CONFIG: Record<RuleKind, { title: string; description: string; color: string; bgColor: string; borderColor: string }> = {
+const KIND_CONFIG: Record<RuleKind, { title: string; description: string; color: string; bgColor: string }> = {
   linea_roja: {
     title: 'Líneas Rojas',
     description: 'Qué nunca hacemos — lista numerada estricta.',
-    color: 'text-red-700',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
+    color: 'text-red-400',
+    bgColor: 'bg-red-950/20',
   },
   protocolo_incidencia: {
     title: 'Protocolos de Incidencias',
     description: 'Cuando algo va mal — listón de atención, flujos de escalado obligatorio.',
-    color: 'text-amber-700',
-    bgColor: 'bg-amber-50',
-    borderColor: 'border-amber-200',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-950/20',
   },
   instruccion_ia: {
     title: 'Instrucciones para Agentes IA',
     description: 'Instrucciones imperativas ejecutables derivadas de todo lo anterior.',
-    color: 'text-violet-700',
-    bgColor: 'bg-violet-50',
-    borderColor: 'border-violet-200',
+    color: 'text-violet-400',
+    bgColor: 'bg-violet-950/20',
   },
 };
 
@@ -120,9 +117,9 @@ export function RulesEditor({ brandId, kind, readOnly = false }: RulesEditorProp
   };
 
   return (
-    <div className={`flex flex-col rounded-lg border ${config.borderColor} bg-white`}>
+    <div className="flex flex-col rounded-lg border border-slate-200 bg-white">
       {/* Header */}
-      <div className={`flex items-center justify-between border-b ${config.borderColor} px-4 py-3 ${config.bgColor}`}>
+      <div className={`flex items-center justify-between border-b border-slate-200 px-4 py-3 ${config.bgColor}`}>
         <div>
           <h3 className={`text-sm font-semibold ${config.color}`}>{config.title}</h3>
           <p className="mt-0.5 text-xs text-slate-400">{config.description}</p>
