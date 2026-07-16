@@ -157,9 +157,9 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
   const isAdmin = currentUser?.role === 'admin';
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[calc(100vh-6rem)]">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#17171a] rounded-xl border border-slate-200 shadow-sm overflow-hidden h-[calc(100vh-6rem)]">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-[#0f0f11]/60">
         <div className="flex items-center gap-2">
           <Settings className="h-5 w-5 text-violet-600 animate-spin-slow" />
           <div>
@@ -169,7 +169,7 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
         </div>
         <button
           onClick={loadData}
-          className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-slate-700 transition"
+          className="p-1.5 hover:bg-slate-800 rounded text-slate-500 hover:text-slate-300 transition cursor-pointer"
           title="Recargar datos"
         >
           <RefreshCw className="h-4 w-4" />
@@ -177,10 +177,10 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-100 px-6 bg-slate-50/20">
+      <div className="flex border-b border-slate-100 px-6 bg-[#0f0f11]/30">
         <button
           onClick={() => setActiveTab('ai')}
-          className={`flex items-center gap-2 py-3 px-4 text-xs font-semibold border-b-2 transition -mb-px ${
+          className={`flex items-center gap-2 py-3 px-4 text-xs font-semibold border-b-2 transition -mb-px cursor-pointer ${
             activeTab === 'ai'
               ? 'border-violet-600 text-violet-600'
               : 'border-transparent text-slate-500 hover:text-slate-700'
@@ -222,8 +222,8 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
         {/* Tab 1: AI configuration */}
         {activeTab === 'ai' && (
           <div className="max-w-2xl space-y-6">
-            <div className="bg-violet-50/50 rounded-xl p-4 border border-violet-100 flex items-start gap-3">
-              <Shield className="h-5 w-5 text-violet-600 shrink-0 mt-0.5" />
+            <div className="bg-violet-950/15 rounded-xl p-4 border border-violet-900/30 flex items-start gap-3">
+              <Shield className="h-5 w-5 text-violet-500 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h3 className="text-xs font-bold text-slate-800">Seguridad & Almacenamiento Local</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
@@ -252,7 +252,7 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                     value={apiKey}
                     onChange={e => setApiKey(e.target.value)}
                     placeholder="Pega tu clave AIzaSy..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-3 pr-10 py-2 text-xs text-slate-700 font-mono placeholder-slate-400 outline-none focus:border-violet-500 transition"
+                    className="w-full bg-[#1d1d21] border border-slate-800 rounded-lg pl-3 pr-10 py-2 text-xs text-slate-200 font-mono placeholder-slate-500 outline-none focus:border-violet-500 transition"
                   />
                   <button
                     onClick={() => setShowKey(!showKey)}
@@ -280,10 +280,10 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
         {/* Tab 2: User Manager */}
         {activeTab === 'users' && isAdmin && (
           <div className="space-y-6">
-            <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+            <div className="bg-[#0f0f11]/40 border border-slate-200 rounded-xl overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100/70 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
+                  <tr className="border-b border-slate-200 bg-[#1a1a1f] text-[10px] uppercase tracking-wider text-slate-400 font-bold">
                     <th className="px-4 py-3">Usuario / Email</th>
                     <th className="px-4 py-3">Rol</th>
                     <th className="px-4 py-3">Escritura</th>
@@ -301,14 +301,14 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                     const isCurrentUser = member.id === currentUser?.id;
 
                     return (
-                      <tr key={member.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={member.id} className="hover:bg-white/5 transition-colors">
                         {/* Name and Email */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-2.5">
                             {member.avatar_url ? (
                               <img src={member.avatar_url} className="w-7 h-7 rounded-full object-cover" alt="" />
                             ) : (
-                              <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-[10px]">
+                              <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-350 text-[10px]">
                                 {member.name?.charAt(0) || member.email.charAt(0).toUpperCase()}
                               </div>
                             )}
@@ -322,7 +322,7 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                         {/* Role Select */}
                         <td className="px-4 py-3">
                           {isCurrentUser ? (
-                            <span className="inline-flex rounded bg-violet-50 px-2 py-0.5 text-[10px] font-bold text-violet-600 border border-violet-100">
+                            <span className="inline-flex rounded bg-violet-950/30 px-2 py-0.5 text-[10px] font-bold text-violet-400 border border-violet-900/40">
                               Administrador (Tú)
                             </span>
                           ) : (
@@ -337,7 +337,7 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                                   }
                                 }));
                               }}
-                              className="bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 outline-none focus:border-violet-300"
+                              className="bg-[#1d1d21] border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 outline-none focus:border-violet-500"
                             >
                               <option value="admin">Administrador</option>
                               <option value="editor">Editor / Cliente</option>
@@ -378,7 +378,7 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                         {/* Allowed Brands */}
                         <td className="px-4 py-3">
                           {edits.role === 'admin' ? (
-                            <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Todas las marcas</span>
+                            <span className="text-[10px] font-semibold text-slate-400 bg-[#1d1d21] px-2 py-0.5 rounded">Todas las marcas</span>
                           ) : (
                             <div className="flex flex-col gap-1 max-w-[240px]">
                               {brands.map(brand => {
@@ -418,8 +418,8 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
 
                             {!isCurrentUser && (
                               deleteConfirmMemberId === member.id ? (
-                                <div className="flex items-center gap-1 bg-red-50 border border-red-200 rounded px-1.5 py-0.5 select-none">
-                                  <span className="text-[10px] text-red-600 font-semibold mr-1">¿Eliminar?</span>
+                                <div className="flex items-center gap-1 bg-red-950/20 border border-red-900/50 rounded px-1.5 py-0.5 select-none">
+                                  <span className="text-[10px] text-red-400 font-semibold mr-1">¿Eliminar?</span>
                                   <button
                                     onClick={() => handleDeleteMember(member.id)}
                                     className="rounded bg-red-600 px-2 py-0.5 text-[9px] font-bold text-white hover:bg-red-700 cursor-pointer"
@@ -428,7 +428,7 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                                   </button>
                                   <button
                                     onClick={() => setDeleteConfirmMemberId(null)}
-                                    className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-slate-50 cursor-pointer"
+                                    className="rounded border border-slate-750 bg-slate-800 px-2 py-0.5 text-[9px] font-bold text-slate-350 hover:bg-slate-700 cursor-pointer"
                                   >
                                     No
                                   </button>
@@ -436,7 +436,7 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                               ) : (
                                 <button
                                   onClick={() => setDeleteConfirmMemberId(member.id)}
-                                  className="inline-flex items-center justify-center p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition cursor-pointer"
+                                  className="inline-flex items-center justify-center p-1 rounded text-slate-400 hover:text-red-500 hover:bg-red-950/30 transition cursor-pointer"
                                   title="Eliminar usuario"
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -462,10 +462,10 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
               <span className="text-[10px] text-slate-400 font-mono">Mostrando logs recientes ({logs.length})</span>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
+            <div className="bg-[#0f0f11]/40 border border-slate-200 rounded-xl overflow-hidden max-h-[500px] overflow-y-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-100/70 text-[10px] uppercase tracking-wider text-slate-400 font-bold sticky top-0 z-10">
+                  <tr className="border-b border-slate-200 bg-[#1a1a1f] text-[10px] uppercase tracking-wider text-slate-400 font-bold sticky top-0 z-10">
                     <th className="px-4 py-2.5">Fecha / Hora</th>
                     <th className="px-4 py-2.5">Usuario</th>
                     <th className="px-4 py-2.5">Acción</th>
@@ -474,14 +474,14 @@ export function SettingsLab({ onSaveKey, onUpdate }: SettingsLabProps) {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-[11px] text-slate-700 font-mono">
                   {logs.map(log => {
-                    let actionColor = 'bg-slate-100 text-slate-650';
-                    if (log.action.includes('update')) actionColor = 'bg-blue-50 text-blue-600 border border-blue-100';
-                    if (log.action.includes('create')) actionColor = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
-                    if (log.action.includes('delete')) actionColor = 'bg-red-50 text-red-600 border border-red-100';
-                    if (log.action.includes('permissions')) actionColor = 'bg-violet-50 text-violet-600 border border-violet-100';
+                    let actionColor = 'bg-[#1d1d21] text-slate-400 border border-slate-800';
+                    if (log.action.includes('update')) actionColor = 'bg-blue-950/20 text-blue-400 border border-blue-900/50';
+                    if (log.action.includes('create')) actionColor = 'bg-emerald-950/20 text-emerald-400 border border-emerald-900/50';
+                    if (log.action.includes('delete')) actionColor = 'bg-red-950/20 text-red-400 border border-red-900/50';
+                    if (log.action.includes('permissions')) actionColor = 'bg-violet-950/20 text-violet-400 border border-violet-900/50';
 
                     return (
-                      <tr key={log.id} className="hover:bg-slate-100/30 transition-colors">
+                      <tr key={log.id} className="hover:bg-white/5 transition-colors">
                         <td className="px-4 py-2 text-slate-400 shrink-0 whitespace-nowrap">
                           {new Date(log.created_at).toLocaleString()}
                         </td>
