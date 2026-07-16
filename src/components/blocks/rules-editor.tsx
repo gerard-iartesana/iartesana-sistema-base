@@ -19,7 +19,7 @@ const KIND_CONFIG: Record<RuleKind, { title: string; description: string; color:
     bgColor: 'bg-red-950/20',
   },
   protocolo_incidencia: {
-    title: 'Ejemplos de Incidencias',
+    title: 'Ejemplos de incidencias',
     description: '',
     color: 'text-amber-400',
     bgColor: 'bg-amber-950/20',
