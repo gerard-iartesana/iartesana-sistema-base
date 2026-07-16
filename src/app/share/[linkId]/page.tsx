@@ -602,22 +602,22 @@ function SharePageRules({ rules, kind }: { rules: Rule[]; kind: 'linea_roja' | '
 
   const kindConfig = {
     linea_roja: {
-      colorClass: 'text-red-400',
-      borderClass: 'border-red-500/25',
-      bgClass: 'bg-red-500/5',
-      icon: <Ban className="h-4.5 w-4.5 text-red-400" />
+      colorClass: 'text-[#85bf57]',
+      borderClass: 'border-[#85bf57]/20',
+      bgClass: 'bg-[#85bf57]/5',
+      icon: <Ban className="h-4.5 w-4.5 text-[#85bf57]" />
     },
     protocolo_incidencia: {
-      colorClass: 'text-amber-400',
-      borderClass: 'border-amber-500/25',
-      bgClass: 'bg-amber-500/5',
-      icon: <ShieldAlert className="h-4.5 w-4.5 text-amber-400" />
+      colorClass: 'text-[#85bf57]',
+      borderClass: 'border-[#85bf57]/20',
+      bgClass: 'bg-[#85bf57]/5',
+      icon: <ShieldAlert className="h-4.5 w-4.5 text-[#85bf57]" />
     },
     instruccion_ia: {
-      colorClass: 'text-violet-400',
-      borderClass: 'border-violet-500/25',
-      bgClass: 'bg-violet-500/5',
-      icon: <BookOpen className="h-4.5 w-4.5 text-violet-400" />
+      colorClass: 'text-[#85bf57]',
+      borderClass: 'border-[#85bf57]/20',
+      bgClass: 'bg-[#85bf57]/5',
+      icon: <BookOpen className="h-4.5 w-4.5 text-[#85bf57]" />
     }
   };
 
