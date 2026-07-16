@@ -19,8 +19,8 @@ export const BLOCK_DEFINITIONS: BlockDefinition[] = [
   { id: 9, stage: 'C', title: 'Relación B2B / Aliados y Propietarios', description: 'Promesa central a socios/propietarios, barreras infranqueables de gestión.', sort: 9 },
   { id: 10, stage: 'C', title: 'Biblioteca de Conocimiento Operativo', description: 'Recomendaciones no incentivadas, FAQs críticas, normativas, políticas diferenciales.', sort: 10 },
   { id: 11, stage: 'D', title: 'Líneas Rojas', description: '"Qué nunca hacemos": lista numerada estricta.', sort: 11 },
-  { id: 12, stage: 'D', title: 'Protocolos de Incidencias', description: '"Cuando algo va mal": listón de atención, flujos de escalado obligatorio a humanos.', sort: 12 },
-  { id: 13, stage: 'D', title: 'Implicaciones Directas para Agentes de IA', description: 'Instrucciones imperativas ejecutables derivadas de todo lo anterior.', sort: 13 },
+  { id: 12, stage: 'D', title: 'Ejemplos de Incidencias', description: '"Cuando algo va mal": listón de atención, flujos de escalado obligatorio a humanos.', sort: 12 },
+  { id: 13, stage: 'D', title: 'Instrucciones específicas', description: '', sort: 13 },
 ];
 
 export function getBlocksByStage(stage: Stage): BlockDefinition[] {

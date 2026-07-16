@@ -19,14 +19,14 @@ const KIND_CONFIG: Record<RuleKind, { title: string; description: string; color:
     bgColor: 'bg-red-950/20',
   },
   protocolo_incidencia: {
-    title: 'Protocolos de Incidencias',
+    title: 'Ejemplos de Incidencias',
     description: 'Cuando algo va mal — listón de atención, flujos de escalado obligatorio.',
     color: 'text-amber-400',
     bgColor: 'bg-amber-950/20',
   },
   instruccion_ia: {
-    title: 'Instrucciones para Agentes IA',
-    description: 'Instrucciones imperativas ejecutables derivadas de todo lo anterior.',
+    title: 'Instrucciones específicas',
+    description: '',
     color: 'text-violet-400',
     bgColor: 'bg-violet-950/20',
   },
@@ -122,7 +122,7 @@ export function RulesEditor({ brandId, kind, readOnly = false }: RulesEditorProp
       <div className={`flex items-center justify-between border-b border-slate-200 px-4 py-3 ${config.bgColor}`}>
         <div>
           <h3 className={`text-sm font-semibold ${config.color}`}>{config.title}</h3>
-          <p className="mt-0.5 text-xs text-slate-400">{config.description}</p>
+          {config.description && <p className="mt-0.5 text-xs text-slate-400">{config.description}</p>}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-slate-500">{rules.length} regla{rules.length !== 1 ? 's' : ''}</span>
