@@ -1316,14 +1316,53 @@ export default function SharePage() {
                       if (def.id === 10) {
                         return <SharePageKnowledgeLibrary content={block?.content_md || ''} items={knowledgeItems} />;
                       }
-                      if (def.id === 11) {
-                        return <SharePageRules rules={rules} kind="linea_roja" />;
-                      }
-                      if (def.id === 12) {
-                        return <SharePageRules rules={rules} kind="protocolo_incidencia" />;
-                      }
-                      if (def.id === 13) {
-                        return <SharePageRules rules={rules} kind="instruccion_ia" />;
+                      if (def.id === 11 || def.id === 12 || def.id === 13) {
+                        const blockContent = block?.content_md || '';
+                        return (
+                          <div className="space-y-6 w-full">
+                            {blockContent.trim() && (
+                              <div className="markdown-preview text-slate-655 text-sm leading-relaxed">
+                                <ReactMarkdown
+                                  components={{
+                                    a: ({ href, children, ...props }) => {
+                                      if (href === '#marker-pendiente') {
+                                        return (
+                                          <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200 select-none">
+                                            {children}
+                                          </span>
+                                        );
+                                      }
+                                      if (href === '#marker-verificar') {
+                                        return (
+                                          <span className="inline-flex items-center gap-1 rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700 border border-red-200 select-none">
+                                            {children}
+                                          </span>
+                                        );
+                                      }
+                                      return <a href={href} {...props}>{children}</a>;
+                                    },
+                                    h1: (props) => <HeadingRenderer level={1} {...props} />,
+                                    h2: (props) => <HeadingRenderer level={2} {...props} />,
+                                    h3: (props) => <HeadingRenderer level={3} {...props} />,
+                                    h4: (props) => <HeadingRenderer level={4} {...props} />,
+                                    h5: (props) => <HeadingRenderer level={5} {...props} />,
+                                    h6: (props) => <HeadingRenderer level={6} {...props} />,
+                                    p: (props) => <ParagraphRenderer {...props} />,
+                                    li: (props) => <LiRenderer {...props} />,
+                                  }}
+                                >
+                                  {preprocessMarkdown(blockContent)
+                                    .replace(/\[pendiente:\s*([^\]]+)\]/gi, '[⏳ PENDIENTE: $1](#marker-pendiente)')
+                                    .replace(/\[verificar:\s*([^\]]+)\]/gi, '[⚠️ VERIFICAR: $1](#marker-verificar)')}
+                                </ReactMarkdown>
+                              </div>
+                            )}
+                            <SharePageRules 
+                              rules={rules} 
+                              kind={def.id === 11 ? "linea_roja" : def.id === 12 ? "protocolo_incidencia" : "instruccion_ia"} 
+                            />
+                          </div>
+                        );
                       }
 
                       // Default markdown rendering

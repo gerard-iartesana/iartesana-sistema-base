@@ -13,14 +13,14 @@ interface RulesEditorProps {
 
 const KIND_CONFIG: Record<RuleKind, { title: string; description: string; color: string; bgColor: string }> = {
   linea_roja: {
-    title: 'Líneas Rojas',
-    description: 'Qué nunca hacemos — lista numerada estricta.',
+    title: 'Líneas rojas específicas',
+    description: '',
     color: 'text-red-400',
     bgColor: 'bg-red-950/20',
   },
   protocolo_incidencia: {
     title: 'Ejemplos de Incidencias',
-    description: 'Cuando algo va mal — listón de atención, flujos de escalado obligatorio.',
+    description: '',
     color: 'text-amber-400',
     bgColor: 'bg-amber-950/20',
   },
