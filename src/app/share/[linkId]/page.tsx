@@ -800,8 +800,8 @@ function SharePageNamingLab({ content, candidates }: { content: string; candidat
               let statusIcon = <Star className="h-3 w-3 fill-blue-500 text-blue-500" />;
 
               if (candidate.status === 'elegido') {
-                cardStyle = 'border-emerald-400 bg-emerald-50/10 shadow-[0_0_12px_rgba(16,185,129,0.08)] ring-1 ring-emerald-400/30';
-                badgeStyle = 'bg-emerald-50 text-emerald-750 border-emerald-200 font-bold';
+                cardStyle = 'border-slate-800 dark:border-white bg-slate-500/5 dark:bg-white/5 shadow-[0_0_12px_rgba(255,255,255,0.08)] ring-1 ring-slate-800/10 dark:ring-white/20';
+                badgeStyle = 'bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-white border-slate-200 dark:border-white/20 font-bold';
                 statusText = 'Elegido';
                 statusIcon = <Trophy className="h-3 w-3 fill-amber-500 text-amber-500" />;
               } else if (candidate.status === 'descartado') {
@@ -817,7 +817,13 @@ function SharePageNamingLab({ content, candidates }: { content: string; candidat
                 <div key={candidate.id} className={`flex flex-col border rounded-xl p-5 transition-all hover:shadow-md ${cardStyle}`}>
                   {/* Name and Status Header */}
                   <div className={`flex items-center justify-between mb-3.5 select-none ${isDiscarded ? 'opacity-50' : ''}`}>
-                    <span className={`text-lg font-bold tracking-tight ${candidate.status === 'elegido' ? 'text-emerald-800' : candidate.status === 'descartado' ? 'text-slate-500' : 'text-slate-800'}`}>
+                    <span className={`font-bold tracking-tight ${
+                      candidate.status === 'elegido'
+                        ? 'text-2xl md:text-3xl text-slate-900 dark:text-white font-extrabold'
+                        : candidate.status === 'descartado'
+                          ? 'text-lg text-slate-500'
+                          : 'text-lg text-slate-800 dark:text-slate-200'
+                    }`}>
                       {candidate.name}
                     </span>
                     <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${badgeStyle}`}>

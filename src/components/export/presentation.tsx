@@ -335,7 +335,7 @@ function PresentationArchetypeWheel({ content, isDarkMode = true }: { content: s
 
 
 
-function PresentationNamingLab({ content, candidates }: { content: string; candidates: NamingCandidate[] }) {
+function PresentationNamingLab({ content, candidates, isDarkMode = true }: { content: string; candidates: NamingCandidate[]; isDarkMode?: boolean }) {
   const cleanContent = splitBlock3Content(content);
 
   // Sort candidates: Chosen (elegido) first, then Candidate (candidato) sorted by score/name, then Discarded (descartado)
@@ -422,8 +422,12 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
               let statusIcon = <Star className="h-3 w-3 fill-blue-500 text-blue-500" />;
 
               if (candidate.status === 'elegido') {
-                cardStyle = 'border-emerald-400 bg-emerald-50/10 shadow-[0_0_12px_rgba(16,185,129,0.08)] ring-1 ring-emerald-400/30';
-                badgeStyle = 'bg-emerald-50 text-emerald-750 border-emerald-200 font-bold';
+                cardStyle = isDarkMode
+                  ? 'border-white bg-white/5 shadow-[0_0_12px_rgba(255,255,255,0.08)] ring-1 ring-white/20'
+                  : 'border-slate-800 bg-slate-50 shadow-sm ring-1 ring-slate-800/10';
+                badgeStyle = isDarkMode
+                  ? 'bg-white/10 text-white border-white/20 font-bold'
+                  : 'bg-slate-100 text-slate-800 border-slate-200 font-bold';
                 statusText = 'Elegido';
                 statusIcon = <Trophy className="h-3 w-3 fill-amber-500 text-amber-500" />;
               } else if (candidate.status === 'descartado') {
@@ -439,7 +443,13 @@ function PresentationNamingLab({ content, candidates }: { content: string; candi
                 <div key={candidate.id} className={`flex flex-col border rounded-xl p-5 transition-all hover:shadow-md ${cardStyle}`}>
                   {/* Name and Status Header */}
                   <div className={`flex items-center justify-between mb-3.5 select-none ${isDiscarded ? 'opacity-50' : ''}`}>
-                    <span className={`text-lg font-bold tracking-tight ${candidate.status === 'elegido' ? 'text-emerald-800' : candidate.status === 'descartado' ? 'text-slate-500' : 'text-slate-800'}`}>
+                    <span className={`font-bold tracking-tight ${
+                      candidate.status === 'elegido'
+                        ? `text-2xl md:text-3xl font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`
+                        : candidate.status === 'descartado'
+                          ? 'text-lg text-slate-500'
+                          : `text-lg ${isDarkMode ? 'text-slate-200' : 'text-slate-800'}`
+                    }`}>
                       {candidate.name}
                     </span>
                     <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${badgeStyle}`}>
@@ -1618,7 +1628,7 @@ export function PresentationViewer({
             {blockDef.id === 2 ? (
               <PresentationValueProp content={content} />
             ) : blockDef.id === 3 ? (
-              <PresentationNamingLab content={content} candidates={candidates} />
+              <PresentationNamingLab content={content} candidates={candidates} isDarkMode={isDarkMode} />
             ) : blockDef.id === 4 ? (
               <div className="flex flex-col items-center mt-4 w-full">
                 {(() => {
