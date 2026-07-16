@@ -93,7 +93,7 @@ export function BlockEditor({ brandId, blockId, onSave, readOnly = false }: Bloc
   const blockDef = getBlockById(blockId);
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<BlockStatus>('vacio');
-  const [viewMode, setViewMode] = useState<ViewMode>('edit');
+  const [viewMode, setViewMode] = useState<ViewMode>('preview');
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [confirmValidado, setConfirmValidado] = useState(false);
@@ -348,13 +348,22 @@ export function BlockEditor({ brandId, blockId, onSave, readOnly = false }: Bloc
     );
   }
 
+  const stageThemeMap: Record<string, { bg: string }> = {
+    'A': { bg: 'bg-violet-100 text-violet-600' },
+    'B': { bg: 'bg-blue-100 text-blue-600' },
+    'C': { bg: 'bg-emerald-100 text-emerald-600' },
+    'D': { bg: 'bg-amber-100 text-amber-600' },
+  };
+
+  const theme = stageThemeMap[blockDef.stage] || stageThemeMap['A'];
+
   return (
     <div className="flex flex-col bg-white rounded-xl border border-slate-200 shadow-sm" style={{ minHeight: '500px' }}>
       {/* Header */}
       <div className="sticky top-0 bg-white z-20 flex items-start justify-between border-b border-slate-200 px-5 py-4 rounded-t-xl shadow-sm">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 text-xs font-bold text-violet-600">
+            <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${theme.bg} text-xs font-bold`}>
               {blockDef.id}
             </span>
             <h2 className="text-base font-semibold text-slate-800">{blockDef.title}</h2>
@@ -412,24 +421,24 @@ export function BlockEditor({ brandId, blockId, onSave, readOnly = false }: Bloc
 
           {/* View mode toggle */}
           <div className="flex rounded-lg border border-slate-200 bg-slate-50">
+            <button
+              onClick={() => setViewMode('preview')}
+              className={`${readOnly ? 'rounded-lg' : 'rounded-l-lg'} px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'preview' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              title="Vista previa"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span>Vista Previa</span>
+            </button>
             {!readOnly && (
               <button
                 onClick={() => setViewMode('edit')}
-                className={`rounded-l-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'edit' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                className={`rounded-r-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'edit' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 title="Editor de texto"
               >
                 <Edit3 className="h-3.5 w-3.5" />
                 <span>Editor</span>
               </button>
             )}
-            <button
-              onClick={() => setViewMode('preview')}
-              className={`${readOnly ? 'rounded-lg' : 'rounded-r-lg'} px-3 py-1.5 text-xs font-semibold flex items-center gap-1 transition-all ${viewMode === 'preview' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              title="Vista previa"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              <span>Vista Previa</span>
-            </button>
           </div>
         </div>
       </div>
